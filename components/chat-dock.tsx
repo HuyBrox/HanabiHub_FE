@@ -1,29 +1,38 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { X, MessageCircle, Mic, ImageIcon, Heart, Gift, Phone, Video } from "lucide-react"
-import { cn } from "@/lib/utils"
+import type React from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  X,
+  MessageCircle,
+  Mic,
+  ImageIcon,
+  Heart,
+  Gift,
+  Phone,
+  Video,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Message {
-  id: string
-  text: string
-  sender: "me" | "other"
-  timestamp: Date
-  read?: boolean
+  id: string;
+  text: string;
+  sender: "me" | "other";
+  timestamp: Date;
+  read?: boolean;
 }
 
 interface ChatWindow {
-  id: string
-  name: string
-  avatar: string
-  online: boolean
-  messages: Message[]
-  typing?: boolean
-  unreadCount?: number
+  id: string;
+  name: string;
+  avatar: string;
+  online: boolean;
+  messages: Message[];
+  typing?: boolean;
+  unreadCount?: number;
 }
 
 const mockChats: ChatWindow[] = [
@@ -149,89 +158,117 @@ const mockChats: ChatWindow[] = [
       },
     ],
   },
-]
+];
 
 export function ChatDock() {
-  const [openChats, setOpenChats] = useState<string[]>(["1", "2"])
-  const [hiddenChats, setHiddenChats] = useState<string[]>([])
-  const [showChatList, setShowChatList] = useState(false)
-  const [newMessage, setNewMessage] = useState<{ [key: string]: string }>({})
+  // Lưu state openChats vào localStorage để giữ trạng thái khi reload
+  const [openChats, setOpenChats] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("openChats");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+  const [hiddenChats, setHiddenChats] = useState<string[]>([]);
+  const [showChatList, setShowChatList] = useState(false);
+  const [newMessage, setNewMessage] = useState<{ [key: string]: string }>({});
+
+  const totalUnreadMessages = mockChats.reduce((total, chat) => {
+    return total + (chat.unreadCount || 0);
+  }, 0);
 
   const openChat = (chatId: string) => {
-    if (openChats.includes(chatId)) return
+    if (openChats.includes(chatId)) return;
 
-    const newOpenChats = [...openChats]
+    const newOpenChats = [...openChats];
 
     if (newOpenChats.length >= 3) {
-      const oldestChat = newOpenChats.shift()
+      const oldestChat = newOpenChats.shift();
       if (oldestChat) {
-        setHiddenChats((prev) => [...prev.filter((id) => id !== oldestChat), oldestChat])
+        setHiddenChats((prev) => [
+          ...prev.filter((id) => id !== oldestChat),
+          oldestChat,
+        ]);
       }
     }
 
-    newOpenChats.push(chatId)
-    setOpenChats(newOpenChats)
-    setHiddenChats(hiddenChats.filter((id) => id !== chatId))
-    setShowChatList(false)
-  }
+    newOpenChats.push(chatId);
+    setOpenChats(newOpenChats);
+    setHiddenChats(hiddenChats.filter((id) => id !== chatId));
+    setShowChatList(false);
+    // Lưu vào localStorage
+    try {
+      localStorage.setItem("openChats", JSON.stringify(newOpenChats));
+    } catch {}
+  };
 
   const closeChat = (chatId: string) => {
-    setOpenChats(openChats.filter((id) => id !== chatId))
+    const updated = openChats.filter((id) => id !== chatId);
+    setOpenChats(updated);
+    try {
+      localStorage.setItem("openChats", JSON.stringify(updated));
+    } catch {}
     if (!hiddenChats.includes(chatId)) {
-      setHiddenChats([...hiddenChats, chatId])
+      setHiddenChats([...hiddenChats, chatId]);
     }
-  }
+  };
 
   const minimizeChat = (chatId: string) => {
     if (!hiddenChats.includes(chatId)) {
-      setHiddenChats([...hiddenChats, chatId])
+      setHiddenChats([...hiddenChats, chatId]);
     }
-  }
+  };
 
   const sendMessage = (chatId: string) => {
-    const message = newMessage[chatId]?.trim()
-    if (!message) return
+    const message = newMessage[chatId]?.trim();
+    if (!message) return;
 
-    console.log(`Sending message to ${chatId}: ${message}`)
+    console.log(`Sending message to ${chatId}: ${message}`);
 
-    setNewMessage({ ...newMessage, [chatId]: "" })
-  }
+    setNewMessage({ ...newMessage, [chatId]: "" });
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent, chatId: string) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage(chatId)
+      e.preventDefault();
+      sendMessage(chatId);
     }
-  }
+  };
 
   const makeVoiceCall = (chatId: string) => {
-    const chat = mockChats.find((c) => c.id === chatId)
-    console.log(`Making voice call to ${chat?.name}`)
-  }
+    const chat = mockChats.find((c) => c.id === chatId);
+    console.log(`Making voice call to ${chat?.name}`);
+  };
 
   const makeVideoCall = (chatId: string) => {
-    const chat = mockChats.find((c) => c.id === chatId)
-    console.log(`Making video call to ${chat?.name}`)
-  }
+    const chat = mockChats.find((c) => c.id === chatId);
+    console.log(`Making video call to ${chat?.name}`);
+  };
 
   return (
     <div className="fixed bottom-0 right-2 md:right-4 z-50 flex items-end gap-1">
       {openChats.map((chatId) => {
-        const chat = mockChats.find((c) => c.id === chatId)
-        if (!chat) return null
+        const chat = mockChats.find((c) => c.id === chatId);
+        if (!chat) return null;
 
         return (
           <div
             key={chatId}
             className={cn(
               "bg-white border border-gray-200 rounded-t-xl shadow-2xl w-72 sm:w-80 h-[400px] sm:h-[500px]",
-              chatId === "1" ? "bg-gradient-to-br from-orange-400 to-red-500" : "bg-white",
+              chatId === "1"
+                ? "bg-gradient-to-br from-orange-400 to-red-500"
+                : "bg-white"
             )}
           >
             <div
               className={cn(
                 "flex items-center justify-between p-2 sm:p-3 rounded-t-xl",
-                chatId === "1" ? "bg-orange-500/90 text-white" : "bg-gray-50 border-b border-gray-200",
+                chatId === "1"
+                  ? "bg-orange-500/90 text-white"
+                  : "bg-gray-50 border-b border-gray-200"
               )}
             >
               <div className="flex items-center gap-2">
@@ -245,8 +282,12 @@ export function ChatDock() {
                   )}
                 </div>
                 <div>
-                  <p className="font-semibold text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">{chat.name}</p>
-                  {chat.typing && <p className="text-xs opacity-70">đang nhập...</p>}
+                  <p className="font-semibold text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">
+                    {chat.name}
+                  </p>
+                  {chat.typing && (
+                    <p className="text-xs opacity-70">đang nhập...</p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-0.5 sm:gap-1">
@@ -255,7 +296,9 @@ export function ChatDock() {
                   size="sm"
                   className={cn(
                     "h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-full",
-                    chatId === "1" ? "hover:bg-white/20 text-white" : "hover:bg-gray-200",
+                    chatId === "1"
+                      ? "hover:bg-white/20 text-white"
+                      : "hover:bg-gray-200"
                   )}
                   onClick={() => makeVoiceCall(chatId)}
                 >
@@ -266,7 +309,9 @@ export function ChatDock() {
                   size="sm"
                   className={cn(
                     "h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-full",
-                    chatId === "1" ? "hover:bg-white/20 text-white" : "hover:bg-gray-200",
+                    chatId === "1"
+                      ? "hover:bg-white/20 text-white"
+                      : "hover:bg-gray-200"
                   )}
                   onClick={() => makeVideoCall(chatId)}
                 >
@@ -277,7 +322,9 @@ export function ChatDock() {
                   size="sm"
                   className={cn(
                     "h-6 w-6 sm:h-7 sm:w-7 p-0 rounded-full",
-                    chatId === "1" ? "hover:bg-white/20 text-white" : "hover:bg-gray-200",
+                    chatId === "1"
+                      ? "hover:bg-white/20 text-white"
+                      : "hover:bg-gray-200"
                   )}
                   onClick={() => closeChat(chatId)}
                 >
@@ -289,11 +336,19 @@ export function ChatDock() {
             <div
               className={cn(
                 "flex-1 p-2 sm:p-3 h-[300px] sm:h-[380px] overflow-y-auto space-y-2",
-                chatId === "1" ? "bg-gradient-to-br from-orange-400 to-red-500" : "bg-white",
+                chatId === "1"
+                  ? "bg-gradient-to-br from-orange-400 to-red-500"
+                  : "bg-white"
               )}
             >
               {chat.messages.map((message) => (
-                <div key={message.id} className={cn("flex", message.sender === "me" ? "justify-end" : "justify-start")}>
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex",
+                    message.sender === "me" ? "justify-end" : "justify-start"
+                  )}
+                >
                   <div
                     className={cn(
                       "max-w-[80%] sm:max-w-[75%] px-3 sm:px-4 py-2 text-xs sm:text-sm leading-relaxed",
@@ -301,7 +356,7 @@ export function ChatDock() {
                         ? chatId === "1"
                           ? "bg-red-600 text-white rounded-2xl rounded-br-md"
                           : "bg-blue-500 text-white rounded-2xl rounded-br-md"
-                        : "bg-gray-200 text-gray-800 rounded-2xl rounded-bl-md",
+                        : "bg-gray-200 text-gray-800 rounded-2xl rounded-bl-md"
                     )}
                   >
                     <p>{message.text}</p>
@@ -331,7 +386,9 @@ export function ChatDock() {
             <div
               className={cn(
                 "p-2 sm:p-3 border-t",
-                chatId === "1" ? "bg-orange-500/90 border-orange-400" : "bg-white border-gray-200",
+                chatId === "1"
+                  ? "bg-orange-500/90 border-orange-400"
+                  : "bg-white border-gray-200"
               )}
             >
               <div className="flex items-center gap-1 sm:gap-2">
@@ -340,7 +397,9 @@ export function ChatDock() {
                   size="sm"
                   className={cn(
                     "h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full",
-                    chatId === "1" ? "hover:bg-white/20 text-white" : "hover:bg-gray-100 text-gray-600",
+                    chatId === "1"
+                      ? "hover:bg-white/20 text-white"
+                      : "hover:bg-gray-100 text-gray-600"
                   )}
                 >
                   <Mic className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -350,7 +409,9 @@ export function ChatDock() {
                   size="sm"
                   className={cn(
                     "h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full",
-                    chatId === "1" ? "hover:bg-white/20 text-white" : "hover:bg-gray-100 text-gray-600",
+                    chatId === "1"
+                      ? "hover:bg-white/20 text-white"
+                      : "hover:bg-gray-100 text-gray-600"
                   )}
                 >
                   <ImageIcon className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -360,7 +421,9 @@ export function ChatDock() {
                   size="sm"
                   className={cn(
                     "h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full hidden sm:flex",
-                    chatId === "1" ? "hover:bg-white/20 text-white" : "hover:bg-gray-100 text-gray-600",
+                    chatId === "1"
+                      ? "hover:bg-white/20 text-white"
+                      : "hover:bg-gray-100 text-gray-600"
                   )}
                 >
                   <Gift className="h-4 w-4" />
@@ -370,7 +433,9 @@ export function ChatDock() {
                   size="sm"
                   className={cn(
                     "h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full hidden sm:flex",
-                    chatId === "1" ? "hover:bg-white/20 text-white" : "hover:bg-gray-100 text-blue-500",
+                    chatId === "1"
+                      ? "hover:bg-white/20 text-white"
+                      : "hover:bg-gray-100 text-blue-500"
                   )}
                 >
                   <span className="text-xs sm:text-sm font-bold">GIF</span>
@@ -378,11 +443,15 @@ export function ChatDock() {
                 <Input
                   placeholder="Aa"
                   value={newMessage[chatId] || ""}
-                  onChange={(e) => setNewMessage({ ...newMessage, [chatId]: e.target.value })}
+                  onChange={(e) =>
+                    setNewMessage({ ...newMessage, [chatId]: e.target.value })
+                  }
                   onKeyPress={(e) => handleKeyPress(e, chatId)}
                   className={cn(
                     "flex-1 h-7 sm:h-8 text-xs sm:text-sm border-0 rounded-full px-3 sm:px-4",
-                    chatId === "1" ? "bg-white/90 placeholder:text-gray-500" : "bg-gray-100 placeholder:text-gray-500",
+                    chatId === "1"
+                      ? "bg-white/90 placeholder:text-gray-500"
+                      : "bg-gray-100 placeholder:text-gray-500"
                   )}
                 />
                 <Button
@@ -390,7 +459,9 @@ export function ChatDock() {
                   size="sm"
                   className={cn(
                     "h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-full",
-                    chatId === "1" ? "hover:bg-white/20 text-white" : "hover:bg-gray-100 text-blue-500",
+                    chatId === "1"
+                      ? "hover:bg-white/20 text-white"
+                      : "hover:bg-gray-100 text-blue-500"
                   )}
                   onClick={() => sendMessage(chatId)}
                 >
@@ -399,13 +470,15 @@ export function ChatDock() {
               </div>
             </div>
           </div>
-        )
+        );
       })}
 
       {showChatList && (
         <div className="absolute bottom-16 sm:bottom-20 right-0 w-72 sm:w-80 bg-white rounded-lg shadow-xl border border-gray-200 max-h-80 sm:max-h-96 overflow-y-auto">
           <div className="p-3 sm:p-4 border-b border-gray-200">
-            <h3 className="font-semibold text-sm sm:text-base text-gray-900">Tin nhắn</h3>
+            <h3 className="font-semibold text-sm sm:text-base text-gray-900">
+              Tin nhắn
+            </h3>
           </div>
           <div className="p-1 sm:p-2">
             {mockChats.map((chat) => (
@@ -424,9 +497,12 @@ export function ChatDock() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-xs sm:text-sm text-gray-900 truncate">{chat.name}</p>
+                  <p className="font-medium text-xs sm:text-sm text-gray-900 truncate">
+                    {chat.name}
+                  </p>
                   <p className="text-xs text-gray-500 truncate">
-                    {chat.messages[chat.messages.length - 1]?.text || "Không có tin nhắn"}
+                    {chat.messages[chat.messages.length - 1]?.text ||
+                      "Không có tin nhắn"}
                   </p>
                 </div>
                 {chat.unreadCount && (
@@ -441,19 +517,21 @@ export function ChatDock() {
       )}
 
       <div className="mb-3 sm:mb-4 ml-1 sm:ml-2">
-        <Button
-          size="lg"
-          className="rounded-full w-12 h-12 sm:w-14 sm:h-14 bg-blue-500 hover:bg-blue-600 shadow-lg"
-          onClick={() => setShowChatList(!showChatList)}
-        >
-          <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-          {hiddenChats.length > 0 && (
-            <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
-              {hiddenChats.length}
+        <div className="relative">
+          <Button
+            size="lg"
+            className="rounded-full w-12 h-12 sm:w-14 sm:h-14 bg-blue-500 hover:bg-blue-600 shadow-lg"
+            onClick={() => setShowChatList(!showChatList)}
+          >
+            <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+          </Button>
+          {totalUnreadMessages > 0 && (
+            <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 sm:min-w-[24px] sm:h-6 flex items-center justify-center px-1 font-medium shadow-lg">
+              {totalUnreadMessages > 99 ? "99+" : totalUnreadMessages}
             </div>
           )}
-        </Button>
+        </div>
       </div>
     </div>
-  )
+  );
 }

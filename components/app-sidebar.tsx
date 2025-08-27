@@ -1,34 +1,74 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Home, BookOpen, Users, CreditCard, Bot, User, LogOut, Menu, X } from "lucide-react"
-import { ModeToggle } from "@/components/mode-toggle"
-import { LanguageToggle } from "@/components/language-toggle"
-import { useLanguage } from "@/lib/language-context"
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Home,
+  BookOpen,
+  Users,
+  CreditCard,
+  Bot,
+  User,
+  LogOut,
+  Menu,
+  X,
+  MessageCircle,
+  Video,
+} from "lucide-react";
+import { ModeToggle } from "@/components/mode-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useLanguage } from "@/lib/language-context";
 
 const navigation = [
   { name: "Home", href: "/", icon: Home, key: "nav.home" },
   { name: "Courses", href: "/courses", icon: BookOpen, key: "nav.courses" },
   { name: "Community", href: "/community", icon: Users, key: "nav.community" },
-  { name: "Flashcards", href: "/flashcards", icon: CreditCard, key: "nav.flashcards" },
-  { name: "AI Practice", href: "/ai-practice", icon: Bot, key: "nav.aiPractice" },
-  { name: "Profile", href: "/profile", icon: User, key: "nav.profile" },
-]
+  {
+    name: "Messages",
+    href: "/messages",
+    icon: MessageCircle,
+    key: "nav.messages",
+  },
+  {
+    name: "Video Call",
+    href: "/call/random",
+    icon: Video,
+    key: "nav.videoCall",
+  },
+  {
+    name: "Flashcards",
+    href: "/flashcards",
+    icon: CreditCard,
+    key: "nav.flashcards",
+  },
+  {
+    name: "AI Practice",
+    href: "/ai-practice",
+    icon: Bot,
+    key: "nav.aiPractice",
+  },
+];
 
 export function AppSidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const pathname = usePathname()
-  const { t } = useLanguage()
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const pathname = usePathname();
+  const { t } = useLanguage();
+
+  const [user, setUser] = useState({
+    isLoggedIn: true,
+    name: "Minh Nguyen",
+    avatar: "/anime-style-avatar-user.png",
+  });
 
   return (
     <div
       className={cn(
         "hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64",
+        isCollapsed ? "w-16" : "w-64"
       )}
     >
       {/* Header with Logo and Toggle */}
@@ -36,9 +76,13 @@ export function AppSidebar() {
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">日</span>
+              <span className="text-primary-foreground font-bold text-sm">
+                日
+              </span>
             </div>
-            <span className="font-semibold text-sidebar-foreground">JapanLearn</span>
+            <span className="font-semibold text-sidebar-foreground">
+              JapanLearn
+            </span>
           </div>
         )}
         <Button
@@ -47,52 +91,132 @@ export function AppSidebar() {
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="text-sidebar-foreground hover:bg-sidebar-accent"
         >
-          {isCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
+          {isCollapsed ? (
+            <Menu className="h-4 w-4" />
+          ) : (
+            <X className="h-4 w-4" />
+          )}
         </Button>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href;
           return (
             <Link key={item.name} href={item.href}>
               <Button
                 variant={isActive ? "default" : "ghost"}
                 className={cn(
                   "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
-                  isActive && "bg-primary text-primary-foreground hover:bg-primary/90",
-                  isCollapsed && "px-2",
+                  isActive &&
+                    "bg-primary text-primary-foreground hover:bg-primary/90",
+                  isCollapsed && "px-2"
                 )}
               >
                 <item.icon className="h-4 w-4 flex-shrink-0" />
                 {!isCollapsed && <span>{t(item.key)}</span>}
               </Button>
             </Link>
-          )
+          );
         })}
+
+        {user.isLoggedIn ? (
+          <Link href="/profile">
+            <Button
+              variant={pathname === "/profile" ? "default" : "ghost"}
+              className={cn(
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+                pathname === "/profile" &&
+                  "bg-primary text-primary-foreground hover:bg-primary/90",
+                isCollapsed && "px-2"
+              )}
+            >
+              {isCollapsed ? (
+                <Avatar className="h-4 w-4">
+                  <AvatarImage
+                    src={user.avatar || "/placeholder.svg"}
+                    alt={user.name}
+                  />
+                  <AvatarFallback className="text-xs">
+                    {user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+              ) : (
+                <>
+                  <Avatar className="h-4 w-4">
+                    <AvatarImage
+                      src={user.avatar || "/placeholder.svg"}
+                      alt={user.name}
+                    />
+                    <AvatarFallback className="text-xs">
+                      {user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{user.name}</span>
+                </>
+              )}
+            </Button>
+          </Link>
+        ) : (
+          <Link href="/login">
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+                isCollapsed && "px-2"
+              )}
+            >
+              <User className="h-4 w-4 flex-shrink-0" />
+              {!isCollapsed && <span>{t("nav.login")}</span>}
+            </Button>
+          </Link>
+        )}
       </nav>
 
       {/* Language Toggle, Theme Toggle and Logout */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
-        <div className={cn("flex", isCollapsed ? "justify-center" : "justify-start")}>
-          <LanguageToggle collapsed={isCollapsed} />
-        </div>
-        <div className={cn("flex", isCollapsed ? "justify-center" : "justify-start")}>
-          <ModeToggle />
-          {!isCollapsed && <span className="ml-3 text-sm text-sidebar-foreground self-center">Theme</span>}
-        </div>
-        <Button
-          variant="ghost"
+        <div
           className={cn(
-            "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
-            isCollapsed && "px-2",
+            "flex",
+            isCollapsed ? "justify-center" : "justify-start"
           )}
         >
-          <LogOut className="h-4 w-4 flex-shrink-0" />
-          {!isCollapsed && <span>{t("nav.logout")}</span>}
-        </Button>
+          <LanguageToggle collapsed={isCollapsed} />
+        </div>
+        <div
+          className={cn(
+            "flex",
+            isCollapsed ? "justify-center" : "justify-start"
+          )}
+        >
+          <ModeToggle />
+          {!isCollapsed && (
+            <span className="ml-3 text-sm text-sidebar-foreground self-center">
+              {t("nav.theme")}
+            </span>
+          )}
+        </div>
+        {user.isLoggedIn && (
+          <Button
+            variant="ghost"
+            onClick={() => setUser({ ...user, isLoggedIn: false })}
+            className={cn(
+              "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+              isCollapsed && "px-2"
+            )}
+          >
+            <LogOut className="h-4 w-4 flex-shrink-0" />
+            {!isCollapsed && <span>{t("nav.logout")}</span>}
+          </Button>
+        )}
       </div>
     </div>
-  )
+  );
 }

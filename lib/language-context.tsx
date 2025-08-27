@@ -21,10 +21,13 @@ const translations = {
     "nav.home": "Home",
     "nav.courses": "Courses",
     "nav.community": "Community",
+    "nav.messages": "Messages",
     "nav.flashcards": "Flashcards",
     "nav.aiPractice": "AI Practice",
     "nav.profile": "Profile",
     "nav.logout": "Logout",
+    "nav.theme": "Theme",
+    "nav.videoCall": "Hanabi Studio",
 
     // Homepage
     "home.hero.title": "Learn Japanese Easily",
@@ -94,10 +97,13 @@ const translations = {
     "nav.home": "Trang chủ",
     "nav.courses": "Khóa học",
     "nav.community": "Cộng đồng",
+    "nav.messages": "Tin nhắn",
     "nav.flashcards": "Thẻ ghi nhớ",
     "nav.aiPractice": "Luyện tập AI",
     "nav.profile": "Hồ sơ",
     "nav.logout": "Đăng xuất",
+    "nav.theme": "Chủ đề",
+    "nav.videoCall": "Hanabi thoại",
 
     // Homepage
     "home.hero.title": "Học tiếng Nhật dễ dàng",
@@ -161,20 +167,20 @@ const translations = {
     "flashcards.completed": "Đã hoàn thành",
     "flashcards.remaining": "Còn lại",
     "flashcards.accuracy": "Độ chính xác",
+
+    //videocall
   },
 };
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  // Lấy giá trị language ban đầu từ window.__lang nếu có, nếu không thì 'en'
-  const getInitialLang = () => {
-    if (typeof window !== "undefined" && (window as any).__lang) {
-      return (window as any).__lang as Language;
+  const [language, setLanguage] = useState<Language>("en");
+
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem("language") as Language;
+    if (savedLanguage && (savedLanguage === "en" || savedLanguage === "vi")) {
+      setLanguage(savedLanguage);
     }
-    return "en";
-  };
-  const [language, setLanguage] = useState<Language>(
-    typeof window !== "undefined" ? getInitialLang() : "en"
-  );
+  }, []);
 
   const handleSetLanguage = (newLanguage: Language) => {
     setLanguage(newLanguage);

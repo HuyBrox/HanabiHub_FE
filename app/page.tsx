@@ -26,7 +26,15 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary/10 to-primary/5 px-6 py-16 md:py-24">
+      <section
+        className="px-6 py-16 md:py-24 bg-gradient-to-b from-primary/10 to-primary/5 relative"
+        style={{
+          backgroundImage: "url('/japan-1.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
             Learn Japanese Easily
