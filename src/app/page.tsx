@@ -29,7 +29,7 @@ export default function HomePage() {
       <section
         className="px-6 py-16 md:py-24 bg-gradient-to-b from-primary/10 to-primary/5 relative"
         style={{
-          backgroundImage: "url('/japan-1.jpg')",
+          backgroundImage: "url('/images/backgrounds/japan-1.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
@@ -65,12 +65,12 @@ export default function HomePage() {
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <Image
-                  src="/japanese-hiragana-characters-colorful-illustration.png"
+                  src="/images/japanese/japanese-hiragana-characters-colorful-illustration.png"
                   alt="Hiragana Course"
                   width={400}
                   height={192}
                   placeholder="blur"
-                  blurDataURL="/placeholder.jpg"
+                  blurDataURL="/images/placeholders/placeholder.jpg"
                   className="w-full h-48 object-cover rounded-lg mb-4"
                   priority
                 />
@@ -93,12 +93,12 @@ export default function HomePage() {
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <Image
-                  src="/japanese-katakana-characters-modern-design.png"
+                  src="/images/japanese/japanese-katakana-characters-modern-design.png"
                   alt="Katakana Course"
                   width={400}
                   height={192}
                   placeholder="blur"
-                  blurDataURL="/placeholder.jpg"
+                  blurDataURL="/images/placeholders/placeholder.jpg"
                   className="w-full h-48 object-cover rounded-lg mb-4"
                   priority
                 />
@@ -121,12 +121,12 @@ export default function HomePage() {
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <Image
-                  src="/japanese-kanji-characters-traditional-calligraphy.png"
+                  src="/images/japanese/japanese-kanji-characters-traditional-calligraphy.png"
                   alt="Kanji Course"
                   width={400}
                   height={192}
                   placeholder="blur"
-                  blurDataURL="/placeholder.jpg"
+                  blurDataURL="/images/placeholders/placeholder.jpg"
                   className="w-full h-48 object-cover rounded-lg mb-4"
                   priority
                 />
@@ -160,7 +160,7 @@ export default function HomePage() {
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <Avatar>
-                    <AvatarImage src="/anime-style-avatar-girl.png" />
+                    <AvatarImage src="/images/avatars/anime-style-avatar-girl.png" />
                     <AvatarFallback>SK</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -193,7 +193,7 @@ export default function HomePage() {
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <Avatar>
-                    <AvatarImage src="/anime-style-avatar-boy.png" />
+                    <AvatarImage src="/images/avatars/anime-style-avatar-boy.png" />
                     <AvatarFallback>TM</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -227,7 +227,7 @@ export default function HomePage() {
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <Avatar>
-                    <AvatarImage src="/anime-style-avatar-woman.png" />
+                    <AvatarImage src="/images/avatars/anime-style-avatar-woman.png" />
                     <AvatarFallback>YL</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">

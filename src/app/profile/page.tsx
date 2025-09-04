@@ -1,15 +1,32 @@
-"use client"
+"use client";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Edit, Calendar, Trophy, BookOpen, Target, Flame, Award, TrendingUp, Clock, Star } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Edit,
+  Calendar,
+  Trophy,
+  BookOpen,
+  Target,
+  Flame,
+  Award,
+  TrendingUp,
+  Clock,
+  Star,
+} from "lucide-react";
 
 const userStats = {
   name: "Alex Johnson",
@@ -22,7 +39,7 @@ const userStats = {
   wordsLearned: 1247,
   kanjiMastered: 89,
   lessonsCompleted: 34,
-}
+};
 
 const enrolledCourses = [
   {
@@ -30,21 +47,23 @@ const enrolledCourses = [
     title: "Hiragana Mastery",
     progress: 100,
     status: "completed",
-    image: "/japanese-hiragana-characters-colorful-illustration.png",
+    image:
+      "/images/japanese/japanese-hiragana-characters-colorful-illustration.png",
   },
   {
     id: 2,
     title: "Katakana Essentials",
     progress: 75,
     status: "in-progress",
-    image: "/japanese-katakana-characters-modern-design.png",
+    image: "/images/japanese/japanese-katakana-characters-modern-design.png",
   },
   {
     id: 3,
     title: "Essential Kanji",
     progress: 45,
     status: "in-progress",
-    image: "/japanese-kanji-characters-traditional-calligraphy.png",
+    image:
+      "/images/japanese/japanese-kanji-characters-traditional-calligraphy.png",
   },
   {
     id: 4,
@@ -53,7 +72,7 @@ const enrolledCourses = [
     status: "in-progress",
     image: "/japanese-grammar-book-illustration.png",
   },
-]
+];
 
 const achievements = [
   {
@@ -104,7 +123,7 @@ const achievements = [
     earned: false,
     progress: 20,
   },
-]
+];
 
 const weeklyProgress = [
   { day: "Mon", hours: 2.5 },
@@ -114,12 +133,12 @@ const weeklyProgress = [
   { day: "Fri", hours: 1.5 },
   { day: "Sat", hours: 4.0 },
   { day: "Sun", hours: 2.8 },
-]
+];
 
 export default function ProfilePage() {
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(false);
 
-  const maxHours = Math.max(...weeklyProgress.map((d) => d.hours))
+  const maxHours = Math.max(...weeklyProgress.map((d) => d.hours));
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -129,20 +148,32 @@ export default function ProfilePage() {
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={userStats.avatar || "/placeholder.svg"} />
+                <AvatarImage
+                  src={
+                    userStats.avatar || "/images/placeholders/placeholder.svg"
+                  }
+                />
                 <AvatarFallback className="text-2xl">AJ</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
                   <div>
                     <h1 className="text-3xl font-bold">{userStats.name}</h1>
-                    <p className="text-muted-foreground">{userStats.username}</p>
+                    <p className="text-muted-foreground">
+                      {userStats.username}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Badge variant="default" className="bg-primary text-primary-foreground">
+                    <Badge
+                      variant="default"
+                      className="bg-primary text-primary-foreground"
+                    >
                       JLPT {userStats.jlptLevel}
                     </Badge>
-                    <Badge variant="outline" className="flex items-center gap-1">
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1"
+                    >
                       <Flame className="h-3 w-3" />
                       {userStats.studyStreak} day streak
                     </Badge>
@@ -176,25 +207,33 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-2">{userStats.wordsLearned}</div>
+              <div className="text-3xl font-bold text-primary mb-2">
+                {userStats.wordsLearned}
+              </div>
               <p className="text-sm text-muted-foreground">Words Learned</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-2">{userStats.kanjiMastered}</div>
+              <div className="text-3xl font-bold text-primary mb-2">
+                {userStats.kanjiMastered}
+              </div>
               <p className="text-sm text-muted-foreground">Kanji Mastered</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-2">{userStats.lessonsCompleted}</div>
+              <div className="text-3xl font-bold text-primary mb-2">
+                {userStats.lessonsCompleted}
+              </div>
               <p className="text-sm text-muted-foreground">Lessons Completed</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-6 text-center">
-              <div className="text-3xl font-bold text-primary mb-2">{userStats.studyStreak}</div>
+              <div className="text-3xl font-bold text-primary mb-2">
+                {userStats.studyStreak}
+              </div>
               <p className="text-sm text-muted-foreground">Day Streak</p>
             </CardContent>
           </Card>
@@ -223,16 +262,22 @@ export default function ProfilePage() {
                   <div className="space-y-4">
                     {weeklyProgress.map((day) => (
                       <div key={day.day} className="flex items-center gap-3">
-                        <div className="w-8 text-sm text-muted-foreground">{day.day}</div>
+                        <div className="w-8 text-sm text-muted-foreground">
+                          {day.day}
+                        </div>
                         <div className="flex-1">
                           <div className="bg-muted rounded-full h-2">
                             <div
                               className="bg-primary rounded-full h-2 transition-all"
-                              style={{ width: `${(day.hours / maxHours) * 100}%` }}
+                              style={{
+                                width: `${(day.hours / maxHours) * 100}%`,
+                              }}
                             />
                           </div>
                         </div>
-                        <div className="w-12 text-sm text-right">{day.hours}h</div>
+                        <div className="w-12 text-sm text-right">
+                          {day.hours}h
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -253,13 +298,21 @@ export default function ProfilePage() {
                       .filter((a) => a.earned)
                       .slice(0, 3)
                       .map((achievement) => (
-                        <div key={achievement.id} className="flex items-center gap-3">
+                        <div
+                          key={achievement.id}
+                          className="flex items-center gap-3"
+                        >
                           <div className="text-2xl">{achievement.icon}</div>
                           <div className="flex-1">
                             <p className="font-medium">{achievement.title}</p>
-                            <p className="text-sm text-muted-foreground">{achievement.earnedDate}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {achievement.earnedDate}
+                            </p>
                           </div>
-                          <Badge variant="outline" className="text-green-600 border-green-200">
+                          <Badge
+                            variant="outline"
+                            className="text-green-600 border-green-200"
+                          >
                             Earned
                           </Badge>
                         </div>
@@ -277,32 +330,57 @@ export default function ProfilePage() {
                   <BookOpen className="h-5 w-5 text-primary" />
                   Enrolled Courses
                 </CardTitle>
-                <CardDescription>Track your progress across all courses</CardDescription>
+                <CardDescription>
+                  Track your progress across all courses
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {enrolledCourses.map((course) => (
-                    <Card key={course.id} className="hover:shadow-md transition-shadow">
+                    <Card
+                      key={course.id}
+                      className="hover:shadow-md transition-shadow"
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-4">
                           <img
-                            src={course.image || "/placeholder.svg"}
+                            src={
+                              course.image ||
+                              "/images/placeholders/placeholder.svg"
+                            }
                             alt={course.title}
                             className="w-16 h-16 rounded-lg object-cover"
                           />
                           <div className="flex-1">
-                            <h3 className="font-semibold mb-2">{course.title}</h3>
+                            <h3 className="font-semibold mb-2">
+                              {course.title}
+                            </h3>
                             <div className="space-y-2">
                               <div className="flex items-center justify-between text-sm">
                                 <span>Progress</span>
-                                <span className="font-medium">{course.progress}%</span>
+                                <span className="font-medium">
+                                  {course.progress}%
+                                </span>
                               </div>
-                              <Progress value={course.progress} className="h-2" />
+                              <Progress
+                                value={course.progress}
+                                className="h-2"
+                              />
                               <Badge
-                                variant={course.status === "completed" ? "default" : "outline"}
-                                className={course.status === "completed" ? "bg-green-600" : ""}
+                                variant={
+                                  course.status === "completed"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                className={
+                                  course.status === "completed"
+                                    ? "bg-green-600"
+                                    : ""
+                                }
                               >
-                                {course.status === "completed" ? "Completed" : "In Progress"}
+                                {course.status === "completed"
+                                  ? "Completed"
+                                  : "In Progress"}
                               </Badge>
                             </div>
                           </div>
@@ -322,7 +400,9 @@ export default function ProfilePage() {
                   <Award className="h-5 w-5 text-primary" />
                   Achievements & Badges
                 </CardTitle>
-                <CardDescription>Your learning milestones and accomplishments</CardDescription>
+                <CardDescription>
+                  Your learning milestones and accomplishments
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -331,17 +411,26 @@ export default function ProfilePage() {
                       key={achievement.id}
                       className={cn(
                         "transition-all",
-                        achievement.earned ? "border-green-200 bg-green-50/50" : "border-muted",
+                        achievement.earned
+                          ? "border-green-200 bg-green-50/50"
+                          : "border-muted"
                       )}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
                           <div className="text-3xl">{achievement.icon}</div>
                           <div className="flex-1">
-                            <h3 className="font-semibold mb-1">{achievement.title}</h3>
-                            <p className="text-sm text-muted-foreground mb-2">{achievement.description}</p>
+                            <h3 className="font-semibold mb-1">
+                              {achievement.title}
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {achievement.description}
+                            </p>
                             {achievement.earned ? (
-                              <Badge variant="outline" className="text-green-600 border-green-200">
+                              <Badge
+                                variant="outline"
+                                className="text-green-600 border-green-200"
+                              >
                                 Earned {achievement.earnedDate}
                               </Badge>
                             ) : (
@@ -350,7 +439,10 @@ export default function ProfilePage() {
                                   <span>Progress</span>
                                   <span>{achievement.progress}/100</span>
                                 </div>
-                                <Progress value={achievement.progress} className="h-2" />
+                                <Progress
+                                  value={achievement.progress}
+                                  className="h-2"
+                                />
                               </div>
                             )}
                           </div>
@@ -428,5 +520,5 @@ export default function ProfilePage() {
         </Tabs>
       </div>
     </div>
-  )
+  );
 }

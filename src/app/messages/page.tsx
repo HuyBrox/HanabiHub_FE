@@ -30,7 +30,7 @@ const conversations: Conversation[] = [
   {
     id: "1",
     name: "Bình Phương",
-    avatar: "/anime-style-avatar-girl.png",
+    avatar: "/images/avatars/anime-style-avatar-girl.png",
     lastMessage: "đi bò cả 10p • 1 ngày",
     timestamp: "1 ngày",
     unread: 0,
@@ -39,7 +39,7 @@ const conversations: Conversation[] = [
   {
     id: "2",
     name: "Hương Giang Trần",
-    avatar: "/anime-style-avatar-woman.png",
+    avatar: "/images/avatars/anime-style-avatar-woman.png",
     lastMessage: "Tài khoản này không cho phép mọi ngư... • 1 tuần",
     timestamp: "1 tuần",
     unread: 2,
@@ -48,7 +48,7 @@ const conversations: Conversation[] = [
   {
     id: "3",
     name: "Tấn Đăng",
-    avatar: "/anime-style-avatar-boy.png",
+    avatar: "/images/avatars/anime-style-avatar-boy.png",
     lastMessage: "Bạn đã gửi một video • 3 tuần",
     timestamp: "3 tuần",
     unread: 0,
@@ -174,7 +174,10 @@ export default function MessagesPage() {
                 <div className="relative">
                   <Avatar className="h-12 w-12">
                     <AvatarImage
-                      src={conversation.avatar || "/placeholder.svg"}
+                      src={
+                        conversation.avatar ||
+                        "/images/placeholders/placeholder.svg"
+                      }
                       alt={conversation.name}
                     />
                     <AvatarFallback>
@@ -225,7 +228,10 @@ export default function MessagesPage() {
                   <div className="relative">
                     <Avatar className="h-10 w-10">
                       <AvatarImage
-                        src={selectedConv?.avatar || "/placeholder.svg"}
+                        src={
+                          selectedConv?.avatar ||
+                          "/images/placeholders/placeholder.svg"
+                        }
                         alt={selectedConv?.name}
                       />
                       <AvatarFallback>
