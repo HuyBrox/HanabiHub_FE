@@ -1,13 +1,20 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { Heart, MessageCircle, Share, TrendingUp, UserPlus, ImageIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Heart,
+  MessageCircle,
+  Share,
+  TrendingUp,
+  UserPlus,
+  ImageIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const posts = [
   {
@@ -85,7 +92,7 @@ const posts = [
     timeAgo: "12 hours ago",
     liked: true,
   },
-]
+];
 
 const trendingTopics = [
   { tag: "#JLPT2024", posts: 234 },
@@ -93,7 +100,7 @@ const trendingTopics = [
   { tag: "#StudyTips", posts: 156 },
   { tag: "#JapaneseGrammar", posts: 143 },
   { tag: "#AnimeJapanese", posts: 98 },
-]
+];
 
 const friendSuggestions = [
   {
@@ -114,29 +121,33 @@ const friendSuggestions = [
     level: "N2",
     mutualFriends: 5,
   },
-]
+];
 
 export default function CommunityPage() {
-  const [postLikes, setPostLikes] = useState<Record<number, { liked: boolean; count: number }>>(
+  const [postLikes, setPostLikes] = useState<
+    Record<number, { liked: boolean; count: number }>
+  >(
     posts.reduce(
       (acc, post) => ({
         ...acc,
         [post.id]: { liked: post.liked, count: post.likes },
       }),
-      {},
-    ),
-  )
-  const [newPost, setNewPost] = useState("")
+      {}
+    )
+  );
+  const [newPost, setNewPost] = useState("");
 
   const handleLike = (postId: number) => {
     setPostLikes((prev) => ({
       ...prev,
       [postId]: {
         liked: !prev[postId].liked,
-        count: prev[postId].liked ? prev[postId].count - 1 : prev[postId].count + 1,
+        count: prev[postId].liked
+          ? prev[postId].count - 1
+          : prev[postId].count + 1,
       },
-    }))
-  }
+    }));
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -150,19 +161,22 @@ export default function CommunityPage() {
                 <AvatarImage src="/anime-style-avatar-user.png" />
                 <AvatarFallback>You</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
+              <div className="flex-1 ">
                 <Textarea
                   placeholder="Share your Japanese learning journey..."
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
-                  className="min-h-[80px] resize-none border-0 p-0 focus-visible:ring-0"
+                  className="min-h-[80px] resize-none border-0 p-3 focus-visible:ring-0 "
                 />
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                   <Button variant="ghost" size="sm">
                     <ImageIcon className="h-4 w-4 mr-2" />
                     Photo
                   </Button>
-                  <Button className="bg-primary hover:bg-primary/90" disabled={!newPost.trim()}>
+                  <Button
+                    className="bg-primary hover:bg-primary/90"
+                    disabled={!newPost.trim()}
+                  >
                     Post
                   </Button>
                 </div>
@@ -188,9 +202,13 @@ export default function CommunityPage() {
                         {post.user.level} Level
                       </Badge>
                       <span className="text-sm text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground">{post.timeAgo}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {post.timeAgo}
+                      </span>
                     </div>
-                    <p className="text-foreground mb-3 leading-relaxed">{post.content}</p>
+                    <p className="text-foreground mb-3 leading-relaxed">
+                      {post.content}
+                    </p>
                     {post.image && (
                       <div className="mb-3">
                         <img
@@ -204,17 +222,33 @@ export default function CommunityPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className={cn("p-0 h-auto hover:text-primary", postLikes[post.id]?.liked && "text-primary")}
+                        className={cn(
+                          "p-0 h-auto hover:text-primary",
+                          postLikes[post.id]?.liked && "text-primary"
+                        )}
                         onClick={() => handleLike(post.id)}
                       >
-                        <Heart className={cn("h-4 w-4 mr-1", postLikes[post.id]?.liked && "fill-current")} />
+                        <Heart
+                          className={cn(
+                            "h-4 w-4 mr-1",
+                            postLikes[post.id]?.liked && "fill-current"
+                          )}
+                        />
                         {postLikes[post.id]?.count || post.likes}
                       </Button>
-                      <Button variant="ghost" size="sm" className="p-0 h-auto hover:text-primary">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-0 h-auto hover:text-primary"
+                      >
                         <MessageCircle className="h-4 w-4 mr-1" />
                         {post.comments}
                       </Button>
-                      <Button variant="ghost" size="sm" className="p-0 h-auto hover:text-primary">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-0 h-auto hover:text-primary"
+                      >
                         <Share className="h-4 w-4 mr-1" />
                         Share
                       </Button>
@@ -239,12 +273,21 @@ export default function CommunityPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {trendingTopics.map((topic, index) => (
-              <div key={topic.tag} className="flex items-center justify-between">
+              <div
+                key={topic.tag}
+                className="flex items-center justify-between"
+              >
                 <div>
-                  <p className="font-medium text-primary hover:underline cursor-pointer">{topic.tag}</p>
-                  <p className="text-xs text-muted-foreground">{topic.posts} posts</p>
+                  <p className="font-medium text-primary hover:underline cursor-pointer">
+                    {topic.tag}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {topic.posts} posts
+                  </p>
                 </div>
-                <span className="text-xs text-muted-foreground">#{index + 1}</span>
+                <span className="text-xs text-muted-foreground">
+                  #{index + 1}
+                </span>
               </div>
             ))}
           </CardContent>
@@ -271,7 +314,9 @@ export default function CommunityPage() {
                     <Badge variant="outline" className="text-xs">
                       {friend.level}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">{friend.mutualFriends} mutual friends</span>
+                    <span className="text-xs text-muted-foreground">
+                      {friend.mutualFriends} mutual friends
+                    </span>
                   </div>
                 </div>
                 <Button size="sm" className="bg-primary hover:bg-primary/90">
@@ -290,22 +335,40 @@ export default function CommunityPage() {
           <CardContent className="space-y-3">
             <div className="p-3 border border-border rounded-lg">
               <p className="font-medium text-sm">JLPT N3 Study Group</p>
-              <p className="text-xs text-muted-foreground">124 members • Daily practice</p>
-              <Button variant="outline" size="sm" className="mt-2 w-full bg-transparent">
+              <p className="text-xs text-muted-foreground">
+                124 members • Daily practice
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full bg-transparent"
+              >
                 Join Group
               </Button>
             </div>
             <div className="p-3 border border-border rounded-lg">
               <p className="font-medium text-sm">Kanji Masters</p>
-              <p className="text-xs text-muted-foreground">89 members • Advanced learners</p>
-              <Button variant="outline" size="sm" className="mt-2 w-full bg-transparent">
+              <p className="text-xs text-muted-foreground">
+                89 members • Advanced learners
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full bg-transparent"
+              >
                 Join Group
               </Button>
             </div>
             <div className="p-3 border border-border rounded-lg">
               <p className="font-medium text-sm">Anime Japanese Club</p>
-              <p className="text-xs text-muted-foreground">256 members • Learn through anime</p>
-              <Button variant="outline" size="sm" className="mt-2 w-full bg-transparent">
+              <p className="text-xs text-muted-foreground">
+                256 members • Learn through anime
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full bg-transparent"
+              >
                 Join Group
               </Button>
             </div>
@@ -313,5 +376,5 @@ export default function CommunityPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
