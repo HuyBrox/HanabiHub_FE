@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { LanguageProvider } from "@/lib/language-context";
 import { ChatDock } from "@/components/chat-dock";
 import { MobileHeader } from "@/components/mobile-header";
+import RtkProvider from "./providers";
 
 export const metadata: Metadata = {
   title: "JapanLearn - Learn Japanese Easily",
@@ -61,22 +62,24 @@ html {
         />
       </head>
       <body>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <LanguageProvider>
-            <div className="flex flex-col lg:flex-row h-screen bg-background">
-              <MobileHeader />
-              <AppSidebar />
-              <main className="flex-1 overflow-auto">{children}</main>
-            </div>
-            <ChatDock />
-            {auth}
-          </LanguageProvider>
-        </ThemeProvider>
+        <RtkProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <LanguageProvider>
+              <div className="flex flex-col lg:flex-row h-screen bg-background">
+                <MobileHeader />
+                <AppSidebar />
+                <main className="flex-1 overflow-auto">{children}</main>
+              </div>
+              <ChatDock />
+              {auth}
+            </LanguageProvider>
+          </ThemeProvider>
+        </RtkProvider>
       </body>
     </html>
   );
