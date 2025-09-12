@@ -1,4 +1,4 @@
-import { AuthModal } from "@/components/auth-modal"
+import { AuthModal } from "@/components/auth"
 
 export default function LoginModal() {
   return <AuthModal />

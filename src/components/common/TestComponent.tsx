@@ -3,8 +3,10 @@ import {
   useGetUsersQuery,
   useUpdateUserMutation,
 } from "@/store/services/userApi";
+import { TestComponentProps } from "@/types/common";
+import styles from "./TestComponent.module.css";
 
-export default function UserList() {
+export function TestComponent({}: TestComponentProps) {
   const { data, isLoading } = useGetUsersQuery();
   const [updateUser] = useUpdateUserMutation();
 

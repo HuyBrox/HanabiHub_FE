@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-import { AppSidebar } from "@/components/app-sidebar";
-import { ThemeProvider } from "@/components/theme-provider";
+import { AppSidebar } from "@/components/layout";
+import { ThemeProvider } from "@/components/common";
 import { LanguageProvider } from "@/lib/language-context";
-import { ChatDock } from "@/components/chat-dock";
-import { MobileHeader } from "@/components/mobile-header";
+import { ChatDock } from "@/components/chat";
+import { MobileHeader } from "@/components/layout";
 import RtkProvider from "./providers";
 
 export const metadata: Metadata = {
