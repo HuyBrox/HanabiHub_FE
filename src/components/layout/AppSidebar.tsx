@@ -20,8 +20,9 @@ import {
   Video,
 } from "lucide-react";
 import { ModeToggle, LanguageToggle } from "@/components/common";
+import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/lib/language-context";
-import { AppSidebarProps, NavigationItem, User as UserType } from "@/types/layout";
+import { AppSidebarProps, NavigationItem } from "@/types/layout";
 import styles from "./AppSidebar.module.css";
 
 const navigation: NavigationItem[] = [
@@ -58,12 +59,7 @@ export function AppSidebar({}: AppSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
-
-  const [user, setUser] = useState<UserType>({
-    isLoggedIn: true,
-    name: "Minh Nguyen",
-    avatar: "/anime-style-avatar-user.png",
-  });
+  const { isAuthenticated, user, logout } = useAuth();
 
   return (
     <div
@@ -122,7 +118,8 @@ export function AppSidebar({}: AppSidebarProps) {
           );
         })}
 
-        {user.isLoggedIn ? (
+        {/* Profile/Login section */}
+        {isAuthenticated ? (
           <Link href="/profile">
             <Button
               variant={pathname === "/profile" ? "default" : "ghost"}
@@ -136,31 +133,31 @@ export function AppSidebar({}: AppSidebarProps) {
               {isCollapsed ? (
                 <Avatar className="h-4 w-4">
                   <AvatarImage
-                    src={user.avatar || "/placeholder.svg"}
-                    alt={user.name}
+                    src={user?.avatar || "/placeholder.svg"}
+                    alt={user?.fullname || user?.username || "User"}
                   />
                   <AvatarFallback className="text-xs">
-                    {user.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+                    {user?.fullname?.charAt(0)?.toUpperCase() ||
+                      user?.username?.charAt(0)?.toUpperCase() ||
+                      "U"}
                   </AvatarFallback>
                 </Avatar>
               ) : (
                 <>
                   <Avatar className="h-4 w-4">
                     <AvatarImage
-                      src={user.avatar || "/placeholder.svg"}
-                      alt={user.name}
+                      src={user?.avatar || "/placeholder.svg"}
+                      alt={user?.fullname || user?.username || "User"}
                     />
                     <AvatarFallback className="text-xs">
-                      {user.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
+                      {user?.fullname?.charAt(0)?.toUpperCase() ||
+                        user?.username?.charAt(0)?.toUpperCase() ||
+                        "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span>{user.name}</span>
+                  <span className="truncate">
+                    {user?.fullname || user?.username || "User"}
+                  </span>
                 </>
               )}
             </Button>
@@ -181,7 +178,7 @@ export function AppSidebar({}: AppSidebarProps) {
         )}
       </nav>
 
-      {/* Language Toggle, Theme Toggle and Logout */}
+      {/* Language Toggle, Theme Toggle and Auth Button */}
       <div className="p-4 border-t border-sidebar-border space-y-2">
         <div
           className={cn(
@@ -204,10 +201,12 @@ export function AppSidebar({}: AppSidebarProps) {
             </span>
           )}
         </div>
-        {user.isLoggedIn && (
+
+        {/* Auth Button - Login/Logout */}
+        {isAuthenticated ? (
           <Button
             variant="ghost"
-            onClick={() => setUser({ ...user, isLoggedIn: false })}
+            onClick={logout}
             className={cn(
               "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
               isCollapsed && "px-2"
@@ -216,6 +215,19 @@ export function AppSidebar({}: AppSidebarProps) {
             <LogOut className="h-4 w-4 flex-shrink-0" />
             {!isCollapsed && <span>{t("nav.logout")}</span>}
           </Button>
+        ) : (
+          <Link href="/login">
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+                isCollapsed && "px-2"
+              )}
+            >
+              <User className="h-4 w-4 flex-shrink-0" />
+              {!isCollapsed && <span>{t("nav.login")}</span>}
+            </Button>
+          </Link>
         )}
       </div>
     </div>

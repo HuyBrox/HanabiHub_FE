@@ -8,7 +8,9 @@ import { ThemeProvider } from "@/components/common";
 import { LanguageProvider } from "@/lib/language-context";
 import { ChatDock } from "@/components/chat";
 import { MobileHeader } from "@/components/layout";
+import { AuthInitializer } from "@/hooks/useAuthInit"; // để khởi tạo auth khi app load lên, nếu có session hợp lệ thì sẽ tự động login
 import RtkProvider from "./providers";
+import { NotificationProvider } from "@/components/notification";
 
 export const metadata: Metadata = {
   title: "JapanLearn - Learn Japanese Easily",
@@ -63,22 +65,26 @@ html {
       </head>
       <body>
         <RtkProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <LanguageProvider>
-              <div className="flex flex-col lg:flex-row h-screen bg-background">
-                <MobileHeader />
-                <AppSidebar />
-                <main className="flex-1 overflow-auto">{children}</main>
-              </div>
-              <ChatDock />
-              {auth}
-            </LanguageProvider>
-          </ThemeProvider>
+          <AuthInitializer>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <LanguageProvider>
+                <NotificationProvider>
+                  <div className="flex flex-col lg:flex-row h-screen bg-background">
+                    <MobileHeader />
+                    <AppSidebar />
+                    <main className="flex-1 overflow-auto">{children}</main>
+                  </div>
+                  <ChatDock />
+                  {auth}
+                </NotificationProvider>
+              </LanguageProvider>
+            </ThemeProvider>
+          </AuthInitializer>
         </RtkProvider>
       </body>
     </html>

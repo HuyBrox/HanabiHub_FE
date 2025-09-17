@@ -5,7 +5,10 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 //hàm này tạo ra một API slice tên là userApi với các endpoint để lấy danh sách người dùng, lấy thông tin người dùng theo ID và cập nhật thông tin người dùng
 export const userApi = createApi({
   reducerPath: "userApi",
-  baseQuery: fetchBaseQuery({ baseUrl: "http://localhost:3001" }),
+  baseQuery: fetchBaseQuery({
+    baseUrl: process.env.API_URL,
+    credentials: "include",
+  }),
   tagTypes: ["User"],
   endpoints: (builder) => ({
     getUsers: builder.query<any[], void>({
@@ -27,8 +30,5 @@ export const userApi = createApi({
   }),
 });
 
-export const {
-  useGetUsersQuery,
-  useGetUserByIdQuery,
-  useUpdateUserMutation,
-} = userApi;
+export const { useGetUsersQuery, useGetUserByIdQuery, useUpdateUserMutation } =
+  userApi;

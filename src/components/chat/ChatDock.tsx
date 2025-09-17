@@ -259,7 +259,7 @@ export function ChatDock({}: ChatDockProps) {
                 <div className="relative">
                   <Avatar className="w-7 h-7 sm:w-8 sm:h-8">
                     <AvatarImage src={chat.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>{chat.name[0]}</AvatarFallback>
+                    <AvatarFallback>{chat.name?.[0] ?? "?"}</AvatarFallback>
                   </Avatar>
                   {chat.online && (
                     <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full border-2 border-white" />
@@ -474,7 +474,7 @@ export function ChatDock({}: ChatDockProps) {
                 <div className="relative">
                   <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
                     <AvatarImage src={chat.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>{chat.name[0]}</AvatarFallback>
+                    <AvatarFallback>{chat.name?.[0] ?? "?"}</AvatarFallback>
                   </Avatar>
                   {chat.online && (
                     <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full border-2 border-white" />

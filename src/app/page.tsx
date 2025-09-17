@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { HeroCTA } from "@/components/common";
 import {
   Card,
   CardContent,
@@ -44,14 +45,7 @@ export default function HomePage() {
             sessions, and a supportive community. Start your journey from
             beginner to fluent today.
           </p>
-          <Link href="/login">
-            <Button
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg"
-            >
-              Start Learning Now
-            </Button>
-          </Link>
+          <HeroCTA />
         </div>
       </section>
 
