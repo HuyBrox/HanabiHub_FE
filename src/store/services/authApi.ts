@@ -1,3 +1,4 @@
+// RTK Query API cho authentication
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import {
   LoginRequest,
@@ -21,6 +22,7 @@ export const authApi = createApi({
   baseQuery,
   tagTypes: ["Auth"],
   endpoints: (builder) => ({
+    // API đăng nhập
     login: builder.mutation<AuthResponse, LoginRequest>({
       query: (credentials) => ({
         url: "/login",
@@ -29,6 +31,7 @@ export const authApi = createApi({
       }),
       invalidatesTags: ["Auth"],
     }),
+    // API đăng xuất
     logout: builder.mutation<void, void>({
       query: () => ({
         url: "/logout",
@@ -36,12 +39,14 @@ export const authApi = createApi({
       }),
       invalidatesTags: ["Auth"],
     }),
+    // API refresh token
     refreshToken: builder.mutation<AuthResponse, void>({
       query: () => ({
         url: "/refresh-token",
         method: "POST",
       }),
     }),
+    // API lấy thông tin user hiện tại
     getCurrentUser: builder.query<UserProfileResponse, void>({
       query: () => ({
         url: "/user/profile",
@@ -51,7 +56,7 @@ export const authApi = createApi({
     }),
   }),
 });
-
+//rtk query tự generate hooks dựa trên endpoint đã khai báo
 export const {
   useLoginMutation,
   useLogoutMutation,

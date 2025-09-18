@@ -30,7 +30,7 @@ export default function HomePage() {
       <section
         className="px-6 py-16 md:py-24 bg-gradient-to-b from-primary/10 to-primary/5 relative"
         style={{
-          backgroundImage: "url('/images/backgrounds/japan-1.jpg')",
+          backgroundImage: "url('/images/backgrounds/jp-bg2.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",

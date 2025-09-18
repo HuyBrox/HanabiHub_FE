@@ -1,10 +1,11 @@
+// Cấu hình Redux store chính của app
 import { configureStore } from "@reduxjs/toolkit";
 import { userApi } from "./services/userApi";
 import { authApi } from "./services/authApi";
 import authReducer from "./slices/authSlice";
 import {
-  authMiddleware,
-  authListenerMiddleware,
+  authMiddleware, // để tự động refresh token
+  authListenerMiddleware, // để lắng nghe các sự kiện auth(login, logout)
 } from "./middleware/authMiddleware";
 
 export const store = configureStore({

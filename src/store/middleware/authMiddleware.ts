@@ -1,3 +1,4 @@
+// Middleware xử lý auto refresh token và logout khi unauthorized
 import {
   createListenerMiddleware,
   isRejectedWithValue,
@@ -6,28 +7,26 @@ import type { MiddlewareAPI, Middleware } from "@reduxjs/toolkit";
 import { authApi } from "../services/authApi";
 import { logout } from "../slices/authSlice";
 
-/**
- * Middleware để tự động refresh token khi gặp lỗi 401
- */
+// Middleware tự động refresh token khi gặp lỗi 401
 export const authMiddleware: Middleware =
   (api: MiddlewareAPI) => (next) => (action) => {
-    // Check if this is a rejected action with a 401 status
+    // Kiểm tra action bị reject với status 401
     if (isRejectedWithValue(action)) {
       const payload = action.payload as any;
       if (payload?.status === 401) {
-        // Chỉ tự động refresh nếu không phải là lỗi từ refresh token endpoint
+        // Chỉ refresh nếu không phải lỗi từ refresh token endpoint
         const endpointName = (action.meta as any)?.arg?.endpointName;
         if (!endpointName?.includes("refreshToken")) {
-          // Thử refresh token - không await để không block
+          // Thử refresh token không đồng bộ
           api
             .dispatch(authApi.endpoints.refreshToken.initiate() as any)
             .unwrap()
             .catch(() => {
-              // Nếu refresh token fail, logout user
+              // Refresh fail thì logout
               api.dispatch(logout());
             });
         } else {
-          // Nếu refresh token fail, logout user
+          // Refresh token fail thì logout
           api.dispatch(logout());
         }
       }
@@ -36,25 +35,22 @@ export const authMiddleware: Middleware =
     return next(action);
   };
 
-/**
- * Listener middleware để handle authentication events
- */
+// Listener middleware để handle các auth events
 export const authListenerMiddleware = createListenerMiddleware();
 
-// Listener for successful login
+// Listener cho login thành công
 authListenerMiddleware.startListening({
   matcher: authApi.endpoints.login.matchFulfilled,
   effect: async (action, listenerApi) => {
-    // Có thể thêm logic sau khi login thành công
     console.log("Login successful:", action.payload);
   },
 });
 
-// Listener for successful logout
+// Listener cho logout thành công
 authListenerMiddleware.startListening({
   matcher: authApi.endpoints.logout.matchFulfilled,
   effect: async (action, listenerApi) => {
-    // Clear any cached data or perform cleanup
+    // Cleanup data sau khi logout
     listenerApi.dispatch(logout());
   },
 });
