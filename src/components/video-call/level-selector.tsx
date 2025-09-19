@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { useLanguage } from "@/lib/language-context";
 import { Star, BookOpen, GraduationCap, Trophy, Crown } from "lucide-react";
 
 interface LevelSelectorProps {
@@ -59,6 +60,7 @@ export function LevelSelector({
   onLevelChange,
   className = "",
 }: LevelSelectorProps) {
+  const { t } = useLanguage();
   const selectedLevelData = levels.find(
     (level) => level.code === selectedLevel
   );
@@ -69,16 +71,16 @@ export function LevelSelector({
     >
       <div className="mb-3">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-          Japanese Level
+          {t("levels.title")}
         </h3>
         <p className="text-xs text-gray-600 dark:text-gray-300">
-          Select your proficiency level
+          {t("levels.subtitle")}
         </p>
       </div>
 
       <Select value={selectedLevel} onValueChange={onLevelChange}>
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Choose your level">
+          <SelectValue placeholder={t("levels.placeholder")}>
             {selectedLevelData && (
               <div className="flex items-center gap-2">
                 <selectedLevelData.icon
@@ -86,7 +88,7 @@ export function LevelSelector({
                 />
                 <span className="font-medium">{selectedLevelData.code}</span>
                 <span className="text-sm text-gray-600">
-                  - {selectedLevelData.name}
+                  - {t(`levels.${selectedLevelData.code}.name`)}
                 </span>
               </div>
             )}
@@ -102,10 +104,10 @@ export function LevelSelector({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">{level.code}</span>
-                      <span className="text-sm">{level.name}</span>
+                      <span className="text-sm">{t(`levels.${level.code}.name`)}</span>
                     </div>
                     <span className="text-xs text-gray-500">
-                      {level.description}
+                      {t(`levels.${level.code}.desc`)}
                     </span>
                   </div>
                 </div>

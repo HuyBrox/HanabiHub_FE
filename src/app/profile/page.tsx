@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 
 import { useState } from "react";
+import { useLanguage } from "@/lib/language-context";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -77,7 +78,7 @@ const enrolledCourses = [
 const achievements = [
   {
     id: 1,
-    title: "First Steps",
+    title: "achievements.firstSteps",
     description: "Complete your first lesson",
     icon: "🎯",
     earned: true,
@@ -85,7 +86,7 @@ const achievements = [
   },
   {
     id: 2,
-    title: "Hiragana Master",
+    title: "achievements.hiraganaMaster",
     description: "Master all 46 hiragana characters",
     icon: "🔤",
     earned: true,
@@ -93,7 +94,7 @@ const achievements = [
   },
   {
     id: 3,
-    title: "Study Streak",
+    title: "achievements.studyStreak",
     description: "Study for 30 consecutive days",
     icon: "🔥",
     earned: true,
@@ -101,7 +102,7 @@ const achievements = [
   },
   {
     id: 4,
-    title: "Kanji Collector",
+    title: "achievements.kanjiCollector",
     description: "Learn 100 kanji characters",
     icon: "📚",
     earned: false,
@@ -109,7 +110,7 @@ const achievements = [
   },
   {
     id: 5,
-    title: "Community Helper",
+    title: "achievements.communityHelper",
     description: "Help 10 fellow learners",
     icon: "🤝",
     earned: false,
@@ -117,7 +118,7 @@ const achievements = [
   },
   {
     id: 6,
-    title: "JLPT Ready",
+    title: "achievements.jlptReady",
     description: "Complete N4 preparation course",
     icon: "🎓",
     earned: false,
@@ -137,6 +138,7 @@ const weeklyProgress = [
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
+  const { t } = useLanguage();
 
   const maxHours = Math.max(...weeklyProgress.map((d) => d.hours));
 
@@ -175,7 +177,7 @@ export default function ProfilePage() {
                       className="flex items-center gap-1"
                     >
                       <Flame className="h-3 w-3" />
-                      {userStats.studyStreak} day streak
+                      {userStats.studyStreak} {t("profile.dayStreakSuffix")}
                     </Badge>
                   </div>
                 </div>
@@ -183,11 +185,11 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      Joined {userStats.joinDate}
+                      {t("profile.joined").replace("{date}", userStats.joinDate)}
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      {userStats.totalStudyTime}h studied
+                      {t("profile.studiedHours").replace("{hours}", String(userStats.totalStudyTime))}
                     </div>
                   </div>
                   <Button
@@ -195,7 +197,7 @@ export default function ProfilePage() {
                     onClick={() => setIsEditing(!isEditing)}
                   >
                     <Edit className="h-4 w-4 mr-2" />
-                    Edit Profile
+                    {t("profile.editProfile")}
                   </Button>
                 </div>
               </div>
@@ -210,7 +212,7 @@ export default function ProfilePage() {
               <div className="text-3xl font-bold text-primary mb-2">
                 {userStats.wordsLearned}
               </div>
-              <p className="text-sm text-muted-foreground">Words Learned</p>
+              <p className="text-sm text-muted-foreground">{t("profile.wordsLearned")}</p>
             </CardContent>
           </Card>
           <Card>
@@ -218,7 +220,7 @@ export default function ProfilePage() {
               <div className="text-3xl font-bold text-primary mb-2">
                 {userStats.kanjiMastered}
               </div>
-              <p className="text-sm text-muted-foreground">Kanji Mastered</p>
+              <p className="text-sm text-muted-foreground">{t("profile.kanjiMastered")}</p>
             </CardContent>
           </Card>
           <Card>
@@ -226,7 +228,7 @@ export default function ProfilePage() {
               <div className="text-3xl font-bold text-primary mb-2">
                 {userStats.lessonsCompleted}
               </div>
-              <p className="text-sm text-muted-foreground">Lessons Completed</p>
+              <p className="text-sm text-muted-foreground">{t("profile.lessonsCompleted")}</p>
             </CardContent>
           </Card>
           <Card>
@@ -234,7 +236,7 @@ export default function ProfilePage() {
               <div className="text-3xl font-bold text-primary mb-2">
                 {userStats.studyStreak}
               </div>
-              <p className="text-sm text-muted-foreground">Day Streak</p>
+              <p className="text-sm text-muted-foreground">{t("profile.dayStreakLabel")}</p>
             </CardContent>
           </Card>
         </div>
@@ -242,10 +244,10 @@ export default function ProfilePage() {
         {/* Main Content Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="courses">Courses</TabsTrigger>
-            <TabsTrigger value="achievements">Achievements</TabsTrigger>
-            <TabsTrigger value="progress">Progress</TabsTrigger>
+            <TabsTrigger value="overview">{t("profile.overview")}</TabsTrigger>
+            <TabsTrigger value="courses">{t("profile.courses")}</TabsTrigger>
+            <TabsTrigger value="achievements">{t("profile.achievements")}</TabsTrigger>
+            <TabsTrigger value="progress">{t("profile.progress")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -255,7 +257,7 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-primary" />
-                    This Week's Study Time
+                    {t("profile.thisWeekStudyTime")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -263,7 +265,7 @@ export default function ProfilePage() {
                     {weeklyProgress.map((day) => (
                       <div key={day.day} className="flex items-center gap-3">
                         <div className="w-8 text-sm text-muted-foreground">
-                          {day.day}
+                          {t(`days.${day.day}`)}
                         </div>
                         <div className="flex-1">
                           <div className="bg-muted rounded-full h-2">
@@ -289,7 +291,7 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-primary" />
-                    Recent Achievements
+                    {t("profile.recentAchievements")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -304,7 +306,7 @@ export default function ProfilePage() {
                         >
                           <div className="text-2xl">{achievement.icon}</div>
                           <div className="flex-1">
-                            <p className="font-medium">{achievement.title}</p>
+                            <p className="font-medium">{t(achievement.title)}</p>
                             <p className="text-sm text-muted-foreground">
                               {achievement.earnedDate}
                             </p>
@@ -313,7 +315,7 @@ export default function ProfilePage() {
                             variant="outline"
                             className="text-green-600 border-green-200"
                           >
-                            Earned
+                            {t("profile.earned")}
                           </Badge>
                         </div>
                       ))}
@@ -328,10 +330,10 @@ export default function ProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BookOpen className="h-5 w-5 text-primary" />
-                  Enrolled Courses
+                  {t("profile.enrolledCourses")}
                 </CardTitle>
                 <CardDescription>
-                  Track your progress across all courses
+                  {t("profile.enrolledCourses.subtitle")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -357,7 +359,7 @@ export default function ProfilePage() {
                             </h3>
                             <div className="space-y-2">
                               <div className="flex items-center justify-between text-sm">
-                                <span>Progress</span>
+                                <span>{t("common.progress")}</span>
                                 <span className="font-medium">
                                   {course.progress}%
                                 </span>
@@ -379,8 +381,8 @@ export default function ProfilePage() {
                                 }
                               >
                                 {course.status === "completed"
-                                  ? "Completed"
-                                  : "In Progress"}
+                                  ? t("common.completed")
+                                  : t("common.inProgress")}
                               </Badge>
                             </div>
                           </div>
@@ -398,10 +400,10 @@ export default function ProfilePage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Award className="h-5 w-5 text-primary" />
-                  Achievements & Badges
+                  {t("profile.achievementsAndBadges")}
                 </CardTitle>
                 <CardDescription>
-                  Your learning milestones and accomplishments
+                  {t("profile.achievements.subtitle")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -421,7 +423,7 @@ export default function ProfilePage() {
                           <div className="text-3xl">{achievement.icon}</div>
                           <div className="flex-1">
                             <h3 className="font-semibold mb-1">
-                              {achievement.title}
+                              {t(achievement.title)}
                             </h3>
                             <p className="text-sm text-muted-foreground mb-2">
                               {achievement.description}
@@ -431,12 +433,12 @@ export default function ProfilePage() {
                                 variant="outline"
                                 className="text-green-600 border-green-200"
                               >
-                                Earned {achievement.earnedDate}
+                                {t("profile.earned")} {achievement.earnedDate}
                               </Badge>
                             ) : (
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between text-sm">
-                                  <span>Progress</span>
+                                  <span>{t("common.progress")}</span>
                                   <span>{achievement.progress}/100</span>
                                 </div>
                                 <Progress
@@ -461,7 +463,7 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5 text-primary" />
-                    Learning Goals
+                    {t("profile.learningGoals")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -474,14 +476,14 @@ export default function ProfilePage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Daily Study Goal (2h)</span>
+                      <span className="text-sm">{t("profile.goal.dailyStudy").replace("{hours}", "2")}</span>
                       <span className="text-sm font-medium">85%</span>
                     </div>
                     <Progress value={85} className="h-2" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm">Monthly Kanji Target (50)</span>
+                      <span className="text-sm">{t("profile.goal.monthlyKanjiTarget").replace("{count}", "50")}</span>
                       <span className="text-sm font-medium">72%</span>
                     </div>
                     <Progress value={72} className="h-2" />
@@ -493,25 +495,25 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Star className="h-5 w-5 text-primary" />
-                    Study Insights
+                    {t("profile.studyInsights")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <span className="text-sm">Most active day</span>
-                    <span className="font-medium">Saturday</span>
+                    <span className="text-sm">{t("profile.mostActiveDay")}</span>
+                    <span className="font-medium">{t("days.Sat")}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <span className="text-sm">Average session</span>
-                    <span className="font-medium">45 minutes</span>
+                    <span className="text-sm">{t("profile.averageSession")}</span>
+                    <span className="font-medium">{t("profile.avgSession.45min")}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <span className="text-sm">Favorite category</span>
-                    <span className="font-medium">Kanji</span>
+                    <span className="text-sm">{t("profile.favoriteCategory")}</span>
+                    <span className="font-medium">{t("profile.kanji")}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <span className="text-sm">Next milestone</span>
-                    <span className="font-medium">100 Kanji</span>
+                    <span className="text-sm">{t("profile.nextMilestone")}</span>
+                    <span className="font-medium">{t("profile.milestone.100kanji")}</span>
                   </div>
                 </CardContent>
               </Card>

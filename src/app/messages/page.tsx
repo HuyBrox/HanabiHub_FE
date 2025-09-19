@@ -145,7 +145,7 @@ export default function MessagesPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Tìm kiếm"
+              placeholder={t("messages.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-muted/50"
@@ -157,10 +157,8 @@ export default function MessagesPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="p-2">
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-sm font-medium">Tin nhắn</span>
-              <span className="text-sm text-muted-foreground">
-                Tin nhắn đang chờ
-              </span>
+              <span className="text-sm font-medium">{t("messages.inbox.title")}</span>
+              <span className="text-sm text-muted-foreground">{t("messages.inbox.pending")}</span>
             </div>
 
             {filteredConversations.map((conversation) => (
@@ -246,8 +244,8 @@ export default function MessagesPage() {
                     <h2 className="font-semibold">{selectedConv?.name}</h2>
                     <p className="text-sm text-muted-foreground">
                       {selectedConv?.online
-                        ? "Đang hoạt động"
-                        : "Không hoạt động"}
+                        ? t("messages.status.online")
+                        : t("messages.status.offline")}
                     </p>
                   </div>
                 </div>
@@ -293,7 +291,7 @@ export default function MessagesPage() {
               <div className="flex items-center gap-2">
                 <div className="flex-1 relative">
                   <Input
-                    placeholder="Aa"
+                    placeholder={t("messages.input.placeholder")}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     className="pr-12"
@@ -321,12 +319,12 @@ export default function MessagesPage() {
                   <Edit className="h-6 w-6 text-primary-foreground" />
                 </div>
               </div>
-              <h2 className="text-xl font-semibold mb-2">Tin nhắn của bạn</h2>
+              <h2 className="text-xl font-semibold mb-2">{t("messages.empty.title")}</h2>
               <p className="text-muted-foreground mb-4 max-w-sm">
-                Gửi ảnh và tin nhắn riêng tư cho bạn bè hoặc nhóm
+                {t("messages.empty.subtitle")}
               </p>
               <Button className="bg-primary hover:bg-primary/90">
-                Gửi tin nhắn
+                {t("messages.empty.cta")}
               </Button>
             </div>
           </div>
