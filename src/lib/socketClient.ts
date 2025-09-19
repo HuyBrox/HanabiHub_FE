@@ -42,7 +42,8 @@ export function createSocketConnection(opts: ConnectOptions = {}): Socket {
   socket = clientIo(SERVER_URL, {
     path: opts.path || "/socket.io",
     autoConnect: opts.autoConnect ?? true,
-    transports: ["websocket", "polling"], //giữ polling để đảm bảo kết nối ổn định nếu người dùng mạng yếu
+    transports: ["polling", "websocket"], // Polling trước để tránh WebSocket frame error
+    upgrade: true, // Cho phép upgrade sau khi kết nối ổn định
     withCredentials: true,
     query,
     reconnectionAttempts: 5,
