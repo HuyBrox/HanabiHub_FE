@@ -24,6 +24,7 @@ import {
   useSendMessageMutation,
 } from "@/store/services/messageApi";
 import styles from "./ChatDock.module.css";
+import { useCall } from "@/hooks/useCall";
 
 const transformConversationToUI = (
   conversation: any,
@@ -860,12 +861,32 @@ export function ChatDock({}: ChatDockProps) {
     }
   };
 
+  const { initiateCall, testSocketConnection } = useCall();
+
   const makeVoiceCall = (chatId: string) => {
     const chat = conversations.find((c) => c.id === chatId);
+    const partnerId = chat?.partnerId;
+    console.log("[ChatDock] makeVoiceCall:", { chatId, chat, partnerId });
+    if (!partnerId) {
+      console.error("[ChatDock] No partnerId found for chatId:", chatId);
+      return;
+    }
+    // Use new optimized call flow
+    console.log("[ChatDock] Initiating voice call to partnerId:", partnerId);
+    initiateCall(partnerId, 'audio');
   };
 
   const makeVideoCall = (chatId: string) => {
     const chat = conversations.find((c) => c.id === chatId);
+    const partnerId = chat?.partnerId;
+    console.log("[ChatDock] makeVideoCall:", { chatId, chat, partnerId });
+    if (!partnerId) {
+      console.error("[ChatDock] No partnerId found for chatId:", chatId);
+      return;
+    }
+    // Use new optimized call flow
+    console.log("[ChatDock] Initiating video call to partnerId:", partnerId);
+    initiateCall(partnerId, 'video');
   };
 
   // Hide ChatDock on messages page or mobile
