@@ -19,13 +19,15 @@ export const IncomingCallPopup: React.FC<IncomingCallPopupProps> = ({
       callerId: state.callerId,
       callType: state.callType,
       otherPeerId: state.otherPeerId,
-      visible
+      visible,
     });
-    
+
     if (state.ringing) {
       setVisible(true);
       // TẮT RINGTONE TẠM THỜI ĐỂ TEST SOCKET
-      console.log("[IncomingCallPopup] Ringtone disabled for testing - socket events should work now");
+      console.log(
+        "[IncomingCallPopup] Ringtone disabled for testing - socket events should work now"
+      );
       // try {
       //   if (!audioRef.current) {
       //     audioRef.current = new Audio(ringtoneUrl);
@@ -48,9 +50,9 @@ export const IncomingCallPopup: React.FC<IncomingCallPopupProps> = ({
     console.log("[IncomingCallPopup] Accept button clicked", {
       callerId: state.callerId,
       otherPeerId: state.otherPeerId,
-      callType: state.callType
+      callType: state.callType,
     });
-    
+
     // Sử dụng function mới với user gesture
     acceptIncomingCall();
   };

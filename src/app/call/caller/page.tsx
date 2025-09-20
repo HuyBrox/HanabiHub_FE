@@ -9,14 +9,15 @@ const CallerPage: React.FC = () => {
   const callType = (search.get("callType") as "video" | "audio") || "video";
   const peerId = search.get("peerId");
 
-  const { state, endCall, toggleMic, toggleCamera, startCallInPopup } = useCall();
+  const { state, endCall, toggleMic, toggleCamera, startCallInPopup } =
+    useCall();
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     if (receiverId && callType) {
-      console.log('[CallerPage] Starting call...', { receiverId, callType });
+      console.log("[CallerPage] Starting call...", { receiverId, callType });
       startCallInPopup(receiverId, callType, "caller");
     }
   }, [receiverId, callType, startCallInPopup]);
@@ -39,7 +40,9 @@ const CallerPage: React.FC = () => {
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   return (
@@ -48,7 +51,11 @@ const CallerPage: React.FC = () => {
       <div className="absolute top-4 left-4 right-4 z-10">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-300">
-            {state.ringing ? "Đang gọi..." : state.inCall ? "Đang trong cuộc gọi" : "Đang kết nối..."}
+            {state.ringing
+              ? "Đang gọi..."
+              : state.inCall
+              ? "Đang trong cuộc gọi"
+              : "Đang kết nối..."}
           </div>
           <div className="text-sm text-gray-300">
             {callType === "video" ? "Video Call" : "Voice Call"}
@@ -64,11 +71,11 @@ const CallerPage: React.FC = () => {
             Bạn
           </div>
           {callType === "video" ? (
-            <video 
-              ref={localVideoRef} 
-              className="h-full w-full object-cover" 
-              playsInline 
-              muted 
+            <video
+              ref={localVideoRef}
+              className="h-full w-full object-cover"
+              playsInline
+              muted
             />
           ) : (
             <div className="flex h-full items-center justify-center text-gray-300">
@@ -88,10 +95,10 @@ const CallerPage: React.FC = () => {
             {state.ringing ? "Đang gọi..." : "Người nhận"}
           </div>
           {callType === "video" ? (
-            <video 
-              ref={remoteVideoRef} 
-              className="h-full w-full object-cover" 
-              playsInline 
+            <video
+              ref={remoteVideoRef}
+              className="h-full w-full object-cover"
+              playsInline
             />
           ) : (
             <div className="flex h-full items-center justify-center text-gray-300">
@@ -106,7 +113,7 @@ const CallerPage: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           {/* Ringing overlay */}
           {state.ringing && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -124,27 +131,31 @@ const CallerPage: React.FC = () => {
         <button
           onClick={() => toggleMic()}
           className={`rounded px-4 py-2 transition-colors ${
-            state.localStream?.getAudioTracks()[0]?.enabled !== false 
-              ? "bg-gray-700 hover:bg-gray-600" 
+            state.localStream?.getAudioTracks()[0]?.enabled !== false
+              ? "bg-gray-700 hover:bg-gray-600"
               : "bg-red-600 hover:bg-red-700"
           }`}
         >
-          {state.localStream?.getAudioTracks()[0]?.enabled !== false ? "🎤" : "🔇"}
+          {state.localStream?.getAudioTracks()[0]?.enabled !== false
+            ? "🎤"
+            : "🔇"}
         </button>
-        
+
         {callType === "video" && (
           <button
             onClick={() => toggleCamera()}
             className={`rounded px-4 py-2 transition-colors ${
-              state.localStream?.getVideoTracks()[0]?.enabled !== false 
-                ? "bg-gray-700 hover:bg-gray-600" 
+              state.localStream?.getVideoTracks()[0]?.enabled !== false
+                ? "bg-gray-700 hover:bg-gray-600"
                 : "bg-red-600 hover:bg-red-700"
             }`}
           >
-            {state.localStream?.getVideoTracks()[0]?.enabled !== false ? "📹" : "📷"}
+            {state.localStream?.getVideoTracks()[0]?.enabled !== false
+              ? "📹"
+              : "📷"}
           </button>
         )}
-        
+
         <button
           onClick={endCall}
           className="rounded bg-red-600 px-6 py-2 font-semibold hover:bg-red-700 transition-colors"

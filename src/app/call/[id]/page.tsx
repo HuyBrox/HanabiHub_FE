@@ -11,19 +11,20 @@ const CallPage: React.FC = () => {
   const callerId = search.get("callerId");
   const otherPeerId = search.get("otherPeerId");
 
-  const { state, endCall, toggleMic, toggleCamera, startCallInPopup } = useCall();
+  const { state, endCall, toggleMic, toggleCamera, startCallInPopup } =
+    useCall();
 
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const id = params?.id as string;
-    
+
     if (id === "caller" && receiverId) {
       // Caller popup: start call với receiver
       startCallInPopup(receiverId, callType, "caller");
     } else if (id === "receiver" && callerId && otherPeerId) {
-      // Receiver popup: start call với caller  
+      // Receiver popup: start call với caller
       startCallInPopup(callerId, callType, "receiver", otherPeerId);
     }
   }, [receiverId, callerId, otherPeerId, callType, startCallInPopup]);
@@ -48,7 +49,12 @@ const CallPage: React.FC = () => {
       <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 gap-2 p-4">
         <div className="relative bg-gray-900 rounded overflow-hidden">
           {callType === "video" ? (
-            <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted />
+            <video
+              ref={localVideoRef}
+              className="h-full w-full object-cover"
+              playsInline
+              muted
+            />
           ) : (
             <div className="flex h-full items-center justify-center text-gray-300">
               Audio call - Local
@@ -57,7 +63,11 @@ const CallPage: React.FC = () => {
         </div>
         <div className="relative bg-gray-900 rounded overflow-hidden">
           {callType === "video" ? (
-            <video ref={remoteVideoRef} className="h-full w-full object-cover" playsInline />
+            <video
+              ref={remoteVideoRef}
+              className="h-full w-full object-cover"
+              playsInline
+            />
           ) : (
             <div className="flex h-full items-center justify-center text-gray-300">
               Audio call - Remote

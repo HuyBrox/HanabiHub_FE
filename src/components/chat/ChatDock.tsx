@@ -873,7 +873,7 @@ export function ChatDock({}: ChatDockProps) {
     }
     // Use new optimized call flow
     console.log("[ChatDock] Initiating voice call to partnerId:", partnerId);
-    initiateCall(partnerId, 'audio');
+    initiateCall(partnerId, "audio");
   };
 
   const makeVideoCall = (chatId: string) => {
@@ -886,7 +886,7 @@ export function ChatDock({}: ChatDockProps) {
     }
     // Use new optimized call flow
     console.log("[ChatDock] Initiating video call to partnerId:", partnerId);
-    initiateCall(partnerId, 'video');
+    initiateCall(partnerId, "video");
   };
 
   // Hide ChatDock on messages page or mobile
