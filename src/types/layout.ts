@@ -7,14 +7,14 @@ export interface MobileHeaderProps {
 }
 
 export interface NavigationItem {
-  name: string
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  key: string
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  key: string;
 }
 
-export interface User {
-  isLoggedIn: boolean
-  name: string
-  avatar: string
+export interface LayoutUser {
+  isLoggedIn: boolean;
+  name: string;
+  avatar: string;
 }

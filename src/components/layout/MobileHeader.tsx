@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { ModeToggle, LanguageToggle } from "@/components/common";
 import { useLanguage } from "@/lib/language-context";
-import { MobileHeaderProps, NavigationItem, User as UserType } from "@/types/layout";
+import { MobileHeaderProps, NavigationItem, LayoutUser } from "@/types/layout";
 import styles from "./MobileHeader.module.css";
 
 const navigation: NavigationItem[] = [
@@ -40,7 +40,7 @@ const navigation: NavigationItem[] = [
   { name: "Profile", href: "/profile", icon: User, key: "nav.profile" },
 ];
 
-const mockUser: UserType = {
+const mockUser: LayoutUser = {
   isLoggedIn: true,
   name: "Nguyễn Văn A",
   avatar: "/anime-style-avatar-user.png",

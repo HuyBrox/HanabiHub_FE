@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { HeroCTA } from "@/components/common";
 import {
   Card,
   CardContent,
@@ -9,20 +10,11 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, MessageCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import React from "react";
 import { useLanguage } from "@/lib/language-context";
-
-// ImageWithSkeleton: Hiển thị skeleton + LQIP cho ảnh
-type ImageWithSkeletonProps = {
-  src: string;
-  alt: string;
-  lqip: string;
-  className?: string;
-};
-import Image from "next/image";
  
 
 
@@ -34,7 +26,7 @@ export default function HomePage() {
       <section
         className="px-6 py-16 md:py-24 bg-gradient-to-b from-primary/10 to-primary/5 relative"
         style={{
-          backgroundImage: "url('/images/backgrounds/japan-1.jpg')",
+          backgroundImage: "url('/images/backgrounds/jp-bg2.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
@@ -45,7 +37,7 @@ export default function HomePage() {
             {t("home.hero.title")}
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            {t("home.hero.subtitle")}
+            {t("home.hero.subtitle")} 
           </p>
           <Link href="/login">
             <Button
@@ -277,13 +269,6 @@ export default function HomePage() {
               <RotateCcw className="h-5 w-5 text-muted-foreground" />
             </div>
           </Card>
-          <div className="mt-8">
-            <Link href="/flashcards">
-              <Button className="bg-primary hover:bg-primary/90" size="lg">
-                {t("flashcards.start")}
-              </Button>
-            </Link>
-          </div>
         </div>
       </section>
 

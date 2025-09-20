@@ -190,7 +190,9 @@ export default function CommunityPage() {
                 <div className="flex items-start gap-3">
                   <Avatar>
                     <AvatarImage src={post.user.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>{post.user.name[0]}</AvatarFallback>
+                    <AvatarFallback>
+                      {post.user.name?.[0] ?? "?"}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -303,7 +305,7 @@ export default function CommunityPage() {
               <div key={friend.name} className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={friend.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>{friend.name[0]}</AvatarFallback>
+                  <AvatarFallback>{friend.name?.[0] ?? "?"}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <p className="font-medium text-sm">{friend.name}</p>

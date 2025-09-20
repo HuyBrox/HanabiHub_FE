@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { withAuth } from "@/components/auth"; //để bảo vệ route (bắt buộc phải đăng nhập mới xem được)
 
 import { useState } from "react";
 import { useLanguage } from "@/lib/language-context";
@@ -136,7 +137,7 @@ const weeklyProgress = [
   { day: "Sun", hours: 2.8 },
 ];
 
-export default function ProfilePage() {
+function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const { t } = useLanguage();
 
@@ -524,3 +525,6 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+// Wrap với HOC để bảo vệ route
+export default withAuth(ProfilePage);
