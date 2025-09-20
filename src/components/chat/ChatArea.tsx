@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ConversationUI, MessageUI } from "@/types/message";
 import { useAuth } from "@/hooks/useAuth";
+import { useSocketMessages } from "@/hooks/useSocketMessages";
 import {
   useGetMessagesQuery,
   useSendMessageMutation,
-  useMarkAsReadMutation, // api đọc tin nhắn
+  useMarkAsReadMutation,
 } from "@/store/services/messageApi";
 
 interface ChatAreaProps {
@@ -18,7 +19,6 @@ interface ChatAreaProps {
   onClose?: () => void;
 }
 
-// Transform API message to UI format
 const transformMessageToUI = (
   message: any,
   currentUserId: string
@@ -33,10 +33,10 @@ const transformMessageToUI = (
     }),
     read: message.isRead,
     createdAt: new Date(message.createdAt),
+    status: message.senderId === currentUserId ? ("sent" as const) : undefined,
   };
 };
 
-// Helper function to check if messages are more than 30 minutes apart
 const shouldShowTimeSeparator = (
   currentMessage: MessageUI,
   previousMessage: MessageUI | null
@@ -45,12 +45,11 @@ const shouldShowTimeSeparator = (
 
   const timeDiff =
     currentMessage.createdAt.getTime() - previousMessage.createdAt.getTime();
-  const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
+  const thirtyMinutes = 30 * 60 * 1000;
 
   return timeDiff > thirtyMinutes;
 };
 
-// Helper function to format time separator
 const formatTimeSeparator = (date: Date): string => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -94,7 +93,75 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
   const [allMessages, setAllMessages] = useState<MessageUI[]>([]);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
+  const [isSending, setIsSending] = useState(false); // Thêm state để tránh spam
+
   const { user } = useAuth();
+
+  // Socket handlers for real-time messaging
+  const { sendTypingStart, sendTypingStop, markMessageAsSeen } =
+    useSocketMessages({
+      onNewMessage: (payload) => {
+        // Chỉ xử lý tin nhắn từ conversation hiện tại
+        if (payload.senderId === conversation.partnerId) {
+          const newMessage: MessageUI = {
+            id: payload.messageId,
+            text: payload.message,
+            sender: "other",
+            timestamp: new Date(payload.timestamp).toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            read: false,
+            createdAt: new Date(payload.timestamp),
+          };
+
+          setAllMessages((prev) => {
+            const messageMap = new Map<string, MessageUI>();
+            prev.forEach((msg) => messageMap.set(msg.id, msg));
+            messageMap.set(newMessage.id, newMessage);
+
+            return Array.from(messageMap.values()).sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
+            );
+          });
+
+          // Scroll to bottom for new message
+          setTimeout(() => scrollToBottom(), 50);
+
+          // Auto mark as read if conversation is open
+          setTimeout(() => {
+            markMessageAsSeen(payload.messageId, payload.senderId);
+          }, 1000);
+        }
+      },
+      onUserTyping: (payload) => {
+        // Chỉ xử lý typing từ partner hiện tại
+        if (payload.senderId === conversation.partnerId) {
+          setIsPartnerTyping(payload.isTyping);
+
+          if (payload.isTyping) {
+            // Auto clear typing after 3 seconds
+            if (typingTimeout) clearTimeout(typingTimeout);
+            const timeout = setTimeout(() => {
+              setIsPartnerTyping(false);
+            }, 3000);
+            setTypingTimeout(timeout);
+          } else {
+            if (typingTimeout) {
+              clearTimeout(typingTimeout);
+              setTypingTimeout(null);
+            }
+          }
+        }
+      },
+    });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const previousScrollHeight = useRef<number>(0);
@@ -243,9 +310,20 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newMessage.trim() || sendingMessage) return;
+    if (!newMessage.trim() || sendingMessage || isSending) return;
 
     const messageText = newMessage.trim();
+
+    // Prevent spam sending
+    setIsSending(true);
+
+    // Stop typing indicator when sending
+    sendTypingStop(conversation.partnerId);
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+      setTypingTimeout(null);
+    }
+
     setNewMessage("");
 
     // Optimistic update - add message immediately
@@ -259,6 +337,7 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
       }),
       read: false,
       createdAt: new Date(),
+      status: "sending", // Trạng thái đang gửi
     };
 
     setAllMessages((prev) => {
@@ -282,15 +361,50 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
         message: messageText,
       }).unwrap();
 
-      // Message sent successfully - the server will send back the real message via socket
-      // Remove the temporary message and let the real one come through the socket
-      setAllMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id));
+      // Message sent successfully - update status to "sent"
+      setAllMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempMessage.id ? { ...msg, status: "sent" as const } : msg
+        )
+      );
+
+      // Focus input after sending
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
+
+      // Reset sending state
+      setIsSending(false);
     } catch (error) {
-      console.error("Error sending message:", error);
-      // Remove the failed message
-      setAllMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id));
-      // Re-add the text back to input
-      setNewMessage(messageText);
+      console.error("Error sending message:", error, {
+        messageText,
+        partnerId: conversation.partnerId,
+        errorDetails: error,
+      });
+
+      // Update message status to failed for better UX
+      setAllMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempMessage.id
+            ? { ...msg, status: "failed" as const }
+            : msg
+        )
+      );
+
+      // Show error notification (you can implement toast here)
+      setTimeout(() => {
+        // Remove the failed message after showing error
+        setAllMessages((prev) =>
+          prev.filter((msg) => msg.id !== tempMessage.id)
+        );
+        // Re-add the text back to input
+        setNewMessage(messageText);
+      }, 2000);
+
+      // Reset sending state
+      setIsSending(false);
     }
   };
 
@@ -368,6 +482,29 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
       }
     }, 100);
   }, [conversation.partnerId]);
+
+  // Handle input change với typing indicator
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    // Send typing start khi bắt đầu gõ
+    if (value.length > 0 && !newMessage) {
+      sendTypingStart(conversation.partnerId);
+    }
+
+    // Send typing stop khi xóa hết
+    if (value.length === 0 && newMessage.length > 0) {
+      sendTypingStop(conversation.partnerId);
+    }
+
+    // Auto stop typing sau 1 giây không gõ
+    if (typingTimeout) clearTimeout(typingTimeout);
+    const timeout = setTimeout(() => {
+      sendTypingStop(conversation.partnerId);
+    }, 1000);
+    setTypingTimeout(timeout);
+  };
 
   // Auto focus input after sending message
   useEffect(() => {
@@ -468,6 +605,12 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
                 previousMessage
               );
 
+              // Kiểm tra xem có phải tin nhắn mới nhất của mình không
+              const isMyLatestMessage =
+                message.sender === "me" &&
+                index ===
+                  displayMessages.findLastIndex((msg) => msg.sender === "me");
+
               return (
                 <React.Fragment key={`${message.id}-${index}`}>
                   {showTimeSeparator && (
@@ -482,21 +625,73 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
                       message.sender === "me" ? "justify-end" : "justify-start"
                     } group`}
                   >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl relative ${
-                        message.sender === "me"
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-foreground"
-                      }`}
-                      title={message.timestamp}
-                    >
-                      <p className="text-sm">{message.text}</p>
+                    <div className="flex flex-col">
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl relative ${
+                          message.sender === "me"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-foreground"
+                        }`}
+                        title={message.timestamp}
+                      >
+                        <p className="text-sm">{message.text}</p>
+                      </div>
+                      {/* Status indicator chỉ cho tin nhắn mới nhất của mình */}
+                      {isMyLatestMessage && message.status && (
+                        <div className="text-xs text-muted-foreground mt-1 text-right">
+                          {message.status === "sending" && (
+                            <span className="flex items-center gap-1 justify-end">
+                              <div className="w-3 h-3 border border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
+                              Đang gửi
+                            </span>
+                          )}
+                          {message.status === "sent" && <span>Đã gửi</span>}
+                          {message.status === "delivered" && (
+                            <span>Đã nhận</span>
+                          )}
+                          {message.status === "read" && <span>Đã xem</span>}
+                          {message.status === "failed" && (
+                            <span className="flex items-center gap-1 justify-end text-red-500">
+                              <svg
+                                className="w-3 h-3"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              Gửi thất bại
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </React.Fragment>
               );
             })}
           </>
+        )}
+
+        {/* Typing indicator */}
+        {isPartnerTyping && (
+          <div className="flex justify-start mb-4">
+            <div className="bg-muted text-foreground px-4 py-2 rounded-2xl max-w-xs">
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-muted-foreground">
+                  {conversation.name} đang soạn tin nhắn
+                </span>
+                <div className="flex gap-1">
+                  <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         <div ref={messagesEndRef} />
@@ -523,7 +718,7 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
               ref={inputRef}
               placeholder="Aa"
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={handleInputChange}
               disabled={sendingMessage}
               className="pr-12"
               tabIndex={0}

@@ -1,4 +1,4 @@
-// Provider quản lý socket connection theo auth state
+// Quản lý kết nối socket theo trạng thái đăng nhập
 "use client";
 import React, { createContext, useContext, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
@@ -41,7 +41,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   useEffect(() => {
     if (isAuthenticated && user?._id) {
-      // Tạo socket khi user đăng nhập thành công
       try {
         const socket = createSocketConnection({
           userId: user._id,
@@ -50,7 +49,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
         socketRef.current = socket;
 
-        // Cập nhật state khi socket connect/disconnect
         const handleConnect = () => {
           setConnected(true);
         };
@@ -67,18 +65,16 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         socket.on("disconnect", handleDisconnect);
         socket.on("connect_error", handleConnectError);
 
-        // Cleanup listeners khi unmount
         return () => {
           socket.off("connect", handleConnect);
           socket.off("disconnect", handleDisconnect);
           socket.off("connect_error", handleConnectError);
         };
       } catch (error) {
-        console.error("Socket initialization error:", error);
+        console.error("Lỗi khởi tạo socket:", error);
         setConnected(false);
       }
     } else {
-      // Đóng socket khi user logout
       if (socketRef.current) {
         closeSocket();
         socketRef.current = null;

@@ -10,7 +10,6 @@ import {
   MessageCircle,
   Phone,
   Video,
-  Heart,
   Send,
   ChevronDown,
 } from "lucide-react";
@@ -18,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { ChatDockProps } from "@/types/chat";
 import { ConversationUI, MessageUI } from "@/types/message";
 import { useAuth } from "@/hooks/useAuth";
+import { useSocketMessages } from "@/hooks/useSocketMessages";
 import {
   useGetConversationsQuery,
   useGetMessagesQuery,
@@ -25,7 +25,6 @@ import {
 } from "@/store/services/messageApi";
 import styles from "./ChatDock.module.css";
 
-// Transform API data to UI format for ChatDock
 const transformConversationToUI = (
   conversation: any,
   currentUserId: string
@@ -50,7 +49,7 @@ const transformConversationToUI = (
       minute: "2-digit",
     }),
     unread: conversation.unreadCount,
-    online: false, // TODO: Implement from socket
+    online: false,
     partnerId: partner?._id || "",
   };
 };
@@ -69,10 +68,10 @@ const transformMessageToUI = (
     }),
     read: message.isRead,
     createdAt: new Date(message.createdAt),
+    status: message.senderId === currentUserId ? ("sent" as const) : undefined,
   };
 };
 
-// Helper function to check if messages are more than 30 minutes apart
 const shouldShowTimeSeparator = (
   currentMessage: MessageUI,
   previousMessage: MessageUI | null
@@ -81,12 +80,11 @@ const shouldShowTimeSeparator = (
 
   const timeDiff =
     currentMessage.createdAt.getTime() - previousMessage.createdAt.getTime();
-  const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
+  const thirtyMinutes = 30 * 60 * 1000;
 
   return timeDiff > thirtyMinutes;
 };
 
-// Helper function to format time separator
 const formatTimeSeparator = (date: Date): string => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -122,7 +120,6 @@ const formatTimeSeparator = (date: Date): string => {
   });
 };
 
-// Individual Chat Window Component
 interface IndividualChatWindowProps {
   chatId: string;
   conversation: ConversationUI;
@@ -146,10 +143,76 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
   const [allMessages, setAllMessages] = useState<MessageUI[]>([]);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(
+    null
+  );
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const previousScrollHeight = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Socket handlers for real-time messaging
+  const { sendTypingStart, sendTypingStop, markMessageAsSeen } =
+    useSocketMessages({
+      onNewMessage: (payload) => {
+        // Chỉ xử lý tin nhắn từ conversation hiện tại
+        if (payload.senderId === conversation.partnerId) {
+          const newMessage: MessageUI = {
+            id: payload.messageId,
+            text: payload.message,
+            sender: "other",
+            timestamp: new Date(payload.timestamp).toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            read: false,
+            createdAt: new Date(payload.timestamp),
+          };
+
+          setAllMessages((prev) => {
+            const messageMap = new Map<string, MessageUI>();
+            prev.forEach((msg) => messageMap.set(msg.id, msg));
+            messageMap.set(newMessage.id, newMessage);
+
+            return Array.from(messageMap.values()).sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
+            );
+          });
+
+          // Scroll to bottom for new message
+          setTimeout(() => scrollToBottom(), 50);
+
+          // Auto mark as read if conversation is open
+          setTimeout(() => {
+            markMessageAsSeen(payload.messageId, payload.senderId);
+          }, 1000);
+        }
+      },
+      onUserTyping: (payload) => {
+        // Chỉ xử lý typing từ partner hiện tại
+        if (payload.senderId === conversation.partnerId) {
+          setIsPartnerTyping(payload.isTyping);
+
+          if (payload.isTyping) {
+            // Auto clear typing after 3 seconds
+            if (typingTimeout) clearTimeout(typingTimeout);
+            const timeout = setTimeout(() => {
+              setIsPartnerTyping(false);
+            }, 3000);
+            setTypingTimeout(timeout);
+          } else {
+            if (typingTimeout) {
+              clearTimeout(typingTimeout);
+              setTypingTimeout(null);
+            }
+          }
+        }
+      },
+    });
 
   // Fetch messages for this conversation
   const {
@@ -289,6 +352,13 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
 
     const messageText = newMessage.trim();
 
+    // Stop typing indicator when sending
+    sendTypingStop(conversation.partnerId);
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+      setTypingTimeout(null);
+    }
+
     // Clear input immediately to prevent any residual characters
     setNewMessage("");
 
@@ -303,6 +373,7 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
       }),
       read: false,
       createdAt: new Date(),
+      status: "sending", // Trạng thái đang gửi
     };
 
     setAllMessages((prev) => {
@@ -326,15 +397,44 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
         message: messageText,
       }).unwrap();
 
-      // Message sent successfully - the server will send back the real message via socket
-      // Remove the temporary message and let the real one come through the socket
-      setAllMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id));
+      // Message sent successfully - update status to "sent"
+      setAllMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempMessage.id ? { ...msg, status: "sent" as const } : msg
+        )
+      );
+
+      // Focus input after sending
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
     } catch (error) {
-      console.error("Error sending message:", error);
-      // Remove the failed message
-      setAllMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id));
-      // Re-add the text back to input
-      setNewMessage(messageText);
+      console.error("Error sending message:", error, {
+        messageText,
+        partnerId: conversation.partnerId,
+        errorDetails: error,
+      });
+
+      // Update message status to failed for better UX
+      setAllMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempMessage.id
+            ? { ...msg, status: "failed" as const }
+            : msg
+        )
+      );
+
+      // Show error notification (you can implement toast here)
+      setTimeout(() => {
+        // Remove the failed message after showing error
+        setAllMessages((prev) =>
+          prev.filter((msg) => msg.id !== tempMessage.id)
+        );
+        // Re-add the text back to input
+        setNewMessage(messageText);
+      }, 2000);
     }
   };
 
@@ -425,6 +525,15 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
       }, 100);
     }
   }, [sendingMessage]);
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeout) {
+        clearTimeout(typingTimeout);
+      }
+    };
+  }, [typingTimeout]);
 
   return (
     <div className="relative w-72 sm:w-80 bg-white rounded-t-lg shadow-xl flex flex-col h-96 sm:h-[450px]">
@@ -517,6 +626,12 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
                 previousMessage
               );
 
+              // Kiểm tra xem có phải tin nhắn mới nhất của mình không
+              const isMyLatestMessage =
+                message.sender === "me" &&
+                index ===
+                  displayMessages.findLastIndex((msg) => msg.sender === "me");
+
               return (
                 <React.Fragment key={`${message.id}-${index}`}>
                   {showTimeSeparator && (
@@ -532,16 +647,50 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
                       message.sender === "me" ? "justify-end" : "justify-start"
                     )}
                   >
-                    <div
-                      className={cn(
-                        "max-w-[80%] sm:max-w-[75%] px-3 sm:px-4 py-2 text-xs sm:text-sm leading-relaxed rounded-2xl relative",
-                        message.sender === "me"
-                          ? "bg-orange-500 text-white rounded-br-md"
-                          : "bg-white text-gray-800 rounded-bl-md shadow-sm"
+                    <div className="flex flex-col">
+                      <div
+                        className={cn(
+                          "max-w-[80%] sm:max-w-[75%] px-3 sm:px-4 py-2 text-xs sm:text-sm leading-relaxed rounded-2xl relative",
+                          message.sender === "me"
+                            ? "bg-orange-500 text-white rounded-br-md"
+                            : "bg-white text-gray-800 rounded-bl-md shadow-sm"
+                        )}
+                        title={message.timestamp}
+                      >
+                        <p>{message.text}</p>
+                      </div>
+                      {/* Status indicator chỉ cho tin nhắn mới nhất của mình */}
+                      {isMyLatestMessage && message.status && (
+                        <div className="text-xs text-gray-400 mt-1 text-right">
+                          {message.status === "sending" && (
+                            <span className="flex items-center gap-1 justify-end">
+                              <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                              Đang gửi
+                            </span>
+                          )}
+                          {message.status === "sent" && <span>Đã gửi</span>}
+                          {message.status === "delivered" && (
+                            <span>Đã nhận</span>
+                          )}
+                          {message.status === "read" && <span>Đã xem</span>}
+                          {message.status === "failed" && (
+                            <span className="flex items-center gap-1 justify-end text-red-500">
+                              <svg
+                                className="w-3 h-3"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              Gửi thất bại
+                            </span>
+                          )}
+                        </div>
                       )}
-                      title={message.timestamp}
-                    >
-                      <p>{message.text}</p>
                     </div>
                   </div>
                 </React.Fragment>
@@ -551,6 +700,28 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
         )}
 
         <div ref={messagesEndRef} />
+
+        {/* Typing indicator */}
+        {isPartnerTyping && (
+          <div className="flex justify-start mb-2">
+            <div className="bg-gray-200 text-gray-600 px-3 py-2 rounded-2xl rounded-bl-md text-xs">
+              <div className="flex items-center gap-1">
+                <span>Đang soạn tin nhắn</span>
+                <div className="flex gap-1">
+                  <div className="w-1 h-1 bg-gray-500 rounded-full animate-pulse"></div>
+                  <div
+                    className="w-1 h-1 bg-gray-500 rounded-full animate-pulse"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
+                  <div
+                    className="w-1 h-1 bg-gray-500 rounded-full animate-pulse"
+                    style={{ animationDelay: "0.4s" }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Scroll to bottom button - overlay, fixed above input */}
@@ -572,7 +743,28 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
           <Input
             ref={inputRef}
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setNewMessage(value);
+
+              // Handle typing indicators
+              if (value.trim()) {
+                sendTypingStart(conversation.partnerId);
+
+                // Stop typing after 1 second of no input
+                if (typingTimeout) clearTimeout(typingTimeout);
+                const timeout = setTimeout(() => {
+                  sendTypingStop(conversation.partnerId);
+                }, 1000);
+                setTypingTimeout(timeout);
+              } else {
+                sendTypingStop(conversation.partnerId);
+                if (typingTimeout) {
+                  clearTimeout(typingTimeout);
+                  setTypingTimeout(null);
+                }
+              }
+            }}
             onKeyDown={handleKeyPress}
             placeholder="Nhập tin nhắn..."
             disabled={sendingMessage}
@@ -670,12 +862,10 @@ export function ChatDock({}: ChatDockProps) {
 
   const makeVoiceCall = (chatId: string) => {
     const chat = conversations.find((c) => c.id === chatId);
-    console.log(`Making voice call to ${chat?.name}`);
   };
 
   const makeVideoCall = (chatId: string) => {
     const chat = conversations.find((c) => c.id === chatId);
-    console.log(`Making video call to ${chat?.name}`);
   };
 
   // Hide ChatDock on messages page or mobile

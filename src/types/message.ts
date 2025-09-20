@@ -101,4 +101,5 @@ export interface MessageUI {
   timestamp: string;
   read: boolean;
   createdAt: Date;
+  status?: "sending" | "sent" | "delivered" | "read" | "failed"; // Thêm trạng thái failed
 }

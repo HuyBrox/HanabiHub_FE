@@ -1,4 +1,4 @@
-// Quản lý kết nối Socket.IO client duy nhất cho toàn app
+// Quản lý kết nối Socket.IO cho toàn ứng dụng
 import { io as clientIo, Socket } from "socket.io-client";
 
 let socket: Socket | null = null;
@@ -11,18 +11,18 @@ type ConnectOptions = {
 };
 
 // Lấy socket instance hiện tại
+// Trả về socket đã kết nối hoặc null nếu chưa có
 export function getSocket(): Socket | null {
   return socket;
 }
 
 // Tạo kết nối socket mới với server
+// Tự động tái sử dụng kết nối cũ nếu còn hoạt động
 export function createSocketConnection(opts: ConnectOptions = {}): Socket {
-  // Nếu đã có socket kết nối, dùng lại
   if (socket && socket.connected) {
     return socket;
   }
 
-  // Cleanup socket cũ trước khi tạo mới
   if (socket) {
     socket.removeAllListeners();
     socket.disconnect();
@@ -38,12 +38,11 @@ export function createSocketConnection(opts: ConnectOptions = {}): Socket {
   }
   if (opts.token) query.token = opts.token;
 
-  // Tạo socket connection với config tối ưu
   socket = clientIo(SERVER_URL, {
     path: opts.path || "/socket.io",
     autoConnect: opts.autoConnect ?? true,
-    transports: ["polling", "websocket"], // Polling trước để tránh WebSocket frame error
-    upgrade: true, // Cho phép upgrade sau khi kết nối ổn định
+    transports: ["polling", "websocket"],
+    upgrade: true,
     withCredentials: true,
     query,
     reconnectionAttempts: 5,
@@ -53,7 +52,6 @@ export function createSocketConnection(opts: ConnectOptions = {}): Socket {
     forceNew: true,
   });
 
-  // Lắng nghe các sự kiện kết nối
   socket.on("connect", () => {
     console.log("✅ Socket connected:", socket?.id);
     try {
@@ -61,9 +59,7 @@ export function createSocketConnection(opts: ConnectOptions = {}): Socket {
         "🚀 Transport:",
         (socket as any).conn?.transport?.name || "unknown"
       );
-    } catch (e) {
-      // Ignore transport logging error
-    }
+    } catch (e) {}
   });
 
   socket.on("disconnect", (reason) => {
@@ -71,13 +67,10 @@ export function createSocketConnection(opts: ConnectOptions = {}): Socket {
   });
 
   socket.on("connect_error", (err: any) => {
-    // WebSocket error là bình thường, chỉ warning
     if (err.message === "websocket error") {
       console.warn("⚠️ WebSocket không khả dụng, fallback về polling");
-      return; // Không log error cho trường hợp này
+      return;
     }
-
-    // Chỉ log error cho các lỗi thực sự
     console.error("🔴 Socket connection error:", err.message || err);
     console.error("🔍 Error details:", {
       type: err.type || "unknown",
@@ -86,7 +79,6 @@ export function createSocketConnection(opts: ConnectOptions = {}): Socket {
     });
   });
 
-  // Listen cho transport events nếu có thể
   try {
     (socket as any).conn?.on("upgrade", () => {
       console.log(
@@ -98,14 +90,13 @@ export function createSocketConnection(opts: ConnectOptions = {}): Socket {
     (socket as any).conn?.on("upgradeError", (err: any) => {
       console.warn("⚠️ Transport upgrade failed:", err.message);
     });
-  } catch (e) {
-    // Ignore if conn events not available
-  }
+  } catch (e) {}
 
   return socket;
 }
 
-// Đóng socket connection và cleanup
+// Đóng socket connection và cleanup hoàn toàn
+// Xóa tất cả listeners và ngắt kết nối
 export function closeSocket() {
   if (!socket) return;
   socket.removeAllListeners();
