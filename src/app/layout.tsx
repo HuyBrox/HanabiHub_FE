@@ -11,6 +11,7 @@ import { MobileHeader } from "@/components/layout";
 import { AuthInitializer } from "@/hooks/useAuthInit"; // để khởi tạo auth khi app load lên, nếu có session hợp lệ thì sẽ tự động login
 import RtkProvider from "./providers";
 import { NotificationProvider } from "@/components/notification";
+import IncomingCallPopup from "@/components/IncomingCallPopup";
 
 export const metadata: Metadata = {
   title: "JapanLearn - Learn Japanese Easily",
@@ -80,6 +81,7 @@ html {
                     <main className="flex-1 overflow-auto">{children}</main>
                   </div>
                   <ChatDock />
+                  <IncomingCallPopup />
                   {auth}
                 </NotificationProvider>
               </LanguageProvider>
