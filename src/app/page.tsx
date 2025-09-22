@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { HeroCTA } from "@/components/common";
 import {
   Card,
   CardContent,
@@ -34,7 +35,7 @@ export default function HomePage() {
       <section
         className="px-6 py-16 md:py-24 bg-gradient-to-b from-primary/10 to-primary/5 relative"
         style={{
-          backgroundImage: "url('/images/backgrounds/japan-1.jpg')",
+          backgroundImage: "url('/images/backgrounds/jp-bg2.jpg')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
@@ -47,14 +48,7 @@ export default function HomePage() {
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             {t("home.hero.subtitle")}
           </p>
-          <Link href="/login">
-            <Button
-              size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg"
-            >
-              {t("home.hero.cta")}
-            </Button>
-          </Link>
+          <HeroCTA />
         </div>
       </section>
 
