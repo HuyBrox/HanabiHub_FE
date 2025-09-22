@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/components/common";
 
 export default function NotFound() {
   // Nếu muốn đổi màu theo theme, có thể lấy theme ở đây
