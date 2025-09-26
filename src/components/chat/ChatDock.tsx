@@ -861,7 +861,7 @@ export function ChatDock({}: ChatDockProps) {
     }
   };
 
-  const { initiateCall, testSocketConnection } = useCall();
+  const { initiateCall } = useCall();
 
   const makeVoiceCall = (chatId: string) => {
     const chat = conversations.find((c) => c.id === chatId);
