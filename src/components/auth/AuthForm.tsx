@@ -38,7 +38,7 @@ export function AuthForm({
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    name: "",
+    fullname: "",
     confirmPassword: "",
   });
 
@@ -246,7 +246,7 @@ export function AuthForm({
             )}
           >
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="fullname">Full Name</Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -267,9 +267,8 @@ export function AuthForm({
                 <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>
               )}
             </div>
-          </div>
+          )}
 
-          {/* Email field */}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
@@ -293,7 +292,6 @@ export function AuthForm({
             )}
           </div>
 
-          {/* Password field */}
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <div className="relative">
@@ -311,18 +309,10 @@ export function AuthForm({
                 onChange={handlePasswordChange}
                 disabled={isLoading}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
+              <Button type="button" variant="ghost" size="sm"
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                )}
+                onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
               </Button>
             </div>
             {fieldErrors.password && (
@@ -363,38 +353,41 @@ export function AuthForm({
                 </p>
               )}
             </div>
-          </div>
+          )}
 
-          {/* Submit button */}
-          <Button
-            type="submit"
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                {mode === "login" ? "Signing in..." : "Creating account..."}
+          {/* Chỉ hiện OTP sau khi đã gửi OTP */}
+          {mode === "register" && otpSent && (
+            <div className="space-y-2">
+              <Label htmlFor="otp">OTP</Label>
+              <div className="relative">
+                <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input id="otp" placeholder="Nhập OTP đã gửi về email" className="pl-10"
+                  value={formData.otp} onChange={(e) => handleChange("otp", e.target.value)} />
               </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                {mode === "login" ? "Sign In" : "Create Account"}
-                <ArrowRight className="h-4 w-4" />
-              </div>
-            )}
+            </div>
+          )}
+
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+            disabled={isSendingOtp || isRegistering}>
+            {(isSendingOtp || isRegistering)
+              ? <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  {mode === "login" ? "Signing in..." : otpSent ? "Registering..." : "Sending OTP..."}
+                </div>
+              : <div className="flex items-center gap-2">
+                  {mode === "login" ? "Sign In" : otpSent ? "Create Account" : "Send OTP"}
+                  <ArrowRight className="h-4 w-4" />
+                </div>}
           </Button>
         </form>
 
-        {/* Mode switch */}
         <div className="text-center pt-4 border-t">
           <p className="text-sm text-muted-foreground">
             {mode === "login"
               ? "Don't have an account?"
               : "Already have an account?"}
           </p>
-          <Button
-            type="button"
-            variant="link"
+          <Button type="button" variant="link"
             className="p-0 h-auto font-semibold text-primary hover:text-primary/80"
             onClick={() =>
               handleModeSwitch(mode === "login" ? "register" : "login")
