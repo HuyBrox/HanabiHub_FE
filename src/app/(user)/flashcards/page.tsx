@@ -1,295 +1,351 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, RotateCcw, Check, X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Search,
+  Play,
+  Users,
+  User,
+  Shield,
+  BookOpen,
+  Clock,
+  Star,
+} from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { AddNewModal } from "@/components/flashcard/AddNewModal";
+import Link from "next/link";
 
-const flashcards = [
+// demo data
+const flashcardSets = [
   {
     id: 1,
-    front: "水",
-    back: "みず / mizu",
-    meaning: "water",
-    category: "Basic Kanji",
+    title: "Basic Kanji Characters",
+    description: "Learn fundamental kanji characters used in daily life",
+    cardCount: 50,
+    category: "admin",
+    type: "flashlist",
+    difficulty: "N5",
+    studyTime: "15 min",
+    rating: 4.8,
+    thumbnail: "/japanese-kanji-characters-traditional-calligraphy.png",
+    author: "Admin",
+    lastUpdated: "2 days ago",
   },
   {
     id: 2,
-    front: "火",
-    back: "ひ / hi",
-    meaning: "fire",
-    category: "Basic Kanji",
+    title: "Essential Greetings",
+    description: "Master common Japanese greetings and polite expressions",
+    cardCount: 25,
+    category: "mine",
+    type: "flashcard",
+    difficulty: "N5",
+    studyTime: "10 min",
+    rating: 4.9,
+    thumbnail: "/japanese-hiragana-characters-colorful-illustration.png",
+    author: "You",
+    lastUpdated: "Today",
   },
-  {
-    id: 3,
-    front: "木",
-    back: "き / ki",
-    meaning: "tree, wood",
-    category: "Basic Kanji",
+];
+
+const categoryConfig = {
+  admin: {
+    label: "Official",
+    icon: Shield,
+    color: "bg-blue-100 text-blue-800 border-blue-200",
   },
-  {
-    id: 4,
-    front: "金",
-    back: "きん / kin",
-    meaning: "gold, money",
-    category: "Basic Kanji",
+  others: {
+    label: "Community",
+    icon: Users,
+    color: "bg-green-100 text-green-800 border-green-200",
   },
-  {
-    id: 5,
-    front: "土",
-    back: "つち / tsuchi",
-    meaning: "earth, soil",
-    category: "Basic Kanji",
+  mine: {
+    label: "My Sets",
+    icon: User,
+    color: "bg-orange-100 text-orange-800 border-orange-200",
   },
-  {
-    id: 6,
-    front: "こんにちは",
-    back: "konnichiwa",
-    meaning: "hello, good afternoon",
-    category: "Greetings",
-  },
-  {
-    id: 7,
-    front: "ありがとう",
-    back: "arigatou",
-    meaning: "thank you",
-    category: "Greetings",
-  },
-  {
-    id: 8,
-    front: "すみません",
-    back: "sumimasen",
-    meaning: "excuse me, sorry",
-    category: "Greetings",
-  },
-  {
-    id: 9,
-    front: "はい",
-    back: "hai",
-    meaning: "yes",
-    category: "Basic Words",
-  },
-  {
-    id: 10,
-    front: "いいえ",
-    back: "iie",
-    meaning: "no",
-    category: "Basic Words",
-  },
-]
+};
 
 export default function FlashcardsPage() {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isFlipped, setIsFlipped] = useState(false)
-  const [studiedCards, setStudiedCards] = useState<Set<number>>(new Set())
-  const [correctCards, setCorrectCards] = useState<Set<number>>(new Set())
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedLevel, setSelectedLevel] = useState("all");
+  const [selectedType, setSelectedType] = useState<"flashcard" | "flashlist">(
+    "flashlist"
+  );
+  const [openModal, setOpenModal] = useState(false);
 
-  const currentCard = flashcards[currentIndex]
-  const progress = (studiedCards.size / flashcards.length) * 100
+  const filteredSets = flashcardSets.filter((set) => {
+    const matchesSearch =
+      set.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      set.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "all" || set.category === selectedCategory;
+    const matchesLevel =
+      selectedLevel === "all" || set.difficulty === selectedLevel;
+    const matchesType = set.type === selectedType;
 
-  const handleNext = () => {
-    if (currentIndex < flashcards.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-      setIsFlipped(false)
-    }
-  }
+    return matchesSearch && matchesCategory && matchesLevel && matchesType;
+  });
 
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
-      setIsFlipped(false)
-    }
-  }
+  const getCategoryIcon = (category: string) => {
+    const config = categoryConfig[category as keyof typeof categoryConfig];
+    const IconComponent = config.icon;
+    return <IconComponent className="h-3 w-3" />;
+  };
 
-  const handleFlip = () => {
-    setIsFlipped(!isFlipped)
-    if (!isFlipped) {
-      setStudiedCards((prev) => new Set([...prev, currentCard.id]))
-    }
-  }
-
-  const handleCorrect = () => {
-    setCorrectCards((prev) => new Set([...prev, currentCard.id]))
-    handleNext()
-  }
-
-  const handleIncorrect = () => {
-    correctCards.delete(currentCard.id)
-    setCorrectCards(new Set(correctCards))
-    handleNext()
-  }
-
-  const resetProgress = () => {
-    setCurrentIndex(0)
-    setIsFlipped(false)
-    setStudiedCards(new Set())
-    setCorrectCards(new Set())
-  }
+  const getCategoryStyle = (category: string) => {
+    return (
+      categoryConfig[category as keyof typeof categoryConfig]?.color ||
+      "bg-gray-100 text-gray-800"
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
+    <div className="min-h-screen bg-background relative">
+      {/* Thanh switcher bên phải */}
+      <div className="fixed top-1/2 right-[15px] -translate-y-1/2 z-50 flex flex-col">
+        <button
+          onClick={() => setSelectedType("flashcard")}
+          className={`w-12 h-14 bg-primary text-white font-bold text-sm shadow-md transition
+      rounded-tl-2xl
+      ${
+        selectedType === "flashcard"
+          ? "opacity-80 shadow-inner"
+          : "hover:bg-primary/90"
+      }
+    `}
+        >
+          <span className="block rotate-90">CARD</span>
+        </button>
+        <button
+          onClick={() => setSelectedType("flashlist")}
+          className={`w-12 h-14 bg-primary text-white font-bold text-sm shadow-md transition
+      rounded-bl-2xl
+      ${
+        selectedType === "flashlist"
+          ? "opacity-80 shadow-inner"
+          : "hover:bg-primary/90"
+      }
+    `}
+        >
+          <span className="block rotate-90">SETS</span>
+        </button>
+      </div>
+
+      {/* Header: Search + Filters */}
       <div className="p-6 border-b border-border">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Flashcards Practice</h1>
-            <p className="text-muted-foreground">Master Japanese characters and vocabulary</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Badge variant="outline">{currentCard.category}</Badge>
-            <span className="text-sm text-muted-foreground">
-              {currentIndex + 1} of {flashcards.length}
-            </span>
+        <div className="max-w-6xl mx-auto flex flex-col gap-4">
+          <h1 className="text-2xl font-bold">Flashcards & Sets</h1>
+          <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
+            {/* Nút tạo mới */}
+            <Button
+              variant="outline"
+              className="border-2 border-dashed border-primary text-primary w-full lg:w-auto"
+              onClick={() => setOpenModal(true)}
+            >
+              + Tạo mới
+            </Button>
+            <AddNewModal open={openModal} onClose={() => setOpenModal(false)} />
+
+            {/* Search */}
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Bộ lọc */}
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Bộ lọc" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="mine">Của tôi</SelectItem>
+                <SelectItem value="others">Cộng đồng</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Level */}
+            <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+              <SelectTrigger className="w-full sm:w-32">
+                <SelectValue placeholder="Level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Cấp độ</SelectItem>
+                <SelectItem value="N5">N5</SelectItem>
+                <SelectItem value="N4">N4</SelectItem>
+                <SelectItem value="N3">N3</SelectItem>
+                <SelectItem value="N2">N2</SelectItem>
+                <SelectItem value="N1">N1</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="max-w-2xl w-full">
-          {/* Flashcard */}
-          <div className="relative mb-8">
-            <Card
-              className={cn(
-                "w-full h-80 cursor-pointer transition-all duration-500 transform-gpu",
-                "hover:shadow-lg",
-                isFlipped && "rotate-y-180",
-              )}
-              onClick={handleFlip}
-            >
-              <CardContent className="flex items-center justify-center h-full p-8 relative">
-                {!isFlipped ? (
-                  // Front of card
-                  <div className="text-center">
-                    <div className="text-8xl font-bold text-primary mb-4">{currentCard.front}</div>
-                    <p className="text-muted-foreground">Click to reveal</p>
-                  </div>
-                ) : (
-                  // Back of card
-                  <div className="text-center space-y-4">
-                    <div className="text-4xl font-bold text-foreground">{currentCard.back}</div>
-                    <div className="text-2xl text-muted-foreground">{currentCard.meaning}</div>
-                    <p className="text-sm text-muted-foreground">Did you get it right?</p>
-                  </div>
-                )}
-                <div className="absolute top-4 right-4">
-                  <RotateCcw className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Controls */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-              className="flex items-center gap-2 bg-transparent"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-
-            {isFlipped && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleIncorrect}
-                  className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
-                >
-                  <X className="h-4 w-4" />
-                  Incorrect
-                </Button>
-                <Button
-                  size="lg"
-                  onClick={handleCorrect}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Check className="h-4 w-4" />
-                  Correct
-                </Button>
-              </div>
-            )}
-
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleNext}
-              disabled={currentIndex === flashcards.length - 1}
-              className="flex items-center gap-2 bg-transparent"
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Keyboard Shortcuts */}
-          <div className="text-center text-sm text-muted-foreground mb-8">
-            <p>
-              Use <kbd className="px-2 py-1 bg-muted rounded text-xs">Space</kbd> to flip •
-              <kbd className="px-2 py-1 bg-muted rounded text-xs mx-1">←</kbd> Previous •
-              <kbd className="px-2 py-1 bg-muted rounded text-xs">→</kbd> Next
-            </p>
-          </div>
+      {/* Grid */}
+      <div className="p-6">
+        <div className="max-w-6xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h2 className="text-xl font-semibold">
+            {selectedType === "flashcard" ? "Flashcards" : "Flash Sets"}
+          </h2>
+          <span className="text-sm text-muted-foreground">
+            {filteredSets.length}{" "}
+            {selectedType === "flashcard" ? "cards" : "sets"} found
+          </span>
         </div>
-      </div>
-
-      {/* Progress Section */}
-      <div className="p-6 border-t border-border bg-muted/30">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold">Learning Progress</h3>
-              <p className="text-sm text-muted-foreground">
-                {studiedCards.size} of {flashcards.length} cards studied • {correctCards.size} correct
+        <div className="max-w-6xl mx-auto">
+          {filteredSets.length === 0 ? (
+            <div className="text-center py-12">
+              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">
+                Không tìm thấy kết quả
+              </h3>
+              <p className="text-muted-foreground">
+                Thử thay đổi từ khoá hoặc bộ lọc
               </p>
             </div>
-            <Button variant="outline" onClick={resetProgress}>
-              Reset Progress
-            </Button>
-          </div>
-          <Progress value={progress} className="h-3" />
-          <div className="flex justify-between text-sm text-muted-foreground mt-2">
-            <span>0%</span>
-            <span className="font-medium text-primary">{Math.round(progress)}% Complete</span>
-            <span>100%</span>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredSets.map((set) => (
+                <Card
+                  key={set.id}
+                  className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${getCategoryStyle(
+                          set.category
+                        )} flex items-center gap-1`}
+                      >
+                        {getCategoryIcon(set.category)}
+                        {
+                          categoryConfig[
+                            set.category as keyof typeof categoryConfig
+                          ]?.label
+                        }
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {set.difficulty}
+                      </Badge>
+                    </div>
+                    <div className="aspect-video bg-muted rounded-lg mb-3 overflow-hidden">
+                      <img
+                        src={set.thumbnail || "/placeholder.svg"}
+                        alt={set.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      />
+                    </div>
+                    <CardTitle className="text-lg line-clamp-2">
+                      {set.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {set.description}
+                    </p>
+
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="h-3 w-3" />
+                          {set.cardCount} cards
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {set.studyTime}
+                        </span>
+                        {set.rating > 0 && (
+                          <span className="flex items-center gap-1">
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            {set.rating}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground">
+                        <p>by {set.author}</p>
+                        <p>{set.lastUpdated}</p>
+                      </div>
+                      <Link href={`/flashcards/practice/${set.id}`}>
+                        <Button
+                          size="sm"
+                          className="bg-primary hover:bg-primary/90"
+                        >
+                          <Play className="h-3 w-3 mr-1" />
+                          Study
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Study Statistics */}
-      <div className="p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-primary">{studiedCards.size}</div>
-                <p className="text-sm text-muted-foreground">Cards Studied</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">{correctCards.size}</div>
-                <p className="text-sm text-muted-foreground">Correct Answers</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-orange-600">
-                  {studiedCards.size > 0 ? Math.round((correctCards.size / studiedCards.size) * 100) : 0}%
-                </div>
-                <p className="text-sm text-muted-foreground">Accuracy Rate</p>
-              </CardContent>
-            </Card>
-          </div>
+      {/* Pagination */}
+      <div className="pb-10">
+        <div className="max-w-6xl mx-auto">
+          <Pagination>
+            <PaginationContent>
+              <PaginationPrevious>
+                <PaginationLink>Trước</PaginationLink>
+              </PaginationPrevious>
+              <PaginationItem>
+                <PaginationLink isActive href="#">
+                  1
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink href="#">2</PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink href="#">3</PaginationLink>
+              </PaginationItem>
+              <PaginationEllipsis />
+              <PaginationItem>
+                <PaginationLink href="#">8</PaginationLink>
+              </PaginationItem>
+              <PaginationNext>
+                <PaginationLink>Sau</PaginationLink>
+              </PaginationNext>
+            </PaginationContent>
+          </Pagination>
         </div>
       </div>
     </div>
-  )
+  );
 }
