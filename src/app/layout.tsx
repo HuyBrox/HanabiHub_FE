@@ -3,11 +3,8 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-import { AppSidebar } from "@/components/layout";
 import { ThemeProvider } from "@/components/common";
 import { LanguageProvider } from "@/lib/language-context";
-import { ChatDock } from "@/components/chat";
-import { MobileHeader } from "@/components/layout";
 import { AuthInitializer } from "@/hooks/useAuthInit"; // để khởi tạo auth khi app load lên, nếu có session hợp lệ thì sẽ tự động login
 import RtkProvider from "./providers";
 import { NotificationProvider } from "@/components/notification";
@@ -22,10 +19,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-  auth,
 }: Readonly<{
   children: React.ReactNode;
-  auth: React.ReactNode;
 }>) {
   return (
     <html
@@ -75,14 +70,8 @@ html {
             >
               <LanguageProvider>
                 <NotificationProvider>
-                  <div className="flex flex-col lg:flex-row h-screen bg-background">
-                    <MobileHeader />
-                    <AppSidebar />
-                    <main className="flex-1 overflow-auto">{children}</main>
-                  </div>
-                  <ChatDock />
+                  {children}
                   <IncomingCallPopup />
-                  {auth}
                 </NotificationProvider>
               </LanguageProvider>
             </ThemeProvider>
