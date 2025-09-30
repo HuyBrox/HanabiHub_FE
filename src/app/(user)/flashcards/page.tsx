@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { withAuth } from "@/components/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -84,7 +85,7 @@ const categoryConfig = {
   },
 };
 
-export default function FlashcardsPage() {
+function FlashcardsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
@@ -349,3 +350,5 @@ export default function FlashcardsPage() {
     </div>
   );
 }
+
+export default withAuth(FlashcardsPage);

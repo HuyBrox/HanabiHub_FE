@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { VideoFrame } from "@/components/video-call/video-frame";
+import { withAuth } from "@/components/auth";
 import { CallControls } from "@/components/video-call/call-controls";
 import { NetworkIndicator } from "@/components/video-call/network-indicator";
 import { LevelSelector } from "@/components/video-call/level-selector";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Users, Clock } from "lucide-react";
 
-export default function RandomCallPage() {
+function RandomCallPage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
@@ -183,3 +184,5 @@ export default function RandomCallPage() {
     </div>
   );
 }
+
+export default withAuth(RandomCallPage);

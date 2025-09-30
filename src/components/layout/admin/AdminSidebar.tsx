@@ -8,11 +8,7 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
-  MessageSquare,
-  Settings,
-  BarChart3,
-  FileText,
-  Shield,
+  Bell,
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -36,29 +32,9 @@ const adminMenuItems = [
     icon: BookOpen,
   },
   {
-    title: "Community",
-    href: "/admin/community",
-    icon: MessageSquare,
-  },
-  {
-    title: "Analytics",
-    href: "/admin/analytics",
-    icon: BarChart3,
-  },
-  {
-    title: "Reports",
-    href: "/admin/reports",
-    icon: FileText,
-  },
-  {
-    title: "Security",
-    href: "/admin/security",
-    icon: Shield,
-  },
-  {
-    title: "Settings",
-    href: "/admin/settings",
-    icon: Settings,
+    title: "Content & Notifications",
+    href: "/admin/content",
+    icon: Bell,
   },
 ];
 
