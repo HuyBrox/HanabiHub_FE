@@ -1,9 +1,4 @@
-// Types cho Flashcard và FlashList
-export interface IFlashCard {
-  _id: string;
-  name: string;
-  // Thêm các field khác nếu cần
-}
+// Types cho Flashcard và FlashList - Đã move xuống dưới
 
 export interface IUser {
   _id: string;
@@ -97,6 +92,63 @@ export interface SearchFlashListResponse {
   message: string;
   data: {
     results: IFlashList[];
+    pagination: {
+      currentPage: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+  timestamp: string;
+}
+
+// FlashCard Types
+export interface IFlashCardItem {
+  vocabulary: string;
+  meaning: string;
+}
+
+export interface IFlashCard {
+  _id: string;
+  name: string;
+  cards: IFlashCardItem[];
+  user: IUser | string;
+  isPublic: boolean;
+  thumbnail?: string;
+  description: string;
+  level: "N5" | "N4" | "N3" | "N2" | "N1";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GetAllFlashCardsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    flashCards: IFlashCard[];
+    pagination: {
+      currentPage: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+  timestamp: string;
+}
+
+export interface SearchFlashCardParams {
+  q: string;
+  level?: "N5" | "N4" | "N3" | "N2" | "N1" | "all";
+  select?: "me" | "other" | "all";
+  page?: number;
+  limit?: number;
+}
+
+export interface SearchFlashCardResponse {
+  success: boolean;
+  message: string;
+  data: {
+    results: IFlashCard[];
     pagination: {
       currentPage: number;
       limit: number;

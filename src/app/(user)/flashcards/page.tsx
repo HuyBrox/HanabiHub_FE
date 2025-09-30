@@ -6,8 +6,13 @@ import { withAuth } from "@/components/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useGetAllFlashListsQuery, useSearchFlashListQuery } from "@/store/services/flashcardApi";
-import { IFlashList, IUser } from "@/types/flashcard";
+import {
+  useGetAllFlashListsQuery,
+  useSearchFlashListQuery,
+  useGetAllFlashCardsQuery,
+  useSearchFlashCardQuery
+} from "@/store/services/flashcardApi";
+import { IFlashList, IFlashCard, IUser } from "@/types/flashcard";
 import { LoadingSpinner } from "@/components/loading";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
@@ -83,7 +88,7 @@ function FlashcardsPage() {
   );
   const [openModal, setOpenModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const limit = 12;
+  const limit = 20;
 
   // Ref để scroll to top
   const contentTopRef = useRef<HTMLDivElement>(null);
@@ -101,18 +106,18 @@ function FlashcardsPage() {
     return selectedCategory === "mine" ? "me" : selectedCategory === "others" ? "other" : "all";
   }, [selectedCategory]);
 
-  // Fetch data từ API - sử dụng search nếu có query
-  const { data: allData, isLoading: isLoadingAll, isError: isErrorAll, refetch: refetchAll } = useGetAllFlashListsQuery(
+  // Fetch FlashList data
+  const { data: allListData, isLoading: isLoadingAllList, isError: isErrorAllList, refetch: refetchAllList } = useGetAllFlashListsQuery(
     {
       page: currentPage,
       limit,
     },
     {
-      skip: isSearching, // Skip nếu đang search
+      skip: isSearching || selectedType === "flashcard", // Skip nếu đang search hoặc đang xem flashcard
     }
   );
 
-  const { data: searchData, isLoading: isLoadingSearch, isError: isErrorSearch, refetch: refetchSearch } = useSearchFlashListQuery(
+  const { data: searchListData, isLoading: isLoadingSearchList, isError: isErrorSearchList, refetch: refetchSearchList } = useSearchFlashListQuery(
     {
       q: debouncedSearchQuery,
       level: selectedLevel as any,
@@ -121,27 +126,76 @@ function FlashcardsPage() {
       limit,
     },
     {
-      skip: !isSearching, // Chỉ gọi nếu có search query
+      skip: !isSearching || selectedType === "flashcard", // Chỉ gọi nếu có search query và đang xem flashlist
+    }
+  );
+
+  // Fetch FlashCard data
+  const { data: allCardData, isLoading: isLoadingAllCard, isError: isErrorAllCard, refetch: refetchAllCard } = useGetAllFlashCardsQuery(
+    {
+      page: currentPage,
+      limit,
+    },
+    {
+      skip: isSearching || selectedType === "flashlist", // Skip nếu đang search hoặc đang xem flashlist
+    }
+  );
+
+  const { data: searchCardData, isLoading: isLoadingSearchCard, isError: isErrorSearchCard, refetch: refetchSearchCard } = useSearchFlashCardQuery(
+    {
+      q: debouncedSearchQuery,
+      level: selectedLevel as any,
+      select: selectParam as any,
+      page: currentPage,
+      limit,
+    },
+    {
+      skip: !isSearching || selectedType === "flashlist", // Chỉ gọi nếu có search query và đang xem flashcard
     }
   );
 
   // Chọn data từ API nào đang active - ổn định với useMemo
   const { data, isLoading, isError, refetch } = useMemo(() => {
-    if (isSearching) {
+    if (selectedType === "flashlist") {
+      if (isSearching) {
+        return {
+          data: searchListData,
+          isLoading: isLoadingSearchList,
+          isError: isErrorSearchList,
+          refetch: refetchSearchList,
+        };
+      }
       return {
-        data: searchData,
-        isLoading: isLoadingSearch,
-        isError: isErrorSearch,
-        refetch: refetchSearch,
+        data: allListData,
+        isLoading: isLoadingAllList,
+        isError: isErrorAllList,
+        refetch: refetchAllList,
+      };
+    } else {
+      // selectedType === "flashcard"
+      if (isSearching) {
+        return {
+          data: searchCardData,
+          isLoading: isLoadingSearchCard,
+          isError: isErrorSearchCard,
+          refetch: refetchSearchCard,
+        };
+      }
+      return {
+        data: allCardData,
+        isLoading: isLoadingAllCard,
+        isError: isErrorAllCard,
+        refetch: refetchAllCard,
       };
     }
-    return {
-      data: allData,
-      isLoading: isLoadingAll,
-      isError: isErrorAll,
-      refetch: refetchAll,
-    };
-  }, [isSearching, searchData, isLoadingSearch, isErrorSearch, refetchSearch, allData, isLoadingAll, isErrorAll, refetchAll]);
+  }, [
+    selectedType,
+    isSearching,
+    searchListData, isLoadingSearchList, isErrorSearchList, refetchSearchList,
+    allListData, isLoadingAllList, isErrorAllList, refetchAllList,
+    searchCardData, isLoadingSearchCard, isErrorSearchCard, refetchSearchCard,
+    allCardData, isLoadingAllCard, isErrorAllCard, refetchAllCard,
+  ]);
 
   // Scroll to top khi đổi trang hoặc khi bắt đầu search
   useEffect(() => {
@@ -158,75 +212,111 @@ function FlashcardsPage() {
     setCurrentPage(1);
   }, [debouncedSearchQuery, selectedCategory, selectedLevel]);
 
+  // Reset category khi chuyển đổi giữa FlashList và FlashCard
+  useEffect(() => {
+    if (selectedType === "flashcard" && selectedCategory === "others") {
+      setSelectedCategory("all"); // FlashCard không có "others"
+    }
+  }, [selectedType, selectedCategory]);
+
   // Thêm state để track việc đang typing
   const isTyping = searchQuery !== debouncedSearchQuery;
 
-  // Transform API data sang format UI
-  const allFlashLists = useMemo(() => {
+  // Transform API data sang format UI - hỗ trợ cả FlashList và FlashCard
+  const allItems = useMemo(() => {
     if (!data?.data) return [];
 
     // Nếu đang search, data.results là mảng kết quả
     if (isSearching && 'results' in data.data) {
-      const results = data.data.results as IFlashList[];
-      return results.map((list) => {
+      const results = data.data.results as (IFlashList | IFlashCard)[];
+      return results.map((item) => {
         const isOwner = selectedCategory === "mine";
-        return {
-          ...list,
-          category: isOwner ? ("mine" as const) : ("others" as const),
-          type: "flashlist" as const,
-          cardCount: Array.isArray(list.flashcards) ? list.flashcards.length : 0,
-          author: typeof list.user === "object" ? list.user.fullname : "Unknown",
-        };
+
+        if (selectedType === "flashlist") {
+          const list = item as IFlashList;
+          return {
+            ...list,
+            category: isOwner ? ("mine" as const) : ("others" as const),
+            type: "flashlist" as const,
+            cardCount: Array.isArray(list.flashcards) ? list.flashcards.length : 0,
+            author: typeof list.user === "object" ? list.user.fullname : "Unknown",
+          };
+        } else {
+          // FlashCard
+          const card = item as IFlashCard;
+          return {
+            ...card,
+            category: "mine" as const, // FlashCard chỉ có của user
+            type: "flashcard" as const,
+            cardCount: Array.isArray(card.cards) ? card.cards.length : 0,
+            author: "Bạn",
+          };
+        }
       });
     }
 
-    // Nếu không search, data có publicLists và myLists
-    if ('publicLists' in data.data && 'myLists' in data.data) {
-      const { publicLists, myLists } = data.data;
+    // Nếu không search
+    if (selectedType === "flashlist") {
+      // FlashList data có publicLists và myLists
+      if ('publicLists' in data.data && 'myLists' in data.data) {
+        const { publicLists, myLists } = data.data;
 
-      // Map public lists
-      const transformedPublicLists = publicLists.map((list) => ({
-        ...list,
-        category: "others" as const,
-        type: "flashlist" as const,
-        cardCount: Array.isArray(list.flashcards) ? list.flashcards.length : 0,
-        author: typeof list.user === "object" ? list.user.fullname : "Unknown",
-      }));
+        // Map public lists
+        const transformedPublicLists = publicLists.map((list) => ({
+          ...list,
+          category: "others" as const,
+          type: "flashlist" as const,
+          cardCount: Array.isArray(list.flashcards) ? list.flashcards.length : 0,
+          author: typeof list.user === "object" ? list.user.fullname : "Unknown",
+        }));
 
-      // Map my lists
-      const transformedMyLists = myLists.map((list) => ({
-        ...list,
-        category: "mine" as const,
-        type: "flashlist" as const,
-        cardCount: Array.isArray(list.flashcards) ? list.flashcards.length : 0,
-        author: "Bạn",
-      }));
+        // Map my lists
+        const transformedMyLists = myLists.map((list) => ({
+          ...list,
+          category: "mine" as const,
+          type: "flashlist" as const,
+          cardCount: Array.isArray(list.flashcards) ? list.flashcards.length : 0,
+          author: "Bạn",
+        }));
 
-      return [...transformedMyLists, ...transformedPublicLists];
+        return [...transformedMyLists, ...transformedPublicLists];
+      }
+    } else {
+      // FlashCard data có flashCards
+      if ('flashCards' in data.data) {
+        const { flashCards } = data.data;
+        return flashCards.map((card) => ({
+          ...card,
+          category: "mine" as const, // FlashCard chỉ có của user
+          type: "flashcard" as const,
+          cardCount: Array.isArray(card.cards) ? card.cards.length : 0,
+          author: "Bạn",
+        }));
+      }
     }
 
     return [];
-  }, [data, isSearching, selectedCategory]);
+  }, [data, isSearching, selectedCategory, selectedType]);
 
   // Nếu đang search, không cần filter client-side vì BE đã filter
   // Nếu không search, vẫn filter theo category và level
   const filteredSets = useMemo(() => {
     if (isSearching) {
       // BE đã filter, chỉ cần filter theo type
-      return allFlashLists.filter((set) => set.type === selectedType);
+      return allItems.filter((item) => item.type === selectedType);
     }
 
     // Client-side filter khi không search
-    return allFlashLists.filter((set) => {
-      const matchesCategory =
-        selectedCategory === "all" || set.category === selectedCategory;
-      const matchesLevel =
-        selectedLevel === "all" || set.level === selectedLevel;
-      const matchesType = set.type === selectedType;
+    return allItems.filter((item) => {
+    const matchesCategory =
+        selectedCategory === "all" || item.category === selectedCategory;
+    const matchesLevel =
+        selectedLevel === "all" || item.level === selectedLevel;
+      const matchesType = item.type === selectedType;
 
       return matchesCategory && matchesLevel && matchesType;
     });
-  }, [allFlashLists, isSearching, selectedCategory, selectedLevel, selectedType]);
+  }, [allItems, isSearching, selectedCategory, selectedLevel, selectedType]);
 
   // Pagination calculations
   const totalPages = useMemo(() => {
@@ -406,7 +496,9 @@ function FlashcardsPage() {
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
                 <SelectItem value="mine">Của tôi</SelectItem>
+                {selectedType === "flashlist" && (
                 <SelectItem value="others">Cộng đồng</SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -432,9 +524,9 @@ function FlashcardsPage() {
       <div className="p-6">
         <div className="max-w-6xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h2 className="text-xl font-semibold">
-              {selectedType === "flashcard" ? "Flashcards" : "Flash Sets"}
-            </h2>
+          <h2 className="text-xl font-semibold">
+            {selectedType === "flashcard" ? "Flashcards" : "Flash Sets"}
+          </h2>
             {isSearching && !isTyping && (
               <p className="text-xs text-muted-foreground mt-1">
                 Kết quả tìm kiếm cho &quot;{debouncedSearchQuery}&quot;
@@ -471,22 +563,22 @@ function FlashcardsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
               {filteredSets.map((set) => (
                 <Card
                   key={set._id}
-                  className="group hover:shadow-lg transition-all duration-200 cursor-pointer"
+                  className="group hover:shadow-xl hover:shadow-primary/10 dark:hover:shadow-primary/20 hover:-translate-y-1 transition-all duration-300 ease-out cursor-pointer border-border/50 hover:border-primary/30"
                 >
-                  <CardHeader className="pb-2 p-3 sm:p-4 md:p-6 md:pb-3">
-                    <div className="flex items-start justify-between mb-1 sm:mb-2">
+                  <CardHeader className="pb-2 p-2 sm:p-3 md:p-4 md:pb-2">
+                    <div className="flex items-start justify-between mb-1">
                       <Badge
                         variant="outline"
-                        className={`text-[10px] sm:text-xs ${getCategoryStyle(
+                        className={`text-[9px] sm:text-[10px] md:text-xs ${getCategoryStyle(
                           set.category
-                        )} flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5`}
+                        )} flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 group-hover:scale-105 transition-transform duration-300`}
                       >
                         <span className="hidden sm:inline">
-                          {getCategoryIcon(set.category)}
+                        {getCategoryIcon(set.category)}
                         </span>
                         {
                           categoryConfig[
@@ -494,40 +586,40 @@ function FlashcardsPage() {
                           ]?.label
                         }
                       </Badge>
-                      <Badge variant="secondary" className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
+                      <Badge variant="secondary" className="text-[9px] sm:text-[10px] md:text-xs px-1 sm:px-1.5 py-0.5 group-hover:scale-105 transition-transform duration-300">
                         {set.level}
                       </Badge>
                     </div>
-                    <div className="aspect-video bg-muted rounded-lg mb-2 sm:mb-3 overflow-hidden">
+                    <div className="aspect-video bg-muted rounded-lg mb-2 overflow-hidden">
                       <img
                         src={set.thumbnail || "/placeholder.svg"}
-                        alt={set.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        alt={set.type === "flashlist" ? set.title : set.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
                       />
                     </div>
-                    <CardTitle className="text-sm sm:text-base md:text-lg line-clamp-2">
-                      {set.title}
+                    <CardTitle className="text-xs sm:text-sm md:text-base line-clamp-2 group-hover:text-primary transition-colors duration-300">
+                      {set.type === "flashlist" ? set.title : set.name}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0 p-3 sm:p-4 md:p-6 md:pt-0">
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-4 line-clamp-2">
+                  <CardContent className="pt-0 p-2 sm:p-3 md:p-4 md:pt-0">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 line-clamp-2">
                       {set.description || "Chưa có mô tả"}
                     </p>
 
-                    <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-4">
-                      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-wrap">
+                    <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground mb-2">
+                      <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                         <span className="flex items-center gap-0.5 sm:gap-1">
-                          <BookOpen className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <BookOpen className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                           <span className="hidden sm:inline">{set.cardCount} cards</span>
                           <span className="sm:hidden">{set.cardCount}</span>
                         </span>
                         <span className="flex items-center gap-0.5 sm:gap-1">
-                          <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <Clock className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                           {estimateStudyTime(set.cardCount)}
                         </span>
-                        {set.rating > 0 && (
+                        {set.type === "flashlist" && set.rating > 0 && (
                           <span className="flex items-center gap-0.5 sm:gap-1">
-                            <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 fill-yellow-400 text-yellow-400" />
+                            <Star className="h-2 w-2 sm:h-2.5 sm:w-2.5 fill-yellow-400 text-yellow-400" />
                             {set.rating.toFixed(1)}
                           </span>
                         )}
@@ -535,16 +627,16 @@ function FlashcardsPage() {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <div className="text-[10px] sm:text-xs text-muted-foreground">
-                        <p className="truncate max-w-[80px] sm:max-w-none">bởi {set.author}</p>
-                        <p className="hidden sm:block">{formatDate(set.updatedAt)}</p>
+                      <div className="text-[9px] sm:text-[10px] text-muted-foreground">
+                        <p className="truncate max-w-[70px] sm:max-w-none">bởi {set.author}</p>
+                        <p className="hidden md:block">{formatDate(set.updatedAt)}</p>
                       </div>
                       <Link href={`/flashcards/practice/${set._id}`}>
                         <Button
                           size="sm"
-                          className="bg-primary hover:bg-primary/90 h-7 sm:h-8 md:h-9 text-xs px-2 sm:px-3"
+                          className="bg-primary hover:bg-primary/90 h-6 sm:h-7 md:h-8 text-[10px] sm:text-xs px-1.5 sm:px-2 group-hover:scale-105 group-hover:shadow-md transition-all duration-300 ease-out"
                         >
-                          <Play className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                          <Play className="h-2 w-2 sm:h-2.5 sm:w-2.5 mr-0.5" />
                           <span className="hidden sm:inline">Học</span>
                           <span className="sm:hidden">Học</span>
                         </Button>
@@ -560,10 +652,10 @@ function FlashcardsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="pb-10">
-          <div className="max-w-6xl mx-auto">
-            <Pagination>
-              <PaginationContent>
+      <div className="pb-10">
+        <div className="max-w-6xl mx-auto">
+          <Pagination>
+            <PaginationContent>
                 {/* Previous Button */}
                 <PaginationItem>
                   <PaginationPrevious
@@ -575,7 +667,7 @@ function FlashcardsPage() {
                     }`}
                   >
                     <span>Trước</span>
-                  </PaginationPrevious>
+              </PaginationPrevious>
                 </PaginationItem>
 
                 {/* Page Numbers */}
@@ -592,13 +684,13 @@ function FlashcardsPage() {
                         className="cursor-pointer"
                       >
                         {page}
-                      </PaginationLink>
-                    </PaginationItem>
+                </PaginationLink>
+              </PaginationItem>
                   )
                 )}
 
                 {/* Next Button */}
-                <PaginationItem>
+              <PaginationItem>
                   <PaginationNext
                     onClick={() => handlePageChange(currentPage + 1)}
                     className={`cursor-pointer ${
@@ -609,9 +701,9 @@ function FlashcardsPage() {
                   >
                     <span>Sau</span>
                   </PaginationNext>
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
 
             {/* Pagination Info */}
             <div className="text-center mt-4 text-sm text-muted-foreground">

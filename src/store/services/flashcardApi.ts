@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import {
+  // FlashList
   GetAllFlashListsResponse,
   GetFlashListByIdResponse,
   CreateFlashListRequest,
@@ -9,6 +10,10 @@ import {
   RateFlashListRequest,
   SearchFlashListParams,
   SearchFlashListResponse,
+  // FlashCard
+  GetAllFlashCardsResponse,
+  SearchFlashCardParams,
+  SearchFlashCardResponse,
 } from "@/types/flashcard";
 
 const baseQuery = fetchBaseQuery({
@@ -30,7 +35,7 @@ export const flashcardApi = createApi({
       GetAllFlashListsResponse,
       { page?: number; limit?: number }
     >({
-      query: ({ page = 1, limit = 10 }) => ({
+      query: ({ page = 1, limit = 20 }) => ({
         url: `/flashcards/get-all-flashlists?page=${page}&limit=${limit}`,
         method: "GET",
       }),
@@ -134,7 +139,7 @@ export const flashcardApi = createApi({
 
     // Tìm kiếm FlashList
     searchFlashList: builder.query<SearchFlashListResponse, SearchFlashListParams>({
-      query: ({ q, level = "all", select = "all", page = 1, limit = 12 }) => {
+      query: ({ q, level = "all", select = "all", page = 1, limit = 20 }) => {
         const params = new URLSearchParams({
           q,
           page: String(page),
@@ -156,6 +161,43 @@ export const flashcardApi = createApi({
       },
       providesTags: ["FlashList"],
     }),
+
+    // Lấy danh sách tất cả FlashCard của user
+    getAllFlashCards: builder.query<
+      GetAllFlashCardsResponse,
+      { page?: number; limit?: number }
+    >({
+      query: ({ page = 1, limit = 20 }) => ({
+        url: `/flashcards/get-all-flashcards?page=${page}&limit=${limit}`,
+        method: "GET",
+      }),
+      providesTags: ["FlashCard"],
+    }),
+
+    // Tìm kiếm FlashCard
+    searchFlashCard: builder.query<SearchFlashCardResponse, SearchFlashCardParams>({
+      query: ({ q, level = "all", select = "all", page = 1, limit = 20 }) => {
+        const params = new URLSearchParams({
+          q,
+          page: String(page),
+          limit: String(limit),
+        });
+
+        if (level && level !== "all") {
+          params.append("level", level);
+        }
+
+        if (select && select !== "all") {
+          params.append("select", select);
+        }
+
+        return {
+          url: `/flashcards/search-flashcard?${params.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["FlashCard"],
+    }),
   }),
 });
 
@@ -170,4 +212,7 @@ export const {
   useGetStudyDataFromListQuery,
   useSearchFlashListQuery,
   useLazySearchFlashListQuery,
+  useGetAllFlashCardsQuery,
+  useSearchFlashCardQuery,
+  useLazySearchFlashCardQuery,
 } = flashcardApi;
