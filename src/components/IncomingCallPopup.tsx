@@ -24,23 +24,21 @@ export const IncomingCallPopup: React.FC<IncomingCallPopupProps> = ({
 
     if (state.ringing) {
       setVisible(true);
-      // TẮT RINGTONE TẠM THỜI ĐỂ TEST SOCKET
-      console.log(
-        "[IncomingCallPopup] Ringtone disabled for testing - socket events should work now"
-      );
-      // try {
-      //   if (!audioRef.current) {
-      //     audioRef.current = new Audio(ringtoneUrl);
-      //     audioRef.current.loop = true;
-      //   }
-      //   audioRef.current.play().catch(() => {});
-      // } catch {}
+      // BẬT LẠI RINGTONE
+      console.log("[IncomingCallPopup] Playing ringtone...");
+      try {
+        if (!audioRef.current) {
+          audioRef.current = new Audio(ringtoneUrl);
+          audioRef.current.loop = true;
+        }
+        audioRef.current.play().catch(() => {});
+      } catch {}
     } else {
       setVisible(false);
-      // try {
-      //   audioRef.current?.pause();
-      //   if (audioRef.current) audioRef.current.currentTime = 0;
-      // } catch {}
+      try {
+        audioRef.current?.pause();
+        if (audioRef.current) audioRef.current.currentTime = 0;
+      } catch {}
     }
   }, [state.ringing, ringtoneUrl]);
 
