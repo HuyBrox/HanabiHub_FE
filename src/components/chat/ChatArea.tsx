@@ -13,6 +13,7 @@ import {
   useSendMessageMutation,
   useMarkAsReadMutation,
 } from "@/store/services/messageApi";
+import { useCall } from "@/hooks/useCall";
 
 interface ChatAreaProps {
   conversation: ConversationUI;
@@ -87,6 +88,31 @@ const formatTimeSeparator = (date: Date): string => {
 
 export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
   const [newMessage, setNewMessage] = useState("");
+  const { initiateCall } = useCall();
+
+  // Call functions
+  const makeVoiceCall = () => {
+    const partnerId = conversation.partnerId;
+    console.log("[ChatArea] makeVoiceCall:", { partnerId });
+    if (!partnerId) {
+      console.error("[ChatArea] No partnerId found");
+      return;
+    }
+    console.log("[ChatArea] Initiating voice call to partnerId:", partnerId);
+    initiateCall(partnerId, "audio");
+  };
+
+  const makeVideoCall = () => {
+    const partnerId = conversation.partnerId;
+    console.log("[ChatArea] makeVideoCall:", { partnerId });
+    if (!partnerId) {
+      console.error("[ChatArea] No partnerId found");
+      return;
+    }
+    console.log("[ChatArea] Initiating video call to partnerId:", partnerId);
+    initiateCall(partnerId, "video");
+  };
+
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -545,10 +571,20 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={makeVoiceCall}
+              title="Gọi thoại"
+            >
               <Phone className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={makeVideoCall}
+              title="Gọi video"
+            >
               <Video className="h-5 w-5" />
             </Button>
             <Button variant="ghost" size="icon">
