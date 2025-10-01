@@ -1,46 +1,55 @@
 "use client";
 
 import { useSelector, useDispatch } from "react-redux";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { RootState } from "../store";
-import { useLoginMutation, useLogoutMutation } from "../store/services/authApi";
+import {
+  useLoginMutation,
+  useLogoutMutation,
+  useRegisterMutation,
+  useVerifyOtpMutation,
+  useSendOtpRegisterMutation,
+} from "../store/services/authApi";
 import {
   loginStart,
   loginSuccess,
   loginFailure,
-  logout,
+  logout as logoutAction,
   clearError,
 } from "../store/slices/authSlice";
-import { LoginRequest } from "../types/auth";
+import { LoginRequest,RegisterRequest  } from "../types/auth";
 
 export const useAuth = () => {
   const dispatch = useDispatch();
-  const authState = useSelector((state: RootState) => state.auth);
-
-  // Destructure in useMemo để tránh unnecessary re-renders
-  const { user, isAuthenticated, isLoading, error } = useMemo(
-    () => authState,
-    [authState]
+  const { user, isAuthenticated, isLoading, error } = useSelector(
+    (state: RootState) => state.auth
   );
 
+  // RTK Query mutations
   const [loginMutation] = useLoginMutation();
   const [logoutMutation] = useLogoutMutation();
+  const [registerMutation] = useRegisterMutation();
+  const [verifyOtpMutation] = useVerifyOtpMutation();
+  const [sendOtpRegisterMutation] = useSendOtpRegisterMutation();
 
+  // ================== LOGIN ==================
   const login = useCallback(
     async (credentials: LoginRequest) => {
       try {
         dispatch(loginStart());
         const result = await loginMutation(credentials).unwrap();
 
-        if (result.success && result.data) {
+        if (result?.success && result?.data?.user) {
           dispatch(loginSuccess(result.data.user));
           return { success: true, user: result.data.user };
-        } else {
-          dispatch(loginFailure(result.message));
-          return { success: false, error: result.message };
         }
-      } catch (error: any) {
-        const errorMessage = error?.data?.message || "Đăng nhập thất bại";
+
+        const message = result?.message || "Đăng nhập thất bại";
+        dispatch(loginFailure(message));
+        return { success: false, error: message };
+      } catch (err: unknown) {
+        const errorMessage =
+          (err as any)?.data?.message || "Đăng nhập thất bại";
         dispatch(loginFailure(errorMessage));
         return { success: false, error: errorMessage };
       }
@@ -48,17 +57,66 @@ export const useAuth = () => {
     [dispatch, loginMutation]
   );
 
-  const handleLogout = useCallback(async () => {
+  // ================== LOGOUT ==================
+  const logout = useCallback(async () => {
     try {
       await logoutMutation().unwrap();
-    } catch (error) {
-      console.error("Logout error:", error);
+    } catch (err) {
+      console.error("Logout error:", err);
     } finally {
-      // Luôn clear state dù API có lỗi hay không
-      dispatch(logout());
+      dispatch(logoutAction());
     }
   }, [dispatch, logoutMutation]);
 
+  // ================== SEND OTP (REGISTER) ==================
+  const sendOtp = useCallback(
+    async (email: string) => {
+      try {
+        const result = await sendOtpRegisterMutation({ email }).unwrap();
+        return { success: true, data: result };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: (err as any)?.data?.message || "Gửi OTP thất bại",
+        };
+      }
+    },
+    [sendOtpRegisterMutation]
+  );
+
+// ================== REGISTER ==================
+const register = useCallback(
+  async (data: RegisterRequest) => {
+    try {
+      const result = await registerMutation(data).unwrap();
+      return { success: true, data: result };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        error: (err as any)?.data?.message || "Đăng ký thất bại",
+      };
+    }
+  },
+  [registerMutation]
+);
+
+  // ================== VERIFY OTP ==================
+  const verifyOtp = useCallback(
+    async (data: RegisterRequest & { otp: string }) => {
+      try {
+        const result = await verifyOtpMutation(data).unwrap();
+        return { success: true, data: result };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: (err as any)?.data?.message || "Xác thực OTP thất bại",
+        };
+      }
+    },
+    [verifyOtpMutation]
+  );
+
+  // ================== CLEAR ERROR ==================
   const clearAuthError = useCallback(() => {
     dispatch(clearError());
   }, [dispatch]);
@@ -69,7 +127,10 @@ export const useAuth = () => {
     isLoading,
     error,
     login,
-    logout: handleLogout,
-    clearError: clearAuthError,
+    logout,
+    sendOtp,
+    register,
+    verifyOtp,
+    clearError: clearAuthError, // rename để dễ phân biệt
   };
 };
