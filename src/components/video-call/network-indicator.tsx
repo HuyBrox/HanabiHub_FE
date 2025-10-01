@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useLanguage } from "@/lib/language-context";
 import { Wifi, WifiOff } from "lucide-react";
 
 interface NetworkIndicatorProps {
@@ -8,6 +9,7 @@ interface NetworkIndicatorProps {
 }
 
 export function NetworkIndicator({ className = "" }: NetworkIndicatorProps) {
+  const { t } = useLanguage();
   const [signalStrength, setSignalStrength] = useState(5); // 0-5 bars
   const [isConnected, setIsConnected] = useState(true);
 
@@ -34,11 +36,11 @@ export function NetworkIndicator({ className = "" }: NetworkIndicatorProps) {
   };
 
   const getSignalText = () => {
-    if (!isConnected) return "No Connection";
-    if (signalStrength >= 4) return "Excellent";
-    if (signalStrength >= 3) return "Good";
-    if (signalStrength >= 2) return "Fair";
-    return "Poor";
+    if (!isConnected) return t("network.noConnection");
+    if (signalStrength >= 4) return t("network.excellent");
+    if (signalStrength >= 3) return t("network.good");
+    if (signalStrength >= 2) return t("network.fair");
+    return t("network.poor");
   };
 
   return (
@@ -75,7 +77,9 @@ export function NetworkIndicator({ className = "" }: NetworkIndicatorProps) {
 
       {/* Screen Reader Text */}
       <span className="sr-only">
-        Network connection: {getSignalText()}, {signalStrength} out of 5 bars
+        {t("network.sr")
+          .replace("{status}", getSignalText())
+          .replace("{bars}", String(signalStrength))}
       </span>
     </div>
   );

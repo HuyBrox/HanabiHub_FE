@@ -1,21 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import {
-  ChevronLeft,
-  ChevronRight,
-  RotateCcw,
-  Check,
-  X,
-  ArrowLeft,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import { ChevronLeft, ChevronRight, RotateCcw, Check, X } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/language-context"
 
 const flashcards = [
   {
@@ -90,14 +82,12 @@ const flashcards = [
   },
 ];
 
-export default function FlashcardPracticePage() {
-  const params = useParams();
-  const setId = params.id;
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [studiedCards, setStudiedCards] = useState<Set<number>>(new Set());
-  const [correctCards, setCorrectCards] = useState<Set<number>>(new Set());
+export default function FlashcardsPage() {
+  const { t } = useLanguage()
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isFlipped, setIsFlipped] = useState(false)
+  const [studiedCards, setStudiedCards] = useState<Set<number>>(new Set())
+  const [correctCards, setCorrectCards] = useState<Set<number>>(new Set())
 
   const currentCard = flashcards[currentIndex];
   const progress = (studiedCards.size / flashcards.length) * 100;
@@ -146,19 +136,9 @@ export default function FlashcardPracticePage() {
       {/* Header */}
       <div className="p-6 border-b border-border">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/flashcards">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Sets
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold">Flashcards Practice</h1>
-              <p className="text-muted-foreground">
-                Master Japanese characters and vocabulary
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold">{t("flashcards.practiceTitle")}</h1>
+            <p className="text-muted-foreground">{t("flashcards.masterSubtitle")}</p>
           </div>
           <div className="flex items-center gap-4">
             <Badge variant="outline">{currentCard.category}</Badge>
@@ -186,23 +166,15 @@ export default function FlashcardPracticePage() {
                 {!isFlipped ? (
                   // Front of card
                   <div className="text-center">
-                    <div className="text-8xl font-bold text-primary mb-4">
-                      {currentCard.front}
-                    </div>
-                    <p className="text-muted-foreground">Click to reveal</p>
+                    <div className="text-8xl font-bold text-primary mb-4">{currentCard.front}</div>
+                    <p className="text-muted-foreground">{t("flashcards.clickToReveal")}</p>
                   </div>
                 ) : (
                   // Back of card
                   <div className="text-center space-y-4">
-                    <div className="text-4xl font-bold text-foreground">
-                      {currentCard.back}
-                    </div>
-                    <div className="text-2xl text-muted-foreground">
-                      {currentCard.meaning}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Did you get it right?
-                    </p>
+                    <div className="text-4xl font-bold text-foreground">{currentCard.back}</div>
+                    <div className="text-2xl text-muted-foreground">{currentCard.meaning}</div>
+                    <p className="text-sm text-muted-foreground">{t("flashcards.didYouGetItRight")}</p>
                   </div>
                 )}
                 <div className="absolute top-4 right-4">
@@ -222,7 +194,7 @@ export default function FlashcardPracticePage() {
               className="flex items-center gap-2 bg-transparent"
             >
               <ChevronLeft className="h-4 w-4" />
-              Previous
+              {t("flashcards.previous")}
             </Button>
 
             {isFlipped && (
@@ -234,7 +206,7 @@ export default function FlashcardPracticePage() {
                   className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
                 >
                   <X className="h-4 w-4" />
-                  Incorrect
+                  {t("flashcards.incorrect")}
                 </Button>
                 <Button
                   size="lg"
@@ -242,7 +214,7 @@ export default function FlashcardPracticePage() {
                   className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                 >
                   <Check className="h-4 w-4" />
-                  Correct
+                  {t("flashcards.correct")}
                 </Button>
               </div>
             )}
@@ -254,7 +226,7 @@ export default function FlashcardPracticePage() {
               disabled={currentIndex === flashcards.length - 1}
               className="flex items-center gap-2 bg-transparent"
             >
-              Next
+              {t("flashcards.next")}
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -262,12 +234,7 @@ export default function FlashcardPracticePage() {
           {/* Keyboard Shortcuts */}
           <div className="text-center text-sm text-muted-foreground mb-8">
             <p>
-              Use{" "}
-              <kbd className="px-2 py-1 bg-muted rounded text-xs">Space</kbd> to
-              flip •
-              <kbd className="px-2 py-1 bg-muted rounded text-xs mx-1">←</kbd>{" "}
-              Previous •
-              <kbd className="px-2 py-1 bg-muted rounded text-xs">→</kbd> Next
+              {t("flashcards.keyboardHelp")}
             </p>
           </div>
         </div>
@@ -278,22 +245,19 @@ export default function FlashcardPracticePage() {
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-semibold">Learning Progress</h3>
+              <h3 className="font-semibold">{t("flashcards.learningProgress")}</h3>
               <p className="text-sm text-muted-foreground">
-                {studiedCards.size} of {flashcards.length} cards studied •{" "}
-                {correctCards.size} correct
+                {studiedCards.size} of {flashcards.length} {t("flashcards.cardsStudied").toLowerCase()} • {correctCards.size} {t("flashcards.correctAnswers").toLowerCase()}
               </p>
             </div>
             <Button variant="outline" onClick={resetProgress}>
-              Reset Progress
+              {t("flashcards.reset")}
             </Button>
           </div>
           <Progress value={progress} className="h-3" />
           <div className="flex justify-between text-sm text-muted-foreground mt-2">
             <span>0%</span>
-            <span className="font-medium text-primary">
-              {Math.round(progress)}% Complete
-            </span>
+            <span className="font-medium text-primary">{Math.round(progress)}{t("flashcards.completePercent")}</span>
             <span>100%</span>
           </div>
         </div>
@@ -305,18 +269,14 @@ export default function FlashcardPracticePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {studiedCards.size}
-                </div>
-                <p className="text-sm text-muted-foreground">Cards Studied</p>
+                <div className="text-2xl font-bold text-primary">{studiedCards.size}</div>
+                <p className="text-sm text-muted-foreground">{t("flashcards.cardsStudied")}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {correctCards.size}
-                </div>
-                <p className="text-sm text-muted-foreground">Correct Answers</p>
+                <div className="text-2xl font-bold text-green-600">{correctCards.size}</div>
+                <p className="text-sm text-muted-foreground">{t("flashcards.correctAnswers")}</p>
               </CardContent>
             </Card>
             <Card>
@@ -327,7 +287,7 @@ export default function FlashcardPracticePage() {
                     : 0}
                   %
                 </div>
-                <p className="text-sm text-muted-foreground">Accuracy Rate</p>
+                <p className="text-sm text-muted-foreground">{t("flashcards.accuracyRate")}</p>
               </CardContent>
             </Card>
           </div>

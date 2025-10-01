@@ -33,6 +33,7 @@ export function AuthForm({
     username: "",
     email: "",
     password: "",
+    fullname: "",
     confirmPassword: "",
     fullname: "",
   });
@@ -169,6 +170,37 @@ export function AuthForm({
           </Alert>
         )}
 
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name field for register mode */}
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              mode === "register" ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="fullname">Full Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  className={cn(
+                    "pl-10",
+                    fieldErrors.name &&
+                      "border-red-500 focus:ring-red-500 focus:border-red-500"
+                  )}
+                  value={formData.name}
+                  onChange={handleNameChange}
+                  disabled={isLoading}
+                />
+              </div>
+              {fieldErrors.name && (
+                <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>
+              )}
+            </div>
+          )}
         {step === "form" && (
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
@@ -205,6 +237,10 @@ export function AuthForm({
               </>
             )}
 
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -221,6 +257,10 @@ export function AuthForm({
               )}
             </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -231,6 +271,27 @@ export function AuthForm({
                   setFormData((p) => ({ ...p, password: e.target.value }))
                 }
                 placeholder="Enter your password"
+                className={cn(
+                  "pl-10 pr-10",
+                  fieldErrors.password &&
+                    "border-red-500 focus:ring-red-500 focus:border-red-500"
+                )}
+                value={formData.password}
+                onChange={handlePasswordChange}
+                disabled={isLoading}
+              />
+              <Button type="button" variant="ghost" size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+              </Button>
+            </div>
+            {fieldErrors.password && (
+              <p className="text-red-500 text-xs mt-1">
+                {fieldErrors.password}
+              </p>
+            )}
+          </div>
               />
               {errors.password && (
                 <p className="text-red-500 text-xs">{errors.password}</p>
@@ -252,6 +313,40 @@ export function AuthForm({
                   }
                   placeholder="Confirm your password"
                 />
+              </div>
+              {fieldErrors.confirmPassword && (
+                <p className="text-red-500 text-xs mt-1">
+                  {fieldErrors.confirmPassword}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Chỉ hiện OTP sau khi đã gửi OTP */}
+          {mode === "register" && otpSent && (
+            <div className="space-y-2">
+              <Label htmlFor="otp">OTP</Label>
+              <div className="relative">
+                <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input id="otp" placeholder="Nhập OTP đã gửi về email" className="pl-10"
+                  value={formData.otp} onChange={(e) => handleChange("otp", e.target.value)} />
+              </div>
+            </div>
+          )}
+
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+            disabled={isSendingOtp || isRegistering}>
+            {(isSendingOtp || isRegistering)
+              ? <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  {mode === "login" ? "Signing in..." : otpSent ? "Registering..." : "Sending OTP..."}
+                </div>
+              : <div className="flex items-center gap-2">
+                  {mode === "login" ? "Sign In" : otpSent ? "Create Account" : "Send OTP"}
+                  <ArrowRight className="h-4 w-4" />
+                </div>}
+          </Button>
+        </form>
                 {errors.confirmPassword && (
                   <p className="text-red-500 text-xs">
                     {errors.confirmPassword}
@@ -299,6 +394,21 @@ export function AuthForm({
           </form>
         )}
 
+        <div className="text-center pt-4 border-t">
+          <p className="text-sm text-muted-foreground">
+            {mode === "login"
+              ? "Don't have an account?"
+              : "Already have an account?"}
+          </p>
+          <Button type="button" variant="link"
+            className="p-0 h-auto font-semibold text-primary hover:text-primary/80"
+            onClick={() =>
+              handleModeSwitch(mode === "login" ? "register" : "login")
+            }
+          >
+            {mode === "login" ? "Create one now" : "Sign in instead"}
+          </Button>
+        </div>
         {step === "form" && (
           <div className="text-center pt-4 border-t">
             <p className="text-sm text-muted-foreground">

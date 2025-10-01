@@ -1,3 +1,4 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import { HeroCTA } from "@/components/common";
 import {
@@ -13,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, MessageCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import React from "react";
+import { useLanguage } from "@/lib/language-context";
 
 // ImageWithSkeleton: Hiển thị skeleton + LQIP cho ảnh
 type ImageWithSkeletonProps = {
@@ -22,8 +24,11 @@ type ImageWithSkeletonProps = {
   className?: string;
 };
 import Image from "next/image";
+ 
+
 
 export default function HomePage() {
+  const { t } = useLanguage();
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -38,12 +43,10 @@ export default function HomePage() {
       >
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-            Learn Japanese Easily
+            {t("home.hero.title")}
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Master Japanese with interactive courses, AI-powered practice
-            sessions, and a supportive community. Start your journey from
-            beginner to fluent today.
+            {t("home.hero.subtitle")}
           </p>
           <HeroCTA />
         </div>
@@ -53,7 +56,7 @@ export default function HomePage() {
       <section className="px-6 py-16">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">
-            Popular Courses
+            {t("home.courses.title")}
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
             <Card className="hover:shadow-lg transition-shadow">
@@ -68,17 +71,16 @@ export default function HomePage() {
                   className="w-full h-48 object-cover rounded-lg mb-4"
                   priority
                 />
-                <CardTitle>Hiragana Mastery</CardTitle>
+                <CardTitle>{t("home.courses.hiragana.title")}</CardTitle>
                 <CardDescription>
-                  Learn all 46 hiragana characters with interactive exercises
-                  and memory techniques.
+                  {t("home.courses.hiragana.desc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <Badge variant="secondary">Beginner</Badge>
+                  <Badge variant="secondary">{t("home.courses.level.beginner")}</Badge>
                   <Button className="bg-primary hover:bg-primary/90">
-                    Enroll
+                    {t("home.courses.enroll")}
                   </Button>
                 </div>
               </CardContent>
@@ -96,17 +98,16 @@ export default function HomePage() {
                   className="w-full h-48 object-cover rounded-lg mb-4"
                   priority
                 />
-                <CardTitle>Katakana Essentials</CardTitle>
+                <CardTitle>{t("home.courses.katakana.title")}</CardTitle>
                 <CardDescription>
-                  Master katakana for foreign words and modern Japanese
-                  vocabulary.
+                  {t("home.courses.katakana.desc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <Badge variant="secondary">Beginner</Badge>
+                  <Badge variant="secondary">{t("home.courses.level.beginner")}</Badge>
                   <Button className="bg-primary hover:bg-primary/90">
-                    Enroll
+                    {t("home.courses.enroll")}
                   </Button>
                 </div>
               </CardContent>
@@ -124,17 +125,16 @@ export default function HomePage() {
                   className="w-full h-48 object-cover rounded-lg mb-4"
                   priority
                 />
-                <CardTitle>Essential Kanji</CardTitle>
+                <CardTitle>{t("home.courses.kanji.title")}</CardTitle>
                 <CardDescription>
-                  Learn the most important 300 kanji characters for daily
-                  Japanese communication.
+                  {t("home.courses.kanji.desc")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <Badge variant="outline">Intermediate</Badge>
+                  <Badge variant="outline">{t("home.courses.level.intermediate")}</Badge>
                   <Button className="bg-primary hover:bg-primary/90">
-                    Enroll
+                    {t("home.courses.enroll")}
                   </Button>
                 </div>
               </CardContent>
@@ -147,7 +147,7 @@ export default function HomePage() {
       <section className="bg-muted/30 px-6 py-16">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">
-            Community Highlights
+            {t("home.community.title")}
           </h2>
           <div className="space-y-6">
             <Card>
@@ -160,14 +160,10 @@ export default function HomePage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-semibold">SakuraKid</span>
-                      <Badge variant="outline" className="text-xs">
-                        N4 Level
-                      </Badge>
+                      <Badge variant="outline" className="text-xs">N4 {t("home.community.level")}</Badge>
                     </div>
                     <p className="text-muted-foreground mb-3">
-                      Just passed my first JLPT practice test! The kanji
-                      flashcards really helped. 頑張って！ Anyone else preparing
-                      for December?
+                      {t("home.community.post1")}
                     </p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <Button variant="ghost" size="sm" className="p-0 h-auto">
@@ -193,14 +189,10 @@ export default function HomePage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-semibold">TokyoMaster</span>
-                      <Badge variant="outline" className="text-xs">
-                        N2 Level
-                      </Badge>
+                      <Badge variant="outline" className="text-xs">N2 {t("home.community.level")}</Badge>
                     </div>
                     <p className="text-muted-foreground mb-3">
-                      Pro tip: When learning new vocabulary, try to use it in
-                      sentences immediately. Context makes everything stick
-                      better! 🎌
+                      {t("home.community.post2")} 🎌
                     </p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <Button variant="ghost" size="sm" className="p-0 h-auto">
@@ -227,14 +219,10 @@ export default function HomePage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-semibold">YukiLearner</span>
-                      <Badge variant="outline" className="text-xs">
-                        N5 Level
-                      </Badge>
+                      <Badge variant="outline" className="text-xs">N5 {t("home.community.level")}</Badge>
                     </div>
                     <p className="text-muted-foreground mb-3">
-                      Finally memorized all hiragana! The spaced repetition
-                      system here is amazing. Moving on to katakana next week.
-                      ありがとうございます！
+                      {t("home.community.post3")} ありがとうございます！
                     </p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <Button variant="ghost" size="sm" className="p-0 h-auto">
@@ -253,7 +241,7 @@ export default function HomePage() {
           <div className="text-center mt-8">
             <Link href="/community">
               <Button variant="outline" size="lg">
-                Join the Community
+                {t("home.community.viewAll")}
               </Button>
             </Link>
           </div>
@@ -263,12 +251,12 @@ export default function HomePage() {
       {/* Flashcards Demo Section */}
       <section className="px-6 py-16">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-8">Interactive Flashcards</h2>
+          <h2 className="text-3xl font-bold mb-8">{t("flashcards.title")}</h2>
           <Card className="relative mx-auto w-80 h-48 cursor-pointer group">
             <CardContent className="flex items-center justify-center h-full p-8 group-hover:hidden">
               <div className="text-center">
                 <div className="text-6xl font-bold text-primary mb-2">水</div>
-                <p className="text-sm text-muted-foreground">Click to flip</p>
+                <p className="text-sm text-muted-foreground">{t("home.flashcards.click")}</p>
               </div>
             </CardContent>
             <CardContent className="hidden group-hover:flex items-center justify-center h-full p-8 bg-primary/5">
@@ -286,7 +274,7 @@ export default function HomePage() {
           <div className="mt-8">
             <Link href="/flashcards">
               <Button className="bg-primary hover:bg-primary/90" size="lg">
-                Start Practicing
+                {t("flashcards.start")}
               </Button>
             </Link>
           </div>
@@ -310,27 +298,24 @@ export default function HomePage() {
                 href="/about"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                About
+                {t("footer.about")}
               </Link>
               <Link
                 href="/contact"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Contact
+                {t("footer.contact")}
               </Link>
               <Link
                 href="/privacy"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                Privacy
+                {t("footer.privacy")}
               </Link>
             </div>
           </div>
           <div className="text-center mt-8 pt-8 border-t border-border">
-            <p className="text-sm text-muted-foreground">
-              © 2024 JapanLearn. All rights reserved. Made with ❤️ for Japanese
-              learners.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("footer.copyright")}</p>
           </div>
         </div>
       </footer>

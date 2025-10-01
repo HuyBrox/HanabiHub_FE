@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Shimmer } from "@/components/ui/shimmer";
 import { User, Mic, MicOff, VideoOff } from "lucide-react";
 import Image from "next/image";
+import { useLanguage } from "@/lib/language-context";
 
 interface VideoFrameProps {
   type: "local" | "remote";
@@ -25,6 +26,7 @@ export function VideoFrame({
   userName = "User",
   level,
 }: VideoFrameProps) {
+  const { t } = useLanguage();
   const isLocal = type === "local";
 
   return (
@@ -53,7 +55,7 @@ export function VideoFrame({
           {isVideoOff ? (
             <div className="text-center">
               <VideoOff className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-400 text-sm">Camera is off</p>
+              <p className="text-gray-400 text-sm">{t("video.cameraOff")}</p>
             </div>
           ) : (
             <div className="text-center">
@@ -104,7 +106,7 @@ export function VideoFrame({
             variant="secondary"
             className="bg-black/50 text-white border-0 backdrop-blur-sm text-xs"
           >
-            You
+            {t("video.you")}
           </Badge>
         </div>
       )}
@@ -115,7 +117,7 @@ export function VideoFrame({
           <div className="text-center">
             <div className="w-3 h-3 bg-gray-400 rounded-full mx-auto mb-2 animate-pulse" />
             <p className="text-gray-400 text-sm">
-              {isLocal ? "Camera ready" : "Waiting for connection..."}
+              {isLocal ? t("video.cameraReady") : t("video.waitingConnection")}
             </p>
           </div>
         </div>

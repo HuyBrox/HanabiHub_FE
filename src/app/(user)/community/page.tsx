@@ -15,6 +15,7 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/language-context";
 
 const posts = [
   {
@@ -24,12 +25,11 @@ const posts = [
       avatar: "/anime-style-avatar-girl.png",
       level: "N4",
     },
-    content:
-      "Just passed my first JLPT practice test! The kanji flashcards really helped. 頑張って！ Anyone else preparing for December?",
+    content: "community.posts.1.content",
     image: null,
     likes: 24,
     comments: 8,
-    timeAgo: "2 hours ago",
+    timeAgo: "community.time.2h",
     liked: false,
   },
   {
@@ -39,12 +39,11 @@ const posts = [
       avatar: "/anime-style-avatar-boy.png",
       level: "N2",
     },
-    content:
-      "Pro tip: When learning new vocabulary, try to use it in sentences immediately. Context makes everything stick better! Here's my study setup:",
+    content: "community.posts.2.content",
     image: "/japanese-study-setup-desk.png",
     likes: 42,
     comments: 15,
-    timeAgo: "4 hours ago",
+    timeAgo: "community.time.4h",
     liked: true,
   },
   {
@@ -54,12 +53,11 @@ const posts = [
       avatar: "/anime-style-avatar-woman.png",
       level: "N5",
     },
-    content:
-      "Finally memorized all hiragana! The spaced repetition system here is amazing. Moving on to katakana next week. ありがとうございます！",
+    content: "community.posts.3.content",
     image: null,
     likes: 18,
     comments: 6,
-    timeAgo: "6 hours ago",
+    timeAgo: "community.time.6h",
     liked: false,
   },
   {
@@ -69,12 +67,11 @@ const posts = [
       avatar: "/anime-style-avatar-man.png",
       level: "N1",
     },
-    content:
-      "Today I learned that 雨 (rain) + 雲 (cloud) doesn't make a compound word, but 雨雲 (rain cloud) does exist! Japanese is fascinating. What's your favorite kanji discovery?",
+    content: "community.posts.4.content",
     image: null,
     likes: 31,
     comments: 12,
-    timeAgo: "8 hours ago",
+    timeAgo: "community.time.8h",
     liked: false,
   },
   {
@@ -84,12 +81,11 @@ const posts = [
       avatar: "/anime-style-avatar-girl-2.png",
       level: "N3",
     },
-    content:
-      "Started learning Kansai dialect and it's so different from standard Japanese! だんだん instead of ありがとう is my new favorite. Anyone else studying dialects?",
+    content: "community.posts.5.content",
     image: "/osaka-street-scene.png",
     likes: 27,
     comments: 9,
-    timeAgo: "12 hours ago",
+    timeAgo: "community.time.12h",
     liked: true,
   },
 ];
@@ -124,6 +120,7 @@ const friendSuggestions = [
 ];
 
 export default function CommunityPage() {
+  const { t } = useLanguage();
   const [postLikes, setPostLikes] = useState<
     Record<number, { liked: boolean; count: number }>
   >(
@@ -159,11 +156,11 @@ export default function CommunityPage() {
             <div className="flex gap-3">
               <Avatar>
                 <AvatarImage src="/anime-style-avatar-user.png" />
-                <AvatarFallback>You</AvatarFallback>
+                <AvatarFallback>{t("common.you")}</AvatarFallback>
               </Avatar>
               <div className="flex-1 ">
                 <Textarea
-                  placeholder="Share your Japanese learning journey..."
+                  placeholder={t("community.create.placeholder")}
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
                   className="min-h-[80px] resize-none border-0 p-3 focus-visible:ring-0 "
@@ -171,13 +168,13 @@ export default function CommunityPage() {
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                   <Button variant="ghost" size="sm">
                     <ImageIcon className="h-4 w-4 mr-2" />
-                    Photo
+                    {t("community.photo")}
                   </Button>
                   <Button
                     className="bg-primary hover:bg-primary/90"
                     disabled={!newPost.trim()}
                   >
-                    Post
+                    {t("community.post")}
                   </Button>
                 </div>
               </div>
@@ -201,15 +198,15 @@ export default function CommunityPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-semibold">{post.user.name}</span>
                       <Badge variant="outline" className="text-xs">
-                        {post.user.level} Level
+                        {post.user.level} {t("home.community.level")}
                       </Badge>
                       <span className="text-sm text-muted-foreground">•</span>
                       <span className="text-sm text-muted-foreground">
-                        {post.timeAgo}
+                        {t(post.timeAgo)}
                       </span>
                     </div>
                     <p className="text-foreground mb-3 leading-relaxed">
-                      {post.content}
+                      {t(post.content)}
                     </p>
                     {post.image && (
                       <div className="mb-3">
@@ -252,7 +249,7 @@ export default function CommunityPage() {
                         className="p-0 h-auto hover:text-primary"
                       >
                         <Share className="h-4 w-4 mr-1" />
-                        Share
+                        {t("community.share")}
                       </Button>
                     </div>
                   </div>
@@ -270,7 +267,7 @@ export default function CommunityPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Trending Topics
+              {t("community.trendingTopics")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -284,7 +281,7 @@ export default function CommunityPage() {
                     {topic.tag}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {topic.posts} posts
+                    {topic.posts} {t("community.posts")}
                   </p>
                 </div>
                 <span className="text-xs text-muted-foreground">
@@ -300,7 +297,7 @@ export default function CommunityPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <UserPlus className="h-5 w-5 text-primary" />
-              People to Follow
+              {t("community.peopleToFollow")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -317,12 +314,12 @@ export default function CommunityPage() {
                       {friend.level}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {friend.mutualFriends} mutual friends
+                      {friend.mutualFriends} {t("community.mutualFriends")}
                     </span>
                   </div>
                 </div>
                 <Button size="sm" className="bg-primary hover:bg-primary/90">
-                  Follow
+                  {t("community.follow")}
                 </Button>
               </div>
             ))}
@@ -332,46 +329,46 @@ export default function CommunityPage() {
         {/* Study Groups */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Study Groups</CardTitle>
+            <CardTitle className="text-lg">{t("community.studyGroups")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="p-3 border border-border rounded-lg">
-              <p className="font-medium text-sm">JLPT N3 Study Group</p>
+              <p className="font-medium text-sm">{t("community.groups.n3.title")}</p>
               <p className="text-xs text-muted-foreground">
-                124 members • Daily practice
+                {t("community.groups.n3.subtitle")}
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-2 w-full bg-transparent"
               >
-                Join Group
+                {t("community.joinGroup")}
               </Button>
             </div>
             <div className="p-3 border border-border rounded-lg">
-              <p className="font-medium text-sm">Kanji Masters</p>
+              <p className="font-medium text-sm">{t("community.groups.kanji.title")}</p>
               <p className="text-xs text-muted-foreground">
-                89 members • Advanced learners
+                {t("community.groups.kanji.subtitle")}
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-2 w-full bg-transparent"
               >
-                Join Group
+                {t("community.joinGroup")}
               </Button>
             </div>
             <div className="p-3 border border-border rounded-lg">
-              <p className="font-medium text-sm">Anime Japanese Club</p>
+              <p className="font-medium text-sm">{t("community.groups.anime.title")}</p>
               <p className="text-xs text-muted-foreground">
-                256 members • Learn through anime
+                {t("community.groups.anime.subtitle")}
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-2 w-full bg-transparent"
               >
-                Join Group
+                {t("community.joinGroup")}
               </Button>
             </div>
           </CardContent>

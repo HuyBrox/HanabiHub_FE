@@ -8,8 +8,10 @@ import { LevelSelector } from "@/components/video-call/level-selector";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Users, Clock } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
 export default function RandomCallPage() {
+  const { t } = useLanguage();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
@@ -81,10 +83,10 @@ export default function RandomCallPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-              Random Japanese Call
+              {t("call.random.title")}
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-1">
-              Practice Japanese with native speakers
+              {t("call.random.subtitle")}
             </p>
           </div>
 
@@ -120,7 +122,7 @@ export default function RandomCallPage() {
               isConnected={isConnected}
               isVideoOff={isVideoOff}
               isMuted={isMuted}
-              userName="You"
+              userName={t("common.you")}
               level={selectedLevel}
             />
 
@@ -129,7 +131,7 @@ export default function RandomCallPage() {
               type="remote"
               isLoading={isConnecting}
               isConnected={isConnected}
-              userName={isConnected ? "Tanaka-san" : "Waiting..."}
+              userName={isConnected ? "Tanaka-san" : t("call.random.waiting")}
               level="N3"
             />
           </div>
@@ -139,17 +141,17 @@ export default function RandomCallPage() {
             <Card className="p-6 text-center mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
               <Users className="h-12 w-12 text-orange-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Ready to Practice Japanese?
+                {t("call.random.ready")}
               </h3>
               <p className="text-gray-600 dark:text-gray-300 mb-4">
-                Connect with a native speaker at {selectedLevel} level
+                {t("call.random.connect").replace("{level}", selectedLevel)}
               </p>
               <Button
                 onClick={handleStartCall}
                 size="lg"
                 className="bg-orange-500 hover:bg-orange-600 text-white px-8"
               >
-                Start Random Call
+                {t("call.random.start")}
               </Button>
             </Card>
           )}
@@ -158,10 +160,10 @@ export default function RandomCallPage() {
             <Card className="p-6 text-center mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
               <div className="animate-spin h-8 w-8 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Connecting...
+                {t("call.random.connecting")}
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
-                Finding a Japanese speaker for you
+                {t("call.random.finding")}
               </p>
             </Card>
           )}

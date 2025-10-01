@@ -14,19 +14,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, Clock, Users, Star, BookOpen, Filter } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
 const courses = [
   {
     id: 1,
-    title: "Hiragana Mastery",
-    description:
-      "Master all 46 hiragana characters with interactive exercises and mnemonics",
+    title: "courses.items.1.title",
+    description: "courses.items.1.description",
     image: "/japanese-hiragana-characters-colorful-illustration.png",
     level: "Beginner",
-    duration: "2 weeks",
+    duration: "courses.items.1.duration",
     students: 1234,
     rating: 4.8,
-    price: "Free",
+    price: "courses.items.1.price",
     category: "Writing System",
     instructor: "Tanaka Sensei",
     lessons: 12,
@@ -34,15 +34,14 @@ const courses = [
   },
   {
     id: 2,
-    title: "Katakana Essentials",
-    description:
-      "Learn katakana characters used for foreign words and modern Japanese",
+    title: "courses.items.2.title",
+    description: "courses.items.2.description",
     image: "/japanese-katakana-characters-modern-design.png",
     level: "Beginner",
-    duration: "2 weeks",
+    duration: "courses.items.2.duration",
     students: 987,
     rating: 4.7,
-    price: "$29",
+    price: "courses.items.2.price",
     category: "Writing System",
     instructor: "Sato Sensei",
     lessons: 10,
@@ -50,14 +49,14 @@ const courses = [
   },
   {
     id: 3,
-    title: "Essential Kanji",
-    description: "Start your kanji journey with the most common 100 characters",
+    title: "courses.items.3.title",
+    description: "courses.items.3.description",
     image: "/japanese-kanji-characters-traditional-calligraphy.png",
     level: "Intermediate",
-    duration: "4 weeks",
+    duration: "courses.items.3.duration",
     students: 756,
     rating: 4.9,
-    price: "$49",
+    price: "courses.items.3.price",
     category: "Writing System",
     instructor: "Yamamoto Sensei",
     lessons: 20,
@@ -65,15 +64,14 @@ const courses = [
   },
   {
     id: 4,
-    title: "JLPT N5 Grammar",
-    description:
-      "Complete grammar course for JLPT N5 level with practice tests",
+    title: "courses.items.4.title",
+    description: "courses.items.4.description",
     image: "/japanese-grammar-book-illustration.png",
     level: "Beginner",
-    duration: "6 weeks",
+    duration: "courses.items.4.duration",
     students: 2341,
     rating: 4.6,
-    price: "$79",
+    price: "courses.items.4.price",
     category: "Grammar",
     instructor: "Suzuki Sensei",
     lessons: 25,
@@ -81,15 +79,14 @@ const courses = [
   },
   {
     id: 5,
-    title: "Business Japanese",
-    description:
-      "Professional Japanese for workplace communication and meetings",
+    title: "courses.items.5.title",
+    description: "courses.items.5.description",
     image: "/japanese-business-meeting.png",
     level: "Advanced",
-    duration: "8 weeks",
+    duration: "courses.items.5.duration",
     students: 432,
     rating: 4.8,
-    price: "$129",
+    price: "courses.items.5.price",
     category: "Business",
     instructor: "Watanabe Sensei",
     lessons: 30,
@@ -97,14 +94,14 @@ const courses = [
   },
   {
     id: 6,
-    title: "Japanese Conversation",
-    description: "Practice speaking with native speakers and build confidence",
+    title: "courses.items.6.title",
+    description: "courses.items.6.description",
     image: "/japanese-conversation-practice.png",
     level: "Intermediate",
-    duration: "5 weeks",
+    duration: "courses.items.6.duration",
     students: 1876,
     rating: 4.7,
-    price: "$89",
+    price: "courses.items.6.price",
     category: "Speaking",
     instructor: "Kobayashi Sensei",
     lessons: 18,
@@ -123,6 +120,7 @@ const categories = [
 const levels = ["All", "Beginner", "Intermediate", "Advanced"];
 
 export default function CoursesPage() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedLevel, setSelectedLevel] = useState("All");
@@ -146,11 +144,10 @@ export default function CoursesPage() {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Discover Japanese Courses
+              {t("courses.hero.title")}
             </h1>
             <p className="text-xl md:text-2xl mb-8 opacity-90">
-              From beginner to advanced, find the perfect course for your
-              Japanese learning journey
+              {t("courses.hero.subtitle")}
             </p>
 
             {/* Search Bar */}
@@ -158,7 +155,7 @@ export default function CoursesPage() {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <Input
                 type="text"
-                placeholder="Search courses..."
+                placeholder={t("courses.searchPlaceholder")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-12 pr-4 py-4 text-lg rounded-full border-0 shadow-lg"
@@ -174,7 +171,7 @@ export default function CoursesPage() {
           <div className="flex items-center gap-2">
             <Filter className="h-5 w-5 text-gray-600" />
             <span className="font-medium text-gray-700 dark:text-gray-300">
-              Filters:
+              {t("courses.filters")}
             </span>
           </div>
 
@@ -192,7 +189,12 @@ export default function CoursesPage() {
                     : ""
                 }
               >
-                {category}
+                {category === "All" && t("courses.categories.all")}
+                {category === "Writing System" && t("courses.categories.writingSystem")}
+                {category === "Grammar" && t("courses.categories.grammar")}
+                {category === "Speaking" && t("courses.categories.speaking")}
+                {category === "Business" && t("courses.categories.business")}
+                {category === "Culture" && t("courses.categories.culture")}
               </Button>
             ))}
           </div>
@@ -211,7 +213,10 @@ export default function CoursesPage() {
                     : ""
                 }
               >
-                {level}
+                {level === "All" && t("courses.levels.all")}
+                {level === "Beginner" && t("courses.levels.beginner")}
+                {level === "Intermediate" && t("courses.levels.intermediate")}
+                {level === "Advanced" && t("courses.levels.advanced")}
               </Button>
             ))}
           </div>
@@ -220,7 +225,7 @@ export default function CoursesPage() {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-gray-600 dark:text-gray-400">
-            Showing {filteredCourses.length} of {courses.length} courses
+            {t("courses.results.showing")} {filteredCourses.length} {t("courses.results.of")} {courses.length} {t("courses.results.courses")}
           </p>
         </div>
 
@@ -239,11 +244,11 @@ export default function CoursesPage() {
                 />
                 {course.isPopular && (
                   <Badge className="absolute top-4 left-4 bg-orange-500 hover:bg-orange-600">
-                    Popular
+                    {t("courses.popular")}
                   </Badge>
                 )}
                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 text-sm font-medium">
-                  {course.price}
+                  {t(course.price)}
                 </div>
               </div>
 
@@ -251,10 +256,10 @@ export default function CoursesPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-xl mb-2 group-hover:text-orange-500 transition-colors">
-                      {course.title}
+                      {t(course.title)}
                     </CardTitle>
                     <CardDescription className="text-sm text-gray-600 dark:text-gray-400">
-                      {course.description}
+                      {t(course.description)}
                     </CardDescription>
                   </div>
                 </div>
@@ -270,29 +275,33 @@ export default function CoursesPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    <span>{course.duration}</span>
+                    <span>{t(course.duration)}</span>
                   </div>
                 </div>
               </CardHeader>
 
               <CardContent>
                 <div className="flex items-center justify-between mb-4">
-                  <Badge variant="secondary">{course.level}</Badge>
+                  <Badge variant="secondary">
+                    {course.level === "Beginner" && t("courses.levels.beginner")}
+                    {course.level === "Intermediate" && t("courses.levels.intermediate")}
+                    {course.level === "Advanced" && t("courses.levels.advanced")}
+                  </Badge>
                   <div className="flex items-center gap-1 text-sm text-gray-500">
                     <BookOpen className="h-4 w-4" />
-                    <span>{course.lessons} lessons</span>
+                    <span>{course.lessons} {t("courses.lessons")}</span>
                   </div>
                 </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Instructor: {course.instructor}
+                  {t("courses.instructor")} {course.instructor}
                 </p>
               </CardContent>
 
               <CardFooter>
                 <Link href={`/courses/${course.id}/preview`} className="w-full">
                   <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
-                    View Course
+                    {t("courses.viewCourse")}
                   </Button>
                 </Link>
               </CardFooter>
@@ -306,10 +315,10 @@ export default function CoursesPage() {
               <BookOpen className="h-16 w-16 mx-auto" />
             </div>
             <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
-              No courses found
+              {t("courses.empty.title")}
             </h3>
             <p className="text-gray-500">
-              Try adjusting your search or filter criteria
+              {t("courses.empty.subtitle")}
             </p>
           </div>
         )}

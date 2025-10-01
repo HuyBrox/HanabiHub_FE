@@ -151,7 +151,7 @@ export default function MessagesPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Tìm kiếm"
+              placeholder={t("messages.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-muted/50"
@@ -258,12 +258,12 @@ export default function MessagesPage() {
                   <Edit className="h-6 w-6 text-primary-foreground" />
                 </div>
               </div>
-              <h2 className="text-xl font-semibold mb-2">Tin nhắn của bạn</h2>
+              <h2 className="text-xl font-semibold mb-2">{t("messages.empty.title")}</h2>
               <p className="text-muted-foreground mb-4 max-w-sm">
-                Gửi ảnh và tin nhắn riêng tư cho bạn bè hoặc nhóm
+                {t("messages.empty.subtitle")}
               </p>
               <Button className="bg-primary hover:bg-primary/90">
-                Gửi tin nhắn
+                {t("messages.empty.cta")}
               </Button>
             </div>
           </div>
