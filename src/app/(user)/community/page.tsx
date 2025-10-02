@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { withAuth } from "@/components/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -123,7 +124,7 @@ const friendSuggestions = [
   },
 ];
 
-export default function CommunityPage() {
+function CommunityPage() {
   const [postLikes, setPostLikes] = useState<
     Record<number, { liked: boolean; count: number }>
   >(
@@ -380,3 +381,5 @@ export default function CommunityPage() {
     </div>
   );
 }
+
+export default withAuth(CommunityPage);
