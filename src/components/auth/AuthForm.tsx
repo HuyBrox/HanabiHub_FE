@@ -13,7 +13,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRight, AlertCircle } from "lucide-react";
+import {
+  ArrowRight,
+  AlertCircle,
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Key,
+} from "lucide-react";
 import {
   InputOTP,
   InputOTPGroup,
@@ -24,23 +33,20 @@ import { AuthFormProps } from "@/types/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotification } from "@/components/notification";
 
-export function AuthForm({
-  mode,
-  onModeChange,
-  isModal = false,
-}: AuthFormProps) {
+export function AuthForm({ mode, onModeChange, isModal = false }: AuthFormProps) {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
     fullname: "",
     confirmPassword: "",
-    fullname: "",
+    otp: "",
   });
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"form" | "otp">("form");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { login, sendOtp, verifyOtp, isLoading, isAuthenticated } = useAuth();
   const { success } = useNotification();
@@ -61,7 +67,7 @@ export function AuthForm({
     }
   }, [isAuthenticated, isModal, router, success]);
 
-  // Validation
+  // Validate
   const validateForm = useCallback(() => {
     const newErrors: Record<string, string> = {};
 
@@ -104,7 +110,6 @@ export function AuthForm({
         window.dispatchEvent(new CustomEvent("auth-success"));
       }
     } else {
-      // Gửi OTP
       const otpResult = await sendOtp(formData.email);
       if (!otpResult.success) {
         setLocalError(otpResult.error || "Không thể gửi OTP");
@@ -115,7 +120,7 @@ export function AuthForm({
     }
   };
 
-  // Submit OTP → verify + register
+  // Submit OTP
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
@@ -125,10 +130,7 @@ export function AuthForm({
       return;
     }
 
-    const result = await verifyOtp({
-      ...formData,
-      otp,
-    });
+    const result = await verifyOtp({ ...formData, otp });
 
     if (!result.success) {
       setLocalError(result.error || "Xác thực OTP thất bại");
@@ -139,12 +141,7 @@ export function AuthForm({
   };
 
   return (
-    <Card
-      className={cn(
-        "w-full transition-all duration-500 ease-in-out transform",
-        isModal && "border-0 shadow-none"
-      )}
-    >
+    <Card className={cn("w-full", isModal && "border-0 shadow-none")}>
       <CardHeader className="space-y-1 text-center">
         <CardTitle className="text-2xl font-bold">
           {mode === "login"
@@ -170,37 +167,6 @@ export function AuthForm({
           </Alert>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name field for register mode */}
-          <div
-            className={cn(
-              "transition-all duration-300 ease-in-out overflow-hidden",
-              mode === "register" ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
-            )}
-          >
-            <div className="space-y-2">
-              <Label htmlFor="fullname">Full Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Enter your full name"
-                  className={cn(
-                    "pl-10",
-                    fieldErrors.name &&
-                      "border-red-500 focus:ring-red-500 focus:border-red-500"
-                  )}
-                  value={formData.name}
-                  onChange={handleNameChange}
-                  disabled={isLoading}
-                />
-              </div>
-              {fieldErrors.name && (
-                <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>
-              )}
-            </div>
-          )}
         {step === "form" && (
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
@@ -237,10 +203,6 @@ export function AuthForm({
               </>
             )}
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -257,42 +219,33 @@ export function AuthForm({
               )}
             </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, password: e.target.value }))
-                }
-                placeholder="Enter your password"
-                className={cn(
-                  "pl-10 pr-10",
-                  fieldErrors.password &&
-                    "border-red-500 focus:ring-red-500 focus:border-red-500"
-                )}
-                value={formData.password}
-                onChange={handlePasswordChange}
-                disabled={isLoading}
-              />
-              <Button type="button" variant="ghost" size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-              </Button>
-            </div>
-            {fieldErrors.password && (
-              <p className="text-red-500 text-xs mt-1">
-                {fieldErrors.password}
-              </p>
-            )}
-          </div>
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData((p) => ({ ...p, password: e.target.value }))
+                  }
+                  placeholder="Enter your password"
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
               {errors.password && (
                 <p className="text-red-500 text-xs">{errors.password}</p>
               )}
@@ -313,40 +266,6 @@ export function AuthForm({
                   }
                   placeholder="Confirm your password"
                 />
-              </div>
-              {fieldErrors.confirmPassword && (
-                <p className="text-red-500 text-xs mt-1">
-                  {fieldErrors.confirmPassword}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Chỉ hiện OTP sau khi đã gửi OTP */}
-          {mode === "register" && otpSent && (
-            <div className="space-y-2">
-              <Label htmlFor="otp">OTP</Label>
-              <div className="relative">
-                <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input id="otp" placeholder="Nhập OTP đã gửi về email" className="pl-10"
-                  value={formData.otp} onChange={(e) => handleChange("otp", e.target.value)} />
-              </div>
-            </div>
-          )}
-
-          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-            disabled={isSendingOtp || isRegistering}>
-            {(isSendingOtp || isRegistering)
-              ? <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  {mode === "login" ? "Signing in..." : otpSent ? "Registering..." : "Sending OTP..."}
-                </div>
-              : <div className="flex items-center gap-2">
-                  {mode === "login" ? "Sign In" : otpSent ? "Create Account" : "Send OTP"}
-                  <ArrowRight className="h-4 w-4" />
-                </div>}
-          </Button>
-        </form>
                 {errors.confirmPassword && (
                   <p className="text-red-500 text-xs">
                     {errors.confirmPassword}
@@ -380,7 +299,7 @@ export function AuthForm({
                     <InputOTPSlot
                       key={i}
                       index={i}
-                      className="w-12 h-12 text-xl rounded-lg border border-input shadow-sm"
+                      className="w-12 h-12 text-xl rounded-lg border"
                     />
                   ))}
                 </InputOTPGroup>
@@ -400,34 +319,17 @@ export function AuthForm({
               ? "Don't have an account?"
               : "Already have an account?"}
           </p>
-          <Button type="button" variant="link"
-            className="p-0 h-auto font-semibold text-primary hover:text-primary/80"
+          <Button
+            type="button"
+            variant="link"
+            className="p-0 h-auto font-semibold text-primary"
             onClick={() =>
-              handleModeSwitch(mode === "login" ? "register" : "login")
+              onModeChange(mode === "login" ? "register" : "login")
             }
           >
             {mode === "login" ? "Create one now" : "Sign in instead"}
           </Button>
         </div>
-        {step === "form" && (
-          <div className="text-center pt-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              {mode === "login"
-                ? "Don't have an account?"
-                : "Already have an account?"}
-            </p>
-            <Button
-              type="button"
-              variant="link"
-              className="p-0 h-auto font-semibold text-primary"
-              onClick={() =>
-                onModeChange(mode === "login" ? "register" : "login")
-              }
-            >
-              {mode === "login" ? "Create one now" : "Sign in instead"}
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
