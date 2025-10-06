@@ -15,8 +15,11 @@ export interface IFlashList {
   level: "N5" | "N4" | "N3" | "N2" | "N1";
   description: string;
   thumbnail: string;
-  rating: number;
-  ratingCount: number;
+  ratings: Array<{
+    user: string;
+    rating: number;
+  }>;
+  averageRating?: number;
   flashcards: IFlashCard[] | string[];
   createdAt: string;
   updatedAt: string;
@@ -53,6 +56,7 @@ export interface CreateFlashListRequest {
   level?: "N5" | "N4" | "N3" | "N2" | "N1";
   description?: string;
   thumbnail?: File;
+  flashcards?: string[]; // Array of FlashCard IDs
 }
 
 export interface CreateFlashListResponse {
@@ -77,6 +81,13 @@ export interface DeleteFlashListResponse {
 
 export interface RateFlashListRequest {
   rating: number;
+}
+
+export interface RateFlashListResponse {
+  success: boolean;
+  message: string;
+  data: IFlashList;
+  timestamp: string;
 }
 
 export interface SearchFlashListParams {
@@ -156,5 +167,21 @@ export interface SearchFlashCardResponse {
       totalPages: number;
     };
   };
+  timestamp: string;
+}
+
+export interface CreateFlashCardRequest {
+  name: string;
+  cards: IFlashCardItem[];
+  isPublic?: boolean;
+  description?: string;
+  level?: "N5" | "N4" | "N3" | "N2" | "N1";
+  thumbnail?: File;
+}
+
+export interface CreateFlashCardResponse {
+  success: boolean;
+  message: string;
+  data: IFlashCard;
   timestamp: string;
 }

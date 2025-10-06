@@ -8,10 +8,13 @@ import {
   UpdateFlashListRequest,
   DeleteFlashListResponse,
   RateFlashListRequest,
+  RateFlashListResponse,
   SearchFlashListParams,
   SearchFlashListResponse,
   // FlashCard
   GetAllFlashCardsResponse,
+  CreateFlashCardRequest,
+  CreateFlashCardResponse,
   SearchFlashCardParams,
   SearchFlashCardResponse,
 } from "@/types/flashcard";
@@ -71,6 +74,11 @@ export const flashcardApi = createApi({
         if (data.thumbnail) {
           formData.append("thumbnail", data.thumbnail);
         }
+        if (data.flashcards && data.flashcards.length > 0) {
+          data.flashcards.forEach((id) => {
+            formData.append("flashcards", id);
+          });
+        }
 
         return {
           url: "/flashcards/create-flashlist",
@@ -111,11 +119,11 @@ export const flashcardApi = createApi({
 
     // Đánh giá FlashList
     rateFlashList: builder.mutation<
-      CreateFlashListResponse,
+      RateFlashListResponse,
       { id: string; rating: number }
     >({
       query: ({ id, rating }) => ({
-        url: `/flashcards/rate/${id}`,
+        url: `/flashcards/rate-flashlist/${id}`,
         method: "POST",
         body: { rating },
         headers: {
@@ -138,7 +146,10 @@ export const flashcardApi = createApi({
     }),
 
     // Tìm kiếm FlashList
-    searchFlashList: builder.query<SearchFlashListResponse, SearchFlashListParams>({
+    searchFlashList: builder.query<
+      SearchFlashListResponse,
+      SearchFlashListParams
+    >({
       query: ({ q, level = "all", select = "all", page = 1, limit = 20 }) => {
         const params = new URLSearchParams({
           q,
@@ -174,8 +185,42 @@ export const flashcardApi = createApi({
       providesTags: ["FlashCard"],
     }),
 
+    // Tạo FlashCard mới
+    createFlashCard: builder.mutation<
+      CreateFlashCardResponse,
+      CreateFlashCardRequest
+    >({
+      query: (data) => {
+        const formData = new FormData();
+        formData.append("name", data.name);
+        formData.append("cards", JSON.stringify(data.cards));
+        if (data.isPublic !== undefined) {
+          formData.append("isPublic", String(data.isPublic));
+        }
+        if (data.level) {
+          formData.append("level", data.level);
+        }
+        if (data.description) {
+          formData.append("description", data.description);
+        }
+        if (data.thumbnail) {
+          formData.append("thumbnail", data.thumbnail);
+        }
+
+        return {
+          url: "/flashcards/create-flashcard",
+          method: "POST",
+          body: formData,
+        };
+      },
+      invalidatesTags: ["FlashCard"],
+    }),
+
     // Tìm kiếm FlashCard
-    searchFlashCard: builder.query<SearchFlashCardResponse, SearchFlashCardParams>({
+    searchFlashCard: builder.query<
+      SearchFlashCardResponse,
+      SearchFlashCardParams
+    >({
       query: ({ q, level = "all", select = "all", page = 1, limit = 20 }) => {
         const params = new URLSearchParams({
           q,
@@ -213,6 +258,7 @@ export const {
   useSearchFlashListQuery,
   useLazySearchFlashListQuery,
   useGetAllFlashCardsQuery,
+  useCreateFlashCardMutation,
   useSearchFlashCardQuery,
   useLazySearchFlashCardQuery,
 } = flashcardApi;
