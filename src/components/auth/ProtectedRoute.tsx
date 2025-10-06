@@ -29,7 +29,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const notifiedRef = useRef(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && !hasRedirected) {
+    if (isLoading) return;
+    
+    if (!isAuthenticated && !hasRedirected) {
       // Tránh thông báo lặp do StrictMode/multiple mounts
       if (!notifiedRef.current) {
         notifiedRef.current = true;
