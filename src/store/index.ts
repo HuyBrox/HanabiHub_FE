@@ -3,6 +3,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { userApi } from "./services/userApi";
 import { authApi } from "./services/authApi";
 import { messageApi } from "./services/messageApi";
+import { flashcardApi } from "./services/flashcardApi";
 import authReducer from "./slices/authSlice";
 import {
   authMiddleware, // để tự động refresh token
@@ -15,12 +16,14 @@ export const store = configureStore({
     [userApi.reducerPath]: userApi.reducer,
     [authApi.reducerPath]: authApi.reducer,
     [messageApi.reducerPath]: messageApi.reducer,
+    [flashcardApi.reducerPath]: flashcardApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(userApi.middleware)
       .concat(authApi.middleware)
       .concat(messageApi.middleware)
+      .concat(flashcardApi.middleware)
       .concat(authMiddleware)
       .prepend(authListenerMiddleware.middleware),
 });
