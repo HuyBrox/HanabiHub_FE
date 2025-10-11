@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { withAuth } from "@/components/auth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -122,7 +123,7 @@ const categories = [
 ];
 const levels = ["All", "Beginner", "Intermediate", "Advanced"];
 
-export default function CoursesPage() {
+function CoursesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedLevel, setSelectedLevel] = useState("All");
@@ -317,3 +318,5 @@ export default function CoursesPage() {
     </div>
   );
 }
+
+export default withAuth(CoursesPage);

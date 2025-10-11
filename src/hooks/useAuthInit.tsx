@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useGetCurrentUserQuery } from "../store/services/authApi";
-import { loginSuccess, logout } from "../store/slices/authSlice";
+import { loginStart, loginSuccess, logout } from "../store/slices/authSlice";
 import { RootState } from "../store";
 // Update the import path to the correct relative location
 import { LoadingPage } from "../components/loading";
@@ -17,25 +17,32 @@ export const useAuthInit = () => {
   const { data, isSuccess, isError, isLoading, refetch, error } =
     useGetCurrentUserQuery();
 
+  // Set loading state khi bắt đầu check auth
+  useEffect(() => {
+    if (isLoading) {
+      dispatch(loginStart());
+    }
+  }, [isLoading, dispatch]);
+
   useEffect(() => {
     if (isSuccess && data?.success && data.data) {
       // Backend trả về user object trực tiếp trong data
       dispatch(loginSuccess(data.data));
       console.log("✅ Auth state restored from /user/profile:", data.data);
     } else if (isError) {
-      // Nếu API fail, logout nếu đang authenticated
+      // Nếu API fail, logout
       const errorStatus = (error as any)?.status;
       if (errorStatus === 401 || errorStatus === 403) {
-        if (isAuthenticated) {
-          console.log("🔓 Session expired, logging out...");
-          dispatch(logout());
-        }
+        console.log("🔓 Session expired, logging out...");
+        dispatch(logout());
+      } else {
+        console.log(
+          "❌ No valid session found - token may be expired or invalid"
+        );
+        dispatch(logout());
       }
-      console.log(
-        "❌ No valid session found - token may be expired or invalid"
-      );
     }
-  }, [isSuccess, isError, data, dispatch, isAuthenticated, error]);
+  }, [isSuccess, isError, data, dispatch, error]);
 
   // Theo dõi khi user quay lại tab để check session
   useEffect(() => {

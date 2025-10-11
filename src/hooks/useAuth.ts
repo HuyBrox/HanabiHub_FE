@@ -62,7 +62,14 @@ export const useAuth = () => {
   const clearAuthError = useCallback(() => {
     dispatch(clearError());
   }, [dispatch]);
-
+//trả về tất cả các state và function liên quan đến auth
+//user chứa thông tin user đã đăng nhập
+//isAuthenticated là true nếu user đã đăng nhập
+//isLoading là true nếu đang loading
+//error là lỗi nếu có
+//login là function để đăng nhập
+//logout là function để đăng xuất
+//clearError là function để clear lỗi
   return {
     user,
     isAuthenticated,

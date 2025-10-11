@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { ModeToggle, LanguageToggle } from "@/components/common";
 import { useLanguage } from "@/lib/language-context";
+import { useAuth } from "@/hooks/useAuth";
 import { MobileHeaderProps, NavigationItem, LayoutUser } from "@/types/layout";
 import styles from "./MobileHeader.module.css";
 
@@ -40,16 +41,11 @@ const navigation: NavigationItem[] = [
   { name: "Profile", href: "/profile", icon: User, key: "nav.profile" },
 ];
 
-const mockUser: LayoutUser = {
-  isLoggedIn: true,
-  name: "Nguyễn Văn A",
-  avatar: "/anime-style-avatar-user.png",
-};
-
 export function MobileHeader({}: MobileHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
+  const { isAuthenticated, user, logout } = useAuth();
 
   return (
     <>
@@ -65,10 +61,10 @@ export function MobileHeader({}: MobileHeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {mockUser.avatar ? (
+          {isAuthenticated && user?.avatar ? (
             <img
-              src={mockUser.avatar || "/images/placeholders/placeholder.svg"}
-              alt={mockUser.name}
+              src={user.avatar || "/images/placeholders/placeholder.svg"}
+              alt={user.fullname || user.username || "User"}
               className="w-8 h-8 rounded-full object-cover"
             />
           ) : (
@@ -77,7 +73,7 @@ export function MobileHeader({}: MobileHeaderProps) {
             </div>
           )}
           <span className="text-sm font-medium text-foreground truncate max-w-20">
-            {mockUser.name}
+            {isAuthenticated ? (user?.fullname || user?.username || "User") : "Guest"}
           </span>
           <Button
             variant="ghost"
@@ -142,18 +138,18 @@ export function MobileHeader({}: MobileHeaderProps) {
                           "bg-primary text-primary-foreground hover:bg-primary/90"
                       )}
                     >
-                      {isProfileItem && mockUser.avatar ? (
+                      {isProfileItem && isAuthenticated && user?.avatar ? (
                         <img
-                          src={mockUser.avatar || "/placeholder.svg"}
-                          alt={mockUser.name}
+                          src={user.avatar || "/placeholder.svg"}
+                          alt={user.fullname || user.username || "User"}
                           className="h-4 w-4 rounded-full object-cover flex-shrink-0"
                         />
                       ) : (
                         <item.icon className="h-4 w-4 flex-shrink-0" />
                       )}
                       <span>
-                        {isProfileItem && mockUser.avatar
-                          ? mockUser.name
+                        {isProfileItem && isAuthenticated && user?.avatar
+                          ? (user.fullname || user.username || "User")
                           : t(item.key)}
                       </span>
                     </Button>
@@ -171,14 +167,30 @@ export function MobileHeader({}: MobileHeaderProps) {
                 <ModeToggle />
                 <span className="ml-3 text-sm text-foreground">Theme</span>
               </div>
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 text-foreground hover:bg-accent"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <LogOut className="h-4 w-4 flex-shrink-0" />
-                <span>{t("nav.logout")}</span>
-              </Button>
+              {isAuthenticated ? (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3 text-foreground hover:bg-accent"
+                  onClick={() => {
+                    logout();
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  <LogOut className="h-4 w-4 flex-shrink-0" />
+                  <span>{t("nav.logout")}</span>
+                </Button>
+              ) : (
+                <Link href="/login">
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start gap-3 text-foreground hover:bg-accent"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4 flex-shrink-0" />
+                    <span>{t("nav.login")}</span>
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
