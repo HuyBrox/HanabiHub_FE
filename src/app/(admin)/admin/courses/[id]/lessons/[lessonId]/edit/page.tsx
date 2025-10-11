@@ -20,7 +20,7 @@ import {
   BookOpen,
   AlertCircle
 } from "lucide-react";
-import { useGetLessonByIdQuery, useUpdateLessonMutation } from "@/store/services/courseApi";
+import { useGetLessonByIdQuery, useUpdateLessonMutation, useUploadAudioMutation } from "@/store/services/courseApi";
 import { useNotification } from "@/components/notification/NotificationProvider";
 import styles from "./edit-lesson.module.css";
 
@@ -61,6 +61,7 @@ export default function EditLessonPage() {
   const courseId = params.id as string;
   const lessonId = params.lessonId as string;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioFileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     data: lessonData,
@@ -69,6 +70,7 @@ export default function EditLessonPage() {
   } = useGetLessonByIdQuery(lessonId);
 
   const [updateLesson, { isLoading: isSubmitting }] = useUpdateLessonMutation();
+  const [uploadAudio, { isLoading: isUploadingAudio }] = useUploadAudioMutation();
   const { success, error: showError } = useNotification();
 
   // Basic form data
@@ -96,6 +98,8 @@ export default function EditLessonPage() {
 
   // Listening
   const [audioUrl, setAudioUrl] = useState("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioType, setAudioType] = useState<"url" | "upload">("url");
   const [listeningQuestions, setListeningQuestions] = useState<ListeningQuestion[]>([]);
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -134,6 +138,7 @@ export default function EditLessonPage() {
           setMatchingItems(jsonTask.items);
         } else if (jsonTask.type === "listening") {
           setAudioUrl(jsonTask.audioUrl || "");
+          setAudioType(jsonTask.audioUrl ? "url" : "upload");
           if (jsonTask.items) {
             setListeningQuestions(jsonTask.items);
           }
@@ -503,6 +508,41 @@ Answer: A`;
     }
   };
 
+  // Audio file handler
+  const handleAudioFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("audio/")) {
+      setAudioFile(file);
+      setAudioType("upload");
+      setErrors(prev => ({ ...prev, audio: "" }));
+    } else {
+      setErrors(prev => ({ ...prev, audio: "File audio không hợp lệ" }));
+    }
+  };
+
+  // Upload audio handler
+  const handleUploadAudio = async () => {
+    if (!audioFile) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioFile);
+
+      const result = await uploadAudio(formData).unwrap();
+      if (result.success && result.data) {
+        setAudioUrl(result.data);
+        success("Upload audio thành công!");
+        setErrors(prev => ({ ...prev, audio: "" }));
+      } else {
+        throw new Error(result.message || "Upload failed");
+      }
+    } catch (error: any) {
+      const errorMessage = error?.data?.message || error?.message || "Lỗi khi upload audio";
+      showError(errorMessage);
+      setErrors(prev => ({ ...prev, audio: errorMessage }));
+    }
+  };
+
   // Validation
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -542,8 +582,11 @@ Answer: A`;
       }
 
       if (taskType === "listening") {
-        if (!audioUrl.trim()) {
+        if (audioType === "url" && !audioUrl.trim()) {
           newErrors.audio = "Vui lòng nhập URL audio";
+        }
+        if (audioType === "upload" && !audioUrl.trim()) {
+          newErrors.audio = "Vui lòng chọn file audio và upload";
         }
         if (listeningQuestions.length === 0) {
           newErrors.task = "Vui lòng thêm ít nhất 1 câu hỏi";
@@ -563,6 +606,21 @@ Answer: A`;
     }
 
     try {
+      let finalAudioUrl = audioUrl;
+
+      // Upload audio nếu cần
+      if (lessonType === "task" && taskType === "listening" && audioType === "upload" && audioFile) {
+        const audioFormData = new FormData();
+        audioFormData.append("audio", audioFile);
+
+        const audioResult = await uploadAudio(audioFormData).unwrap();
+        if (audioResult.success && audioResult.data) {
+          finalAudioUrl = audioResult.data;
+        } else {
+          throw new Error("Không thể upload audio");
+        }
+      }
+
       const formData = new FormData();
       formData.append("title", title);
       formData.append("content", content);
@@ -590,7 +648,7 @@ Answer: A`;
         } else if (taskType === "matching") {
           jsonTask.items = matchingItems;
         } else if (taskType === "listening") {
-          jsonTask.audioUrl = audioUrl;
+          jsonTask.audioUrl = finalAudioUrl;
           jsonTask.items = listeningQuestions;
         } else if (taskType === "speaking" || taskType === "reading") {
           jsonTask.items = [];
@@ -1227,16 +1285,95 @@ Answer: A`;
                 <div className={styles.formGroup}>
                   <label className={styles.label}>
                     <Volume2 size={18} />
-                    URL Audio <span className={styles.required}>*</span>
+                    Audio <span className={styles.required}>*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={audioUrl || ""}
-                    onChange={(e) => setAudioUrl(e.target.value)}
-                    className={`${styles.input} ${errors.audio ? styles.inputError : ""}`}
-                    placeholder="https://cdn.example.com/audio/lesson.mp3"
-                    disabled={isSubmitting}
-                  />
+
+                  {/* Audio Type Toggle */}
+                  <div className={styles.audioTypeToggle}>
+                    <button
+                      type="button"
+                      className={`${styles.toggleBtn} ${audioType === "url" ? styles.active : ""}`}
+                      onClick={() => {
+                        setAudioType("url");
+                        setAudioFile(null);
+                        setErrors(prev => ({ ...prev, audio: "" }));
+                      }}
+                      disabled={isSubmitting}
+                    >
+                      URL
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.toggleBtn} ${audioType === "upload" ? styles.active : ""}`}
+                      onClick={() => {
+                        setAudioType("upload");
+                        setAudioUrl("");
+                        setErrors(prev => ({ ...prev, audio: "" }));
+                      }}
+                      disabled={isSubmitting}
+                    >
+                      Upload File
+                    </button>
+                  </div>
+
+                  {/* URL Input */}
+                  {audioType === "url" && (
+                    <input
+                      type="text"
+                      value={audioUrl || ""}
+                      onChange={(e) => {
+                        setAudioUrl(e.target.value);
+                        setErrors(prev => ({ ...prev, audio: "" }));
+                      }}
+                      className={`${styles.input} ${errors.audio ? styles.inputError : ""}`}
+                      placeholder="https://cdn.example.com/audio/lesson.mp3"
+                      disabled={isSubmitting}
+                    />
+                  )}
+
+                  {/* File Upload */}
+                  {audioType === "upload" && (
+                    <div className={styles.fileUploadContainer}>
+                      <input
+                        ref={audioFileInputRef}
+                        type="file"
+                        accept="audio/*"
+                        onChange={handleAudioFileChange}
+                        className={styles.fileInput}
+                        disabled={isSubmitting}
+                      />
+                      <button
+                        type="button"
+                        className={styles.fileUploadBtn}
+                        onClick={() => audioFileInputRef.current?.click()}
+                        disabled={isSubmitting}
+                      >
+                        <Upload size={18} />
+                        {audioFile ? audioFile.name : "Chọn file audio"}
+                      </button>
+                      {audioFile && (
+                        <button
+                          type="button"
+                          className={styles.uploadBtn}
+                          onClick={handleUploadAudio}
+                          disabled={isSubmitting || isUploadingAudio}
+                        >
+                          {isUploadingAudio ? (
+                            <>
+                              <Loader2 size={18} className={styles.spinner} />
+                              Đang upload...
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={18} />
+                              Upload
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {errors.audio && <span className={styles.errorText}>{errors.audio}</span>}
                 </div>
                 <div className={styles.questionsList}>

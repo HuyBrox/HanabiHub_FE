@@ -14,11 +14,11 @@ export interface Course {
   title: string;
   description: string;
   thumbnail?: string;
-  lessons: Lesson[];
+  lessons?: Lesson[];
   level: string;
-  instructor: Instructor;
-  students: string[];
-  studentCount: number;
+  instructor?: Instructor;
+  students?: string[];
+  studentCount?: number;
   price: number;
   createdAt: string;
   updatedAt: string;
@@ -29,14 +29,14 @@ export interface Lesson {
   title: string;
   type: "video" | "task";
   content: string;
-  videoUrl: string;
+  videoUrl?: string;
   videoType?: "youtube" | "upload";
-  duration: number;
+  duration?: number;
   jsonTask?: any;
   taskType?: string;
   order: number;
-  userCompleted: any[];
-  Comments: any[];
+  userCompleted?: any[];
+  Comments?: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -100,13 +100,28 @@ export const courseApi = createApi({
   endpoints: (builder) => ({
     // ============ COURSE ENDPOINTS ============
 
-    // Lấy tất cả courses
-    getAllCourses: builder.query<ApiResponse<Course[]>, void>({
-      query: () => ({
-        url: "/courses/get-all",
+    // Lấy tất cả courses (dùng chung cho cả admin và user)
+    getAllCourses: builder.query<
+      ApiResponse<Course[]>,
+      { page?: number; limit?: number }
+    >({
+      query: ({ page = 1, limit = 20 } = {}) => ({
+        url: "/courses",
         method: "GET",
+        params: { page, limit },
       }),
       providesTags: ["Course"],
+      transformResponse: (response: any) => {
+        // Nếu response có cấu trúc { courses: [], pagination: {} }, lấy courses
+        if (response.data && Array.isArray(response.data.courses)) {
+          return {
+            ...response,
+            data: response.data.courses,
+          };
+        }
+        // Nếu response.data là array trực tiếp
+        return response;
+      },
     }),
 
     // Lấy chi tiết course theo ID
@@ -192,13 +207,28 @@ export const courseApi = createApi({
     }),
 
     // Xóa lesson (Admin)
-    deleteLesson: builder.mutation<ApiResponse<null>, { lessonId: string; courseId: string }>({
+    deleteLesson: builder.mutation<
+      ApiResponse<null>,
+      { lessonId: string; courseId: string }
+    >({
       query: ({ lessonId, courseId }) => ({
         url: `/courses/lesson/${lessonId}`,
         method: "DELETE",
         body: { courseId },
       }),
       invalidatesTags: ["Lesson", "Course"],
+    }),
+
+    // Upload audio cho task (Admin)
+    uploadAudio: builder.mutation<ApiResponse<string>, FormData>({
+      query: (formData) => ({
+        url: "/courses/lesson/upload-audio",
+        method: "POST",
+        body: formData,
+        headers: {
+          // Không set Content-Type, để browser tự set với boundary
+        },
+      }),
     }),
   }),
 });
@@ -214,5 +244,5 @@ export const {
   useCreateLessonMutation,
   useUpdateLessonMutation,
   useDeleteLessonMutation,
+  useUploadAudioMutation,
 } = courseApi;
-
