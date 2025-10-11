@@ -1,0 +1,61 @@
+/* Flashcard Detail Page Styles */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fadeIn {
+  animation: fadeIn 0.6s ease-out;
+}
+
+.thumbnailContainer {
+  position: relative;
+  width: 100%;
+  height: 380px;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  transition: all 0.5s ease;
+}
+
+.thumbnailContainer:hover {
+  transform: scale(1.03);
+}
+
+.thumbnailImage {
+  transition: transform 0.5s ease;
+}
+
+.thumbnailContainer:hover .thumbnailImage {
+  transform: scale(1.1);
+}
+
+@media (min-width: 768px) {
+  .thumbnailContainer {
+    width: 380px;
+  }
+}
+
+.buttonScale {
+  transition: transform 0.3s ease;
+}
+
+.buttonScale:hover {
+  transform: scale(1.05);
+}
+
+.cardHover {
+  transition: all 0.3s ease;
+}
+
+.cardHover:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
