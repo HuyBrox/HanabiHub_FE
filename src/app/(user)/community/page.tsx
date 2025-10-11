@@ -384,4 +384,3 @@ function CommunityPage() {
 
 export default withAuth(CommunityPage);
 
-export default withAuth(CommunityPage);

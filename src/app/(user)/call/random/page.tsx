@@ -187,4 +187,3 @@ function RandomCallPage() {
 
 export default withAuth(RandomCallPage);
 
-export default withAuth(RandomCallPage);

@@ -321,4 +321,3 @@ function CoursesPage() {
 
 export default withAuth(CoursesPage);
 
-export default withAuth(CoursesPage);
