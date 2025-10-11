@@ -136,7 +136,14 @@ export function AuthForm({ mode, onModeChange, isModal = false }: AuthFormProps)
       setLocalError(result.error || "Xác thực OTP thất bại");
     } else {
       success("Tạo tài khoản thành công", { title: "Hoàn tất" });
-      router.push("/");
+
+      if (isModal) {
+        // 🔔 Gửi event để AuthModal bắt và tự đóng modal + redirect
+        window.dispatchEvent(new CustomEvent("auth-success"));
+      } else {
+        // 🔁 Nếu không nằm trong modal thì redirect trực tiếp
+        router.push("/");
+      }
     }
   };
 
@@ -147,15 +154,15 @@ export function AuthForm({ mode, onModeChange, isModal = false }: AuthFormProps)
           {mode === "login"
             ? "Welcome back"
             : step === "form"
-            ? "Create account"
-            : "Verify OTP"}
+              ? "Create account"
+              : "Verify OTP"}
         </CardTitle>
         <CardDescription>
           {mode === "login"
             ? "Sign in to continue"
             : step === "form"
-            ? "Fill in details to create account"
-            : "Enter the 6-digit OTP we sent to your email"}
+              ? "Fill in details to create account"
+              : "Enter the 6-digit OTP we sent to your email"}
         </CardDescription>
       </CardHeader>
 
@@ -278,8 +285,8 @@ export function AuthForm({ mode, onModeChange, isModal = false }: AuthFormProps)
               {isLoading
                 ? "Processing..."
                 : mode === "login"
-                ? "Sign In"
-                : "Send OTP"}
+                  ? "Sign In"
+                  : "Send OTP"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </form>
