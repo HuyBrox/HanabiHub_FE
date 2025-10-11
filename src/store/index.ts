@@ -4,6 +4,7 @@ import { userApi } from "./services/userApi";
 import { authApi } from "./services/authApi";
 import { messageApi } from "./services/messageApi";
 import { flashcardApi } from "./services/flashcardApi";
+import { courseApi } from "./services/courseApi";
 import authReducer from "./slices/authSlice";
 import {
   authMiddleware, // để tự động refresh token
@@ -17,6 +18,7 @@ export const store = configureStore({
     [authApi.reducerPath]: authApi.reducer,
     [messageApi.reducerPath]: messageApi.reducer,
     [flashcardApi.reducerPath]: flashcardApi.reducer,
+    [courseApi.reducerPath]: courseApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -24,6 +26,7 @@ export const store = configureStore({
       .concat(authApi.middleware)
       .concat(messageApi.middleware)
       .concat(flashcardApi.middleware)
+      .concat(courseApi.middleware)
       .concat(authMiddleware)
       .prepend(authListenerMiddleware.middleware),
 });
