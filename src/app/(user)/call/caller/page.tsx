@@ -2,8 +2,9 @@
 import React, { useEffect, useRef } from "react";
 import { useCall } from "@/hooks/useCall";
 import { useSearchParams } from "next/navigation";
+import { withAuth } from "@/components/auth";
 
-const CallerPage: React.FC = () => {
+const CallerPageComponent: React.FC = () => {
   const search = useSearchParams();
   const receiverId = search.get("receiverId")!;
   const callType = (search.get("callType") as "video" | "audio") || "video";
@@ -167,4 +168,4 @@ const CallerPage: React.FC = () => {
   );
 };
 
-export default CallerPage;
+export default withAuth(CallerPageComponent);

@@ -2,16 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { VideoFrame } from "@/components/video-call/video-frame";
+import { withAuth } from "@/components/auth";
 import { CallControls } from "@/components/video-call/call-controls";
 import { NetworkIndicator } from "@/components/video-call/network-indicator";
 import { LevelSelector } from "@/components/video-call/level-selector";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Users, Clock } from "lucide-react";
-import { useLanguage } from "@/lib/language-context";
 
-export default function RandomCallPage() {
-  const { t } = useLanguage();
+function RandomCallPage() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
@@ -83,10 +82,10 @@ export default function RandomCallPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-              {t("call.random.title")}
+              Random Japanese Call
             </h1>
             <p className="text-gray-600 dark:text-gray-300 mt-1">
-              {t("call.random.subtitle")}
+              Practice Japanese with native speakers
             </p>
           </div>
 
@@ -122,7 +121,7 @@ export default function RandomCallPage() {
               isConnected={isConnected}
               isVideoOff={isVideoOff}
               isMuted={isMuted}
-              userName={t("common.you")}
+              userName="You"
               level={selectedLevel}
             />
 
@@ -131,7 +130,7 @@ export default function RandomCallPage() {
               type="remote"
               isLoading={isConnecting}
               isConnected={isConnected}
-              userName={isConnected ? "Tanaka-san" : t("call.random.waiting")}
+              userName={isConnected ? "Tanaka-san" : "Waiting..."}
               level="N3"
             />
           </div>
@@ -141,17 +140,17 @@ export default function RandomCallPage() {
             <Card className="p-6 text-center mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
               <Users className="h-12 w-12 text-orange-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                {t("call.random.ready")}
+                Ready to Practice Japanese?
               </h3>
               <p className="text-gray-600 dark:text-gray-300 mb-4">
-                {t("call.random.connect").replace("{level}", selectedLevel)}
+                Connect with a native speaker at {selectedLevel} level
               </p>
               <Button
                 onClick={handleStartCall}
                 size="lg"
                 className="bg-orange-500 hover:bg-orange-600 text-white px-8"
               >
-                {t("call.random.start")}
+                Start Random Call
               </Button>
             </Card>
           )}
@@ -160,10 +159,10 @@ export default function RandomCallPage() {
             <Card className="p-6 text-center mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
               <div className="animate-spin h-8 w-8 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                {t("call.random.connecting")}
+                Connecting...
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
-                {t("call.random.finding")}
+                Finding a Japanese speaker for you
               </p>
             </Card>
           )}
@@ -185,3 +184,7 @@ export default function RandomCallPage() {
     </div>
   );
 }
+
+export default withAuth(RandomCallPage);
+
+export default withAuth(RandomCallPage);

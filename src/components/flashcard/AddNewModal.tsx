@@ -21,6 +21,9 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { AnimatePresence, motion } from "framer-motion";
+import { useCreateFlashListMutation, useGetAllFlashCardsQuery, useCreateFlashCardMutation } from "@/store/services/flashcardApi";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useNotification } from "@/components/notification";
 
 interface AddNewModalProps {
   open: boolean;
@@ -32,34 +35,109 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
     "flashlist"
   );
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isPublic, setIsPublic] = useState(true);
+
+  // FlashList form data
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [level, setLevel] = useState<"N5" | "N4" | "N3" | "N2" | "N1">("N5");
+  const [selectedFlashcards, setSelectedFlashcards] = useState<string[]>([]);
 
   // search flashcard
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const debouncedSearch = useDebounce(search, 300);
 
   // thêm card
   const [cards, setCards] = useState<{ front: string; back: string }[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
 
-  // fake dữ liệu flashcard
-  const results = Array.from({ length: 15 }, (_, i) => ({
-    id: i + 1,
-    vocabulary: `Từ vựng ${i + 1}`,
-    meaning: `Nghĩa ${i + 1}`,
-  }));
+  // API hooks
+  const [createFlashList, { isLoading: isCreatingFlashList }] = useCreateFlashListMutation();
+  const [createFlashCard, { isLoading: isCreatingFlashCard }] = useCreateFlashCardMutation();
+  const { success, error: showError } = useNotification();
+
+  // Fetch user's flashcards for selection
+  const { data: flashCardsData, isLoading: isLoadingCards } = useGetAllFlashCardsQuery(
+    { page: 1, limit: 50 }, // Get more cards for selection
+    { skip: !open } // Only fetch when modal is open
+  );
+
+  // Filter flashcards based on search
+  const filteredFlashCards = flashCardsData?.data?.flashCards?.filter((card) =>
+    card.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    card.description.toLowerCase().includes(debouncedSearch.toLowerCase())
+  ) || [];
+
   const perPage = 5;
-  const paginated = results.slice((page - 1) * perPage, page * perPage);
-  const totalPages = Math.ceil(results.length / perPage);
+  const paginated = filteredFlashCards.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.ceil(filteredFlashCards.length / perPage);
 
   if (!open) return null;
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setThumbnailFile(file);
       setThumbnailPreview(URL.createObjectURL(file));
     }
     e.target.value = "";
+  };
+
+  // Handle flashcard selection
+  const handleAddFlashcard = (cardId: string) => {
+    if (!selectedFlashcards.includes(cardId)) {
+      setSelectedFlashcards([...selectedFlashcards, cardId]);
+    }
+  };
+
+  const handleRemoveFlashcard = (cardId: string) => {
+    setSelectedFlashcards(selectedFlashcards.filter(id => id !== cardId));
+  };
+
+  // Handle create FlashList
+  const handleCreateFlashList = async () => {
+    if (!title.trim()) {
+      showError("Vui lòng nhập tiêu đề FlashList", {
+        title: "Thiếu thông tin",
+        duration: 4000,
+      });
+      return;
+    }
+
+    try {
+      // Tạo data object với file
+      const createData = {
+        title,
+        description,
+        level,
+        isPublic,
+        flashcards: selectedFlashcards,
+        thumbnail: thumbnailFile || undefined, // Sử dụng file từ state
+      };
+
+      console.log("Creating FlashList with data:", createData); // Debug log
+
+      await createFlashList(createData).unwrap();
+
+      // Hiển thị thông báo thành công
+      success(`"${title}" đã được tạo và lưu vào thư viện của bạn`, {
+        title: "🎉 Tạo FlashList thành công!",
+        duration: 4000,
+      });
+
+      // Đợi ít nhất 2s để user thấy loading
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      handleClose();
+    } catch (error: any) {
+      console.error("Create FlashList error:", error); // Debug log
+      showError(error?.data?.message || "Vui lòng thử lại sau", {
+        title: "❌ Có lỗi xảy ra khi tạo FlashList",
+        duration: 5000,
+      });
+    }
   };
 
   // xử lý nhập liệu thẻ học tập
@@ -88,11 +166,73 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
     }
   };
 
+  // Handle create FlashCard
+  const handleCreateFlashCard = async () => {
+    if (!title.trim()) {
+      showError("Vui lòng nhập tên FlashCard", {
+        title: "Thiếu thông tin",
+        duration: 4000,
+      });
+      return;
+    }
+
+    if (cards.length === 0) {
+      showError("Vui lòng thêm ít nhất một thẻ học tập", {
+        title: "Thiếu thông tin",
+        duration: 4000,
+      });
+      return;
+    }
+
+    try {
+      // Transform cards to API format
+      const transformedCards = cards.map(card => ({
+        vocabulary: card.front,
+        meaning: card.back
+      }));
+
+      const createData = {
+        name: title,
+        cards: transformedCards,
+        isPublic,
+        description,
+        level,
+        thumbnail: thumbnailFile || undefined,
+      };
+
+      console.log("Creating FlashCard with data:", createData); // Debug log
+
+      await createFlashCard(createData).unwrap();
+
+      // Hiển thị thông báo thành công
+      success(`"${title}" đã được tạo và lưu vào thư viện của bạn`, {
+        title: "🎉 Tạo FlashCard thành công!",
+        duration: 4000,
+      });
+
+      // Đợi ít nhất 2s để user thấy loading
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      handleClose();
+    } catch (error: any) {
+      console.error("Create FlashCard error:", error); // Debug log
+      showError(error?.data?.message || "Vui lòng thử lại sau", {
+        title: "❌ Có lỗi xảy ra khi tạo FlashCard",
+        duration: 5000,
+      });
+    }
+  };
+
   // reset khi đóng modal
   const handleClose = () => {
     setActiveTab("flashlist");
     setThumbnailPreview(null);
+    setThumbnailFile(null);
     setIsPublic(true);
+    setTitle("");
+    setDescription("");
+    setLevel("N5");
+    setSelectedFlashcards([]);
     setSearch("");
     setPage(1);
     setCards([]);
@@ -149,9 +289,16 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
               transition={{ duration: 0.2 }}
               className="space-y-4"
             >
-              <Input placeholder="Tiêu đề FlashList..." required />
+              <Input
+                placeholder="Tiêu đề FlashList..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
               <textarea
                 placeholder="Mô tả..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 className="w-full border rounded px-3 py-2 text-sm min-h-[80px]"
               />
 
@@ -159,7 +306,7 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {/* Left */}
                 <div className="space-y-4">
-                  <Select>
+                  <Select value={level} onValueChange={(value: any) => setLevel(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Cấp độ" />
                     </SelectTrigger>
@@ -189,24 +336,47 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                     />
 
                     <div className="border rounded p-2 max-h-80 md:max-h-96 overflow-y-auto space-y-2">
-                      {paginated.map((fc) => (
-                        <div
-                          key={fc.id}
-                          className="flex items-center justify-between border rounded px-2 py-1"
-                        >
-                          <div>
-                            <p className="text-sm font-medium">
-                              {fc.vocabulary}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {fc.meaning}
-                            </p>
-                          </div>
-                          <Button size="sm" variant="outline">
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                      {isLoadingCards ? (
+                        <div className="text-center py-4 text-sm text-muted-foreground">
+                          Đang tải flashcards...
                         </div>
-                      ))}
+                      ) : paginated.length === 0 ? (
+                        <div className="text-center py-4 text-sm text-muted-foreground">
+                          {search ? "Không tìm thấy flashcard nào" : "Chưa có flashcard nào"}
+                        </div>
+                      ) : (
+                        paginated.map((fc) => (
+                          <div
+                            key={fc._id}
+                            className="flex items-center justify-between border rounded px-2 py-1"
+                          >
+                            <div>
+                              <p className="text-sm font-medium">
+                                {fc.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {fc.description || "Chưa có mô tả"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {fc.cards.length} thẻ • {fc.level}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={selectedFlashcards.includes(fc._id) ? "default" : "outline"}
+                              onClick={() => {
+                                if (selectedFlashcards.includes(fc._id)) {
+                                  handleRemoveFlashcard(fc._id);
+                                } else {
+                                  handleAddFlashcard(fc._id);
+                                }
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))
+                      )}
                     </div>
 
                     {/* Pagination */}
@@ -248,6 +418,34 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                         </PaginationItem>
                       </PaginationContent>
                     </Pagination>
+
+                    {/* Selected flashcards */}
+                    {selectedFlashcards.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Flashcards đã chọn ({selectedFlashcards.length})</p>
+                        <div className="border rounded p-2 max-h-32 overflow-y-auto space-y-1">
+                          {selectedFlashcards.map((cardId) => {
+                            const card = flashCardsData?.data?.flashCards?.find(c => c._id === cardId);
+                            return card ? (
+                              <div key={cardId} className="flex items-center justify-between bg-primary/5 rounded px-2 py-1">
+                                <div>
+                                  <p className="text-xs font-medium">{card.name}</p>
+                                  <p className="text-xs text-muted-foreground">{card.cards.length} thẻ</p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleRemoveFlashcard(cardId)}
+                                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -274,7 +472,10 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                       />
                       <button
                         type="button"
-                        onClick={() => setThumbnailPreview(null)}
+                        onClick={() => {
+                          setThumbnailPreview(null);
+                          setThumbnailFile(null);
+                        }}
                         className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
                       >
                         <X className="h-4 w-4" />
@@ -292,7 +493,13 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                 </div>
               </div>
 
-              <Button className="w-full">Lưu FlashList</Button>
+              <Button
+                className="w-full"
+                onClick={handleCreateFlashList}
+                disabled={isCreatingFlashList || !title.trim()}
+              >
+                {isCreatingFlashList ? "Đang tạo..." : "Lưu FlashList"}
+              </Button>
             </motion.div>
           )}
 
@@ -305,17 +512,24 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
               transition={{ duration: 0.2 }}
               className="space-y-4"
             >
-              <Input placeholder="Tên bộ FlashCard..." required />
+              <Input
+                placeholder="Tên bộ FlashCard..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 {/* Left */}
                 <div className="space-y-4">
                   <textarea
                     placeholder="Mô tả..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                     className="w-full border rounded px-3 py-2 text-sm min-h-[80px]"
                   />
 
-                  <Select>
+                  <Select value={level} onValueChange={(value: any) => setLevel(value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Cấp độ" />
                     </SelectTrigger>
@@ -362,7 +576,10 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                         />
                         <button
                           type="button"
-                          onClick={() => setThumbnailPreview(null)}
+                          onClick={() => {
+                            setThumbnailPreview(null);
+                            setThumbnailFile(null);
+                          }}
                           className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
                         >
                           <X className="h-4 w-4" />
@@ -443,7 +660,13 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                 </div>
               )}
 
-              <Button className="w-full">Lưu FlashCard</Button>
+              <Button
+                className="w-full"
+                onClick={handleCreateFlashCard}
+                disabled={isCreatingFlashCard || !title.trim() || cards.length === 0}
+              >
+                {isCreatingFlashCard ? "Đang tạo..." : "Lưu FlashCard"}
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>

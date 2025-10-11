@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { withAuth } from "@/components/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,6 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLanguage } from "@/lib/language-context";
 
 const posts = [
   {
@@ -25,11 +25,12 @@ const posts = [
       avatar: "/anime-style-avatar-girl.png",
       level: "N4",
     },
-    content: "community.posts.1.content",
+    content:
+      "Just passed my first JLPT practice test! The kanji flashcards really helped. 頑張って！ Anyone else preparing for December?",
     image: null,
     likes: 24,
     comments: 8,
-    timeAgo: "community.time.2h",
+    timeAgo: "2 hours ago",
     liked: false,
   },
   {
@@ -39,11 +40,12 @@ const posts = [
       avatar: "/anime-style-avatar-boy.png",
       level: "N2",
     },
-    content: "community.posts.2.content",
+    content:
+      "Pro tip: When learning new vocabulary, try to use it in sentences immediately. Context makes everything stick better! Here's my study setup:",
     image: "/japanese-study-setup-desk.png",
     likes: 42,
     comments: 15,
-    timeAgo: "community.time.4h",
+    timeAgo: "4 hours ago",
     liked: true,
   },
   {
@@ -53,11 +55,12 @@ const posts = [
       avatar: "/anime-style-avatar-woman.png",
       level: "N5",
     },
-    content: "community.posts.3.content",
+    content:
+      "Finally memorized all hiragana! The spaced repetition system here is amazing. Moving on to katakana next week. ありがとうございます！",
     image: null,
     likes: 18,
     comments: 6,
-    timeAgo: "community.time.6h",
+    timeAgo: "6 hours ago",
     liked: false,
   },
   {
@@ -67,11 +70,12 @@ const posts = [
       avatar: "/anime-style-avatar-man.png",
       level: "N1",
     },
-    content: "community.posts.4.content",
+    content:
+      "Today I learned that 雨 (rain) + 雲 (cloud) doesn't make a compound word, but 雨雲 (rain cloud) does exist! Japanese is fascinating. What's your favorite kanji discovery?",
     image: null,
     likes: 31,
     comments: 12,
-    timeAgo: "community.time.8h",
+    timeAgo: "8 hours ago",
     liked: false,
   },
   {
@@ -81,11 +85,12 @@ const posts = [
       avatar: "/anime-style-avatar-girl-2.png",
       level: "N3",
     },
-    content: "community.posts.5.content",
+    content:
+      "Started learning Kansai dialect and it's so different from standard Japanese! だんだん instead of ありがとう is my new favorite. Anyone else studying dialects?",
     image: "/osaka-street-scene.png",
     likes: 27,
     comments: 9,
-    timeAgo: "community.time.12h",
+    timeAgo: "12 hours ago",
     liked: true,
   },
 ];
@@ -119,8 +124,7 @@ const friendSuggestions = [
   },
 ];
 
-export default function CommunityPage() {
-  const { t } = useLanguage();
+function CommunityPage() {
   const [postLikes, setPostLikes] = useState<
     Record<number, { liked: boolean; count: number }>
   >(
@@ -156,11 +160,11 @@ export default function CommunityPage() {
             <div className="flex gap-3">
               <Avatar>
                 <AvatarImage src="/anime-style-avatar-user.png" />
-                <AvatarFallback>{t("common.you")}</AvatarFallback>
+                <AvatarFallback>You</AvatarFallback>
               </Avatar>
               <div className="flex-1 ">
                 <Textarea
-                  placeholder={t("community.create.placeholder")}
+                  placeholder="Share your Japanese learning journey..."
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
                   className="min-h-[80px] resize-none border-0 p-3 focus-visible:ring-0 "
@@ -168,13 +172,13 @@ export default function CommunityPage() {
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                   <Button variant="ghost" size="sm">
                     <ImageIcon className="h-4 w-4 mr-2" />
-                    {t("community.photo")}
+                    Photo
                   </Button>
                   <Button
                     className="bg-primary hover:bg-primary/90"
                     disabled={!newPost.trim()}
                   >
-                    {t("community.post")}
+                    Post
                   </Button>
                 </div>
               </div>
@@ -198,15 +202,15 @@ export default function CommunityPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-semibold">{post.user.name}</span>
                       <Badge variant="outline" className="text-xs">
-                        {post.user.level} {t("home.community.level")}
+                        {post.user.level} Level
                       </Badge>
                       <span className="text-sm text-muted-foreground">•</span>
                       <span className="text-sm text-muted-foreground">
-                        {t(post.timeAgo)}
+                        {post.timeAgo}
                       </span>
                     </div>
                     <p className="text-foreground mb-3 leading-relaxed">
-                      {t(post.content)}
+                      {post.content}
                     </p>
                     {post.image && (
                       <div className="mb-3">
@@ -249,7 +253,7 @@ export default function CommunityPage() {
                         className="p-0 h-auto hover:text-primary"
                       >
                         <Share className="h-4 w-4 mr-1" />
-                        {t("community.share")}
+                        Share
                       </Button>
                     </div>
                   </div>
@@ -267,7 +271,7 @@ export default function CommunityPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <TrendingUp className="h-5 w-5 text-primary" />
-              {t("community.trendingTopics")}
+              Trending Topics
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -281,7 +285,7 @@ export default function CommunityPage() {
                     {topic.tag}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {topic.posts} {t("community.posts")}
+                    {topic.posts} posts
                   </p>
                 </div>
                 <span className="text-xs text-muted-foreground">
@@ -297,7 +301,7 @@ export default function CommunityPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <UserPlus className="h-5 w-5 text-primary" />
-              {t("community.peopleToFollow")}
+              People to Follow
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -314,12 +318,12 @@ export default function CommunityPage() {
                       {friend.level}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {friend.mutualFriends} {t("community.mutualFriends")}
+                      {friend.mutualFriends} mutual friends
                     </span>
                   </div>
                 </div>
                 <Button size="sm" className="bg-primary hover:bg-primary/90">
-                  {t("community.follow")}
+                  Follow
                 </Button>
               </div>
             ))}
@@ -329,46 +333,46 @@ export default function CommunityPage() {
         {/* Study Groups */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{t("community.studyGroups")}</CardTitle>
+            <CardTitle className="text-lg">Study Groups</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="p-3 border border-border rounded-lg">
-              <p className="font-medium text-sm">{t("community.groups.n3.title")}</p>
+              <p className="font-medium text-sm">JLPT N3 Study Group</p>
               <p className="text-xs text-muted-foreground">
-                {t("community.groups.n3.subtitle")}
+                124 members • Daily practice
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-2 w-full bg-transparent"
               >
-                {t("community.joinGroup")}
+                Join Group
               </Button>
             </div>
             <div className="p-3 border border-border rounded-lg">
-              <p className="font-medium text-sm">{t("community.groups.kanji.title")}</p>
+              <p className="font-medium text-sm">Kanji Masters</p>
               <p className="text-xs text-muted-foreground">
-                {t("community.groups.kanji.subtitle")}
+                89 members • Advanced learners
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-2 w-full bg-transparent"
               >
-                {t("community.joinGroup")}
+                Join Group
               </Button>
             </div>
             <div className="p-3 border border-border rounded-lg">
-              <p className="font-medium text-sm">{t("community.groups.anime.title")}</p>
+              <p className="font-medium text-sm">Anime Japanese Club</p>
               <p className="text-xs text-muted-foreground">
-                {t("community.groups.anime.subtitle")}
+                256 members • Learn through anime
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-2 w-full bg-transparent"
               >
-                {t("community.joinGroup")}
+                Join Group
               </Button>
             </div>
           </CardContent>
@@ -377,3 +381,7 @@ export default function CommunityPage() {
     </div>
   );
 }
+
+export default withAuth(CommunityPage);
+
+export default withAuth(CommunityPage);

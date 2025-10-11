@@ -590,7 +590,7 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
       {/* Messages */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 p-2 sm:p-3 overflow-y-auto space-y-2 bg-gray-50 relative"
+        className="flex-1 p-3 overflow-y-auto space-y-3 bg-gradient-to-b from-gray-50 to-white relative"
         onScroll={handleScroll}
       >
         {messagesLoading ? (
@@ -636,8 +636,8 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
               return (
                 <React.Fragment key={`${message.id}-${index}`}>
                   {showTimeSeparator && (
-                    <div className="flex justify-center my-2">
-                      <div className="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">
+                    <div className="flex justify-center my-3">
+                      <div className="bg-white/80 backdrop-blur-sm text-gray-500 text-xs px-3 py-1.5 rounded-full shadow-sm border border-gray-200">
                         {formatTimeSeparator(message.createdAt)}
                       </div>
                     </div>
@@ -648,34 +648,37 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
                       message.sender === "me" ? "justify-end" : "justify-start"
                     )}
                   >
-                    <div className="flex flex-col">
+                    <div className="flex flex-col max-w-[85%]">
                       <div
                         className={cn(
-                          "max-w-[80%] sm:max-w-[75%] px-3 sm:px-4 py-2 text-xs sm:text-sm leading-relaxed rounded-2xl relative",
+                          "px-4 py-2.5 text-sm leading-relaxed rounded-2xl relative shadow-sm",
                           message.sender === "me"
-                            ? "bg-orange-500 text-white rounded-br-md"
-                            : "bg-white text-gray-800 rounded-bl-md shadow-sm"
+                            ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-br-md ml-8"
+                            : "bg-white text-gray-800 rounded-bl-md mr-8 border border-gray-100"
                         )}
                         title={message.timestamp}
                       >
-                        <p>{message.text}</p>
+                        <p className="break-words">{message.text}</p>
                       </div>
                       {/* Status indicator chỉ cho tin nhắn mới nhất của mình */}
                       {isMyLatestMessage && message.status && (
-                        <div className="text-xs text-gray-400 mt-1 text-right">
+                        <div className={cn(
+                          "text-xs mt-1.5",
+                          message.sender === "me" ? "text-right" : "text-left"
+                        )}>
                           {message.status === "sending" && (
-                            <span className="flex items-center gap-1 justify-end">
+                            <span className="flex items-center gap-1.5 text-gray-400">
                               <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                               Đang gửi
                             </span>
                           )}
-                          {message.status === "sent" && <span>Đã gửi</span>}
+                          {message.status === "sent" && <span className="text-gray-400">Đã gửi</span>}
                           {message.status === "delivered" && (
-                            <span>Đã nhận</span>
+                            <span className="text-gray-400">Đã nhận</span>
                           )}
-                          {message.status === "read" && <span>Đã xem</span>}
+                          {message.status === "read" && <span className="text-blue-500">Đã xem</span>}
                           {message.status === "failed" && (
-                            <span className="flex items-center gap-1 justify-end text-red-500">
+                            <span className="flex items-center gap-1.5 text-red-500">
                               <svg
                                 className="w-3 h-3"
                                 fill="currentColor"
@@ -739,8 +742,8 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
       )}
 
       {/* Input */}
-      <div className="p-2 sm:p-3 bg-white">
-        <div className="flex items-center gap-1 sm:gap-2">
+      <div className="p-3 bg-white border-t border-gray-100">
+        <div className="flex items-center gap-2">
           <Input
             ref={inputRef}
             value={newMessage}
@@ -769,21 +772,21 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
             onKeyDown={handleKeyPress}
             placeholder="Nhập tin nhắn..."
             disabled={sendingMessage}
-            className="flex-1 h-8 sm:h-9 text-xs sm:text-sm"
+            className="flex-1 h-10 text-sm rounded-full border-gray-200 focus:border-orange-400 focus:ring-orange-400/20"
             tabIndex={0}
             autoFocus
           />
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-full hover:bg-orange-100"
+            className="h-10 w-10 p-0 rounded-full hover:bg-orange-100 transition-colors"
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || sendingMessage}
           >
             {sendingMessage ? (
-              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-500"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-orange-500 border-t-transparent"></div>
             ) : (
-              <Send className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
+              <Send className="h-4 w-4 text-orange-500" />
             )}
           </Button>
         </div>

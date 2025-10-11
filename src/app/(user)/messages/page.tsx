@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/language-context";
 import { useAuth } from "@/hooks/useAuth";
 import { useGetConversationsQuery } from "@/store/services/messageApi";
+import { withAuth } from "@/components/auth";
 import { ConversationUI } from "@/types/message";
 import { ChatArea } from "@/components/chat";
 
@@ -62,7 +63,7 @@ const transformConversationToUI = (
   };
 };
 
-export default function MessagesPage() {
+function MessagesPage() {
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
   >(null);
@@ -272,3 +273,5 @@ export default function MessagesPage() {
     </div>
   );
 }
+
+export default withAuth(MessagesPage);
