@@ -539,7 +539,7 @@ const FlashcardFanDetail: React.FC<FlashcardFanDetailProps> = () => {
                   {visibleCards.map((flashcard, index) => (
                     <Link
                       key={flashcard._id || index}
-                      href={`/flashcards/practice/${flashcard._id}`}
+                      href={`/flashcards/${flashcard._id}`}
                       className="block group/card"
                     >
                       <div className="relative h-full transition-transform duration-300 hover:-translate-y-2 hover:z-50">
