@@ -9,6 +9,7 @@ import { AuthInitializer } from "@/hooks/useAuthInit"; // để khởi tạo aut
 import RtkProvider from "./providers";
 import { NotificationProvider } from "@/components/notification";
 import IncomingCallPopup from "@/components/IncomingCallPopup";
+import NoSSR from "@/components/NoSSR";
 
 export const metadata: Metadata = {
   title: "JapanLearn - Learn Japanese Easily",
@@ -36,47 +37,79 @@ html {
   --font-mono: ${GeistMono.variable};
 }
         `}</style>
-        {/* Script chống flash theme & language */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  try {
-    // Theme
-    var theme = localStorage.getItem('theme');
-    var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    var cl = document.documentElement.classList;
-    cl.remove('light', 'dark');
-    if(theme === 'dark' || (!theme && systemDark)) cl.add('dark');
-    else cl.add('light');
-    // Language
-    var lang = localStorage.getItem('language');
-    if(lang === 'vi' || lang === 'en') window.__lang = lang;
-    else window.__lang = 'en';
-  } catch(e) {}
+  // Remove browser extension attributes that cause hydration mismatch
+  const removeExtensionAttributes = () => {
+    const elements = document.querySelectorAll('*');
+    elements.forEach(el => {
+      // Remove common browser extension attributes
+      const attrsToRemove = [
+        'bis_skin_checked',
+        'bis_register',
+        '__processed_',
+        'cz-shortcut-listen',
+        'data-bis_',
+        'data-extension-'
+      ];
+      
+      attrsToRemove.forEach(attr => {
+        if (el.hasAttribute(attr)) {
+          el.removeAttribute(attr);
+        }
+      });
+    });
+  };
+  
+  // Run immediately and on DOM changes
+  removeExtensionAttributes();
+  
+  // Wait for DOM to be ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', removeExtensionAttributes);
+  }
+  
+  const observer = new MutationObserver(removeExtensionAttributes);
+  observer.observe(document.documentElement, { 
+    attributes: true, 
+    childList: true, 
+    subtree: true,
+    attributeFilter: ['bis_skin_checked', 'bis_register', '__processed_', 'cz-shortcut-listen']
+  });
 })();
             `,
           }}
         />
       </head>
-      <body>
-        <RtkProvider>
-          <AuthInitializer>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
-              <LanguageProvider>
-                <NotificationProvider>
-                  {children}
-                  <IncomingCallPopup />
-                </NotificationProvider>
-              </LanguageProvider>
-            </ThemeProvider>
-          </AuthInitializer>
-        </RtkProvider>
+      <body suppressHydrationWarning>
+        <NoSSR fallback={
+          <div className="fixed inset-0 flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          </div>
+        }>
+          <RtkProvider>
+            <AuthInitializer>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                <LanguageProvider>
+                  <NotificationProvider>
+                    {children}
+                    <IncomingCallPopup />
+                  </NotificationProvider>
+                </LanguageProvider>
+              </ThemeProvider>
+            </AuthInitializer>
+          </RtkProvider>
+        </NoSSR>
       </body>
     </html>
   );
