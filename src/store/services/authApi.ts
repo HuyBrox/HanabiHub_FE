@@ -54,6 +54,32 @@ export const authApi = createApi({
       }),
       providesTags: ["Auth"],
     }),
+    // Gửi OTP để đăng ký
+    sendOtpRegister: builder.mutation<any, { email: string }>({
+      query: (body) => ({
+        url: "/send-otp-register",
+        method: "POST",
+        body,
+      }),
+    }),
+    // Đăng ký tài khoản
+    registerUser: builder.mutation<
+      any,
+      {
+        fullname: string
+        username: string
+        email: string
+        password: string
+        confirmPassword: string   // 👈 thêm confirmPassword
+        Otp: string
+      }
+    >({
+      query: (body) => ({
+        url: "/register",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 //rtk query tự generate hooks dựa trên endpoint đã khai báo
@@ -62,4 +88,6 @@ export const {
   useLogoutMutation,
   useRefreshTokenMutation,
   useGetCurrentUserQuery,
+  useSendOtpRegisterMutation,
+  useRegisterUserMutation,
 } = authApi;
