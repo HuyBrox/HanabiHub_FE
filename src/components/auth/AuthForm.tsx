@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,12 +23,22 @@ import {
   User,
   ArrowRight,
   AlertCircle,
+  Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AuthFormProps } from "@/types/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotification } from "@/components/notification";
 import styles from "./AuthForm.module.css";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
+  useSendOtpRegisterMutation,
+  useRegisterUserMutation,
+} from "@/store/services/authApi";
 
 export function AuthForm({
   mode,
@@ -38,27 +49,46 @@ export function AuthForm({
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    username: "",
     fullname: "",
     confirmPassword: "",
+    otp: "",
   });
 
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
     password?: string;
-    name?: string;
+    username?: string;
+    fullname?: string;
     confirmPassword?: string;
   }>({});
 
   const [localError, setLocalError] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
 
   const { login, isLoading, isAuthenticated } = useAuth();
-  const { success } = useNotification();
+  const { success, error: notifyError } = useNotification();
   const router = useRouter();
+
+  // RTK Query hooks
+  const [sendOtpRegister, { isLoading: isSendingOtp }] =
+    useSendOtpRegisterMutation();
+  const [registerUser, { isLoading: isRegistering }] =
+    useRegisterUserMutation();
 
   // Clear error khi chuyển mode
   useEffect(() => {
     setFieldErrors({});
     setLocalError(null);
+    setOtpSent(false);
+    setFormData({
+      email: "",
+      password: "",
+      username: "",
+      fullname: "",
+      confirmPassword: "",
+      otp: "",
+    });
   }, [mode]);
 
   // Chỉ redirect sau khi login thành công và không phải modal
@@ -94,9 +124,20 @@ export function AuthForm({
     []
   );
 
-  const validateName = useCallback(
-    (name: string): string | undefined => {
-      if (mode === "register" && !name) return "Họ tên là bắt buộc";
+  const validateUsername = useCallback(
+    (username: string): string | undefined => {
+      if (mode === "register" && !username) return "Tên người dùng là bắt buộc";
+      if (mode === "register" && username.length < 3) return "Tên người dùng phải có ít nhất 3 ký tự";
+      if (mode === "register" && username.length > 100) return "Tên người dùng không được quá 100 ký tự";
+      return undefined;
+    },
+    [mode]
+  );
+
+  const validateFullname = useCallback(
+    (fullname: string): string | undefined => {
+      if (mode === "register" && !fullname) return "Họ tên là bắt buộc";
+      if (mode === "register" && fullname.length > 200) return "Họ tên không được quá 200 ký tự";
       return undefined;
     },
     [mode]
@@ -119,7 +160,8 @@ export function AuthForm({
 
     errors.email = validateEmail(formData.email);
     errors.password = validatePassword(formData.password);
-    errors.name = validateName(formData.name);
+    errors.username = validateUsername(formData.username);
+    errors.fullname = validateFullname(formData.fullname);
     errors.confirmPassword = validateConfirmPassword(
       formData.confirmPassword,
       formData.password
@@ -138,9 +180,71 @@ export function AuthForm({
     formData,
     validateEmail,
     validatePassword,
-    validateName,
+    validateUsername,
+    validateFullname,
     validateConfirmPassword,
   ]);
+
+  // Hàm gửi OTP
+  const handleSendOtp = useCallback(async () => {
+    setLocalError(null);
+
+    // Validate form trước khi gửi OTP
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      const result = await sendOtpRegister({ email: formData.email }).unwrap();
+      success("OTP đã được gửi đến email của bạn", { title: "Thành công" });
+      setOtpSent(true);
+    } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.message || "Không thể gửi OTP";
+      setLocalError(errorMessage);
+      notifyError(errorMessage, { title: "Lỗi" });
+    }
+  }, [formData.email, sendOtpRegister, validateForm, success, notifyError]);
+
+  // Hàm xác thực OTP và đăng ký
+  const handleVerifyAndRegister = useCallback(async () => {
+    setLocalError(null);
+
+    if (!formData.otp || formData.otp.length !== 6) {
+      setLocalError("Vui lòng nhập đầy đủ mã OTP");
+      return;
+    }
+
+    try {
+      const result = await registerUser({
+        username: formData.username,
+        fullname: formData.fullname,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        otp: formData.otp,
+      }).unwrap();
+
+      success("Đăng ký thành công! Vui lòng đăng nhập.", { title: "Thành công" });
+
+      // Chuyển về màn hình login
+      setOtpSent(false);
+      setFormData({
+        email: "",
+        password: "",
+        username: "",
+        fullname: "",
+        confirmPassword: "",
+        otp: "",
+      });
+      onModeChange("login");
+    } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.message || "Đăng ký thất bại";
+      setLocalError(errorMessage);
+      notifyError(errorMessage, { title: "Lỗi" });
+    }
+  }, [formData, registerUser, success, notifyError, onModeChange]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -164,9 +268,17 @@ export function AuthForm({
         } else if (isModal) {
           window.dispatchEvent(new CustomEvent("auth-success"));
         }
+      } else if (mode === "register") {
+        // Nếu chưa gửi OTP, gửi OTP
+        if (!otpSent) {
+          await handleSendOtp();
+        } else {
+          // Nếu đã gửi OTP, xác thực và đăng ký
+          await handleVerifyAndRegister();
+        }
       }
     },
-    [mode, formData, validateForm, login, isModal]
+    [mode, formData, validateForm, login, isModal, otpSent, handleSendOtp, handleVerifyAndRegister]
   );
 
   const handleModeSwitch = useCallback(
@@ -185,8 +297,12 @@ export function AuthForm({
     []
   );
 
-  const handleNameChange = useMemo(
-    () => handleInputChange("name"),
+  const handleUsernameChange = useMemo(
+    () => handleInputChange("username"),
+    [handleInputChange]
+  );
+  const handleFullnameChange = useMemo(
+    () => handleInputChange("fullname"),
     [handleInputChange]
   );
   const handleEmailChange = useMemo(
@@ -202,6 +318,10 @@ export function AuthForm({
     [handleInputChange]
   );
 
+  const handleOtpChange = useCallback((value: string) => {
+    setFormData((prev) => ({ ...prev, otp: value }));
+  }, []);
+
   return (
     <Card
       key="auth-form" // Stable key để tránh re-mount
@@ -212,10 +332,14 @@ export function AuthForm({
     >
       <CardHeader className="space-y-1 text-center">
         <div className="flex items-center justify-center mb-4">
-          <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-xl">
-              日
-            </span>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+            <Image
+              src="/images/logos/logohanabi.png"
+              alt="HanabiHub Logo"
+              width={48}
+              height={48}
+              className="object-contain"
+            />
           </div>
         </div>
         <CardTitle className="text-2xl font-bold">
@@ -238,11 +362,42 @@ export function AuthForm({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name field for register mode */}
+          {/* Username field for register mode */}
           <div
             className={cn(
               "transition-all duration-300 ease-in-out overflow-hidden",
-              mode === "register" ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+              mode === "register" && !otpSent ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  className={cn(
+                    "pl-10",
+                    fieldErrors.username &&
+                      "border-red-500 focus:ring-red-500 focus:border-red-500"
+                  )}
+                  value={formData.username}
+                  onChange={handleUsernameChange}
+                  disabled={isLoading || isSendingOtp || isRegistering}
+                />
+              </div>
+              {fieldErrors.username && (
+                <p className="text-red-500 text-xs mt-1">{fieldErrors.username}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Fullname field for register mode */}
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              mode === "register" && !otpSent ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
             )}
           >
             <div className="space-y-2">
@@ -250,24 +405,24 @@ export function AuthForm({
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="name"
+                  id="fullname"
                   type="text"
                   placeholder="Enter your full name"
                   className={cn(
                     "pl-10",
-                    fieldErrors.name &&
+                    fieldErrors.fullname &&
                       "border-red-500 focus:ring-red-500 focus:border-red-500"
                   )}
-                  value={formData.name}
-                  onChange={handleNameChange}
-                  disabled={isLoading}
+                  value={formData.fullname}
+                  onChange={handleFullnameChange}
+                  disabled={isLoading || isSendingOtp || isRegistering}
                 />
               </div>
-              {fieldErrors.name && (
-                <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>
+              {fieldErrors.fullname && (
+                <p className="text-red-500 text-xs mt-1">{fieldErrors.fullname}</p>
               )}
             </div>
-          )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -284,7 +439,7 @@ export function AuthForm({
                 )}
                 value={formData.email}
                 onChange={handleEmailChange}
-                disabled={isLoading}
+                disabled={isLoading || isSendingOtp || isRegistering || (mode === "register" && otpSent)}
               />
             </div>
             {fieldErrors.email && (
@@ -307,7 +462,7 @@ export function AuthForm({
                 )}
                 value={formData.password}
                 onChange={handlePasswordChange}
-                disabled={isLoading}
+                disabled={isLoading || isSendingOtp || isRegistering || (mode === "register" && otpSent)}
               />
               <Button type="button" variant="ghost" size="sm"
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
@@ -326,7 +481,7 @@ export function AuthForm({
           <div
             className={cn(
               "transition-all duration-300 ease-in-out overflow-hidden",
-              mode === "register" ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+              mode === "register" && !otpSent ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
             )}
           >
             <div className="space-y-2">
@@ -344,7 +499,7 @@ export function AuthForm({
                   )}
                   value={formData.confirmPassword}
                   onChange={handleConfirmPasswordChange}
-                  disabled={isLoading}
+                  disabled={isLoading || isSendingOtp || isRegistering}
                 />
               </div>
               {fieldErrors.confirmPassword && (
@@ -353,29 +508,66 @@ export function AuthForm({
                 </p>
               )}
             </div>
-          )}
+          </div>
 
-          {/* Chỉ hiện OTP sau khi đã gửi OTP */}
-          {mode === "register" && otpSent && (
+          {/* OTP field - hiện sau khi gửi OTP thành công */}
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              mode === "register" && otpSent ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
             <div className="space-y-2">
-              <Label htmlFor="otp">OTP</Label>
-              <div className="relative">
-                <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input id="otp" placeholder="Nhập OTP đã gửi về email" className="pl-10"
-                  value={formData.otp} onChange={(e) => handleChange("otp", e.target.value)} />
+              <Label htmlFor="otp">Enter OTP Code</Label>
+              <p className="text-sm text-muted-foreground">
+                We&apos;ve sent a 6-digit code to {formData.email}
+              </p>
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={formData.otp}
+                  onChange={handleOtpChange}
+                  disabled={isRegistering}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
               </div>
+              <Button
+                type="button"
+                variant="link"
+                className="w-full text-sm"
+                onClick={handleSendOtp}
+                disabled={isSendingOtp}
+              >
+                {isSendingOtp ? "Sending..." : "Resend OTP"}
+              </Button>
             </div>
-          )}
+          </div>
 
           <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-            disabled={isSendingOtp || isRegistering}>
-            {(isSendingOtp || isRegistering)
+            disabled={isLoading || isSendingOtp || isRegistering}>
+            {(isLoading || isSendingOtp || isRegistering)
               ? <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  {mode === "login" ? "Signing in..." : otpSent ? "Registering..." : "Sending OTP..."}
+                  {mode === "login"
+                    ? "Signing in..."
+                    : otpSent
+                      ? "Verifying..."
+                      : "Sending OTP..."}
                 </div>
               : <div className="flex items-center gap-2">
-                  {mode === "login" ? "Sign In" : otpSent ? "Create Account" : "Send OTP"}
+                  {mode === "login"
+                    ? "Sign In"
+                    : otpSent
+                      ? "Verify & Register"
+                      : "Send OTP"}
                   <ArrowRight className="h-4 w-4" />
                 </div>}
           </Button>

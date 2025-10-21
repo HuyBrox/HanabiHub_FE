@@ -11,7 +11,7 @@ import { NotificationProvider } from "@/components/notification";
 import IncomingCallPopup from "@/components/IncomingCallPopup";
 
 export const metadata: Metadata = {
-  title: "JapanLearn - Learn Japanese Easily",
+  title: "HanabiHub - Learn Japanese Easily",
   description:
     "Master Japanese with interactive courses, flashcards, and AI practice",
   generator: "v0.app",

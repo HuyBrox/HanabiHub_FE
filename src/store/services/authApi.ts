@@ -66,12 +66,12 @@ export const authApi = createApi({
     registerUser: builder.mutation<
       any,
       {
-        fullname: string
         username: string
+        fullname: string
         email: string
         password: string
-        confirmPassword: string   // 👈 thêm confirmPassword
-        Otp: string
+        confirmPassword: string
+        otp: string
       }
     >({
       query: (body) => ({
