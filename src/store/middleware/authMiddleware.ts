@@ -23,7 +23,7 @@ export const authMiddleware: Middleware =
           api
             .dispatch(authApi.endpoints.refreshToken.initiate() as any)
             .unwrap()
-            .then((result) => {
+            .then((result: unknown) => {
               console.log("✅ Token refreshed successfully");
               // Sau khi refresh thành công, retry request gốc
               const originalRequest = action.meta?.arg;
@@ -31,7 +31,7 @@ export const authMiddleware: Middleware =
                 api.dispatch(authApi.util.invalidateTags(["Auth"]));
               }
             })
-            .catch((error) => {
+            .catch((error: unknown) => {
               console.log("❌ Token refresh failed:", error);
               // Refresh fail thì logout
               api.dispatch(logout());
