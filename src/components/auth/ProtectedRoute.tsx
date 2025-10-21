@@ -20,7 +20,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   fallback = <div>Loading...</div>,
   redirectTo = "/",
 }) => {
-  const { isAuthenticated, isLoading } = useSelector(
+  const { isAuthenticated, isLoading, isInitialized } = useSelector(
     (state: RootState) => state.auth
   );
   const router = useRouter();
@@ -29,7 +29,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const notifiedRef = useRef(false);
 
   useEffect(() => {
-    if (isLoading) return;
+    // Chỉ xử lý redirect sau khi auth đã được khởi tạo
+    if (!isInitialized || isLoading) return;
 
     if (!isAuthenticated && !hasRedirected) {
       // Tránh thông báo lặp do StrictMode/multiple mounts
@@ -47,9 +48,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       setHasRedirected(true);
       router.push(redirectTo);
     }
-  }, [isAuthenticated, isLoading, router, redirectTo, warning, hasRedirected]);
+  }, [isAuthenticated, isLoading, isInitialized, router, redirectTo, warning, hasRedirected]);
 
-  if (isLoading) {
+  // Hiển thị loading nếu đang khởi tạo auth hoặc đang loading
+  if (!isInitialized || isLoading) {
     return <>{fallback}</>;
   }
 
@@ -107,18 +109,22 @@ export const GuestRoute: React.FC<ProtectedRouteProps> = ({
   fallback = <div>Loading...</div>,
   redirectTo = "/",
 }) => {
-  const { isAuthenticated, isLoading } = useSelector(
+  const { isAuthenticated, isLoading, isInitialized } = useSelector(
     (state: RootState) => state.auth
   );
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    // Chỉ xử lý redirect sau khi auth đã được khởi tạo
+    if (!isInitialized || isLoading) return;
+
+    if (isAuthenticated) {
       router.push(redirectTo);
     }
-  }, [isAuthenticated, isLoading, router, redirectTo]);
+  }, [isAuthenticated, isLoading, isInitialized, router, redirectTo]);
 
-  if (isLoading) {
+  // Hiển thị loading nếu đang khởi tạo auth hoặc đang loading
+  if (!isInitialized || isLoading) {
     return <>{fallback}</>;
   }
 

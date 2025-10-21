@@ -53,6 +53,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isInitialized: boolean; // Đánh dấu auth đã được khởi tạo
 }
 
 // Component Props

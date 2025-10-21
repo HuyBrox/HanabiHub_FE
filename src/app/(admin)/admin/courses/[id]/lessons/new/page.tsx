@@ -18,15 +18,24 @@ import {
   Shuffle,
   Mic,
   BookOpen,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
-import { useCreateLessonMutation } from "@/store/services/courseApi";
+import {
+  useCreateLessonMutation,
+  useUploadAudioMutation,
+} from "@/store/services/courseApi";
 import { useNotification } from "@/components/notification/NotificationProvider";
 import styles from "./new-lesson.module.css";
 
 // Types
 type LessonType = "video" | "task";
-type TaskType = "multiple_choice" | "fill_blank" | "listening" | "matching" | "speaking" | "reading";
+type TaskType =
+  | "multiple_choice"
+  | "fill_blank"
+  | "listening"
+  | "matching"
+  | "speaking"
+  | "reading";
 
 interface MultipleChoiceQuestion {
   id: string;
@@ -62,6 +71,8 @@ export default function NewLessonPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [createLesson, { isLoading: isSubmitting }] = useCreateLessonMutation();
+  const [uploadAudio, { isLoading: isUploadingAudio }] =
+    useUploadAudioMutation();
   const { success, error: showError } = useNotification();
 
   // Basic form data
@@ -70,7 +81,7 @@ export default function NewLessonPage() {
   const [content, setContent] = useState("");
 
   // Video fields
-  const [videoUrl, setVideoUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState<string>("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoType, setVideoType] = useState<"youtube" | "upload">("youtube");
 
@@ -88,8 +99,12 @@ export default function NewLessonPage() {
   const [matchingItems, setMatchingItems] = useState<MatchingItem[]>([]);
 
   // Listening
-  const [audioUrl, setAudioUrl] = useState("");
-  const [listeningQuestions, setListeningQuestions] = useState<ListeningQuestion[]>([]);
+  const [audioUrl, setAudioUrl] = useState<string>("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioType, setAudioType] = useState<"url" | "upload">("url");
+  const [listeningQuestions, setListeningQuestions] = useState<
+    ListeningQuestion[]
+  >([]);
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -97,18 +112,24 @@ export default function NewLessonPage() {
   const [isMultiAddMode, setIsMultiAddMode] = useState(false);
   const [multiAddText, setMultiAddText] = useState("");
 
+  // Refs
+  const audioFileInputRef = useRef<HTMLInputElement>(null);
+
   // Multiple Choice Handlers
   const addMcQuestion = () => {
-    setMcQuestions([...mcQuestions, {
-      id: `q${mcQuestions.length + 1}`,
-      question: "",
-      options: [
-        { key: "A", text: "" },
-        { key: "B", text: "" }
-      ],
-      answer: "",
-      explanation: ""
-    }]);
+    setMcQuestions([
+      ...mcQuestions,
+      {
+        id: `q${mcQuestions.length + 1}`,
+        question: "",
+        options: [
+          { key: "A", text: "" },
+          { key: "B", text: "" },
+        ],
+        answer: "",
+        explanation: "",
+      },
+    ]);
   };
 
   const removeMcQuestion = (index: number) => {
@@ -130,7 +151,9 @@ export default function NewLessonPage() {
 
   const removeMcOption = (qIndex: number, optIndex: number) => {
     const updated = [...mcQuestions];
-    updated[qIndex].options = updated[qIndex].options.filter((_, i) => i !== optIndex);
+    updated[qIndex].options = updated[qIndex].options.filter(
+      (_, i) => i !== optIndex
+    );
     setMcQuestions(updated);
   };
 
@@ -142,12 +165,15 @@ export default function NewLessonPage() {
 
   // Fill Blank Handlers
   const addFbItem = () => {
-    setFbItems([...fbItems, {
-      id: `q${fbItems.length + 1}`,
-      sentence: "",
-      answer: "",
-      hints: []
-    }]);
+    setFbItems([
+      ...fbItems,
+      {
+        id: `q${fbItems.length + 1}`,
+        sentence: "",
+        answer: "",
+        hints: [],
+      },
+    ]);
   };
 
   const removeFbItem = (index: number) => {
@@ -168,11 +194,17 @@ export default function NewLessonPage() {
 
   const removeFbHint = (itemIndex: number, hintIndex: number) => {
     const updated = [...fbItems];
-    updated[itemIndex].hints = updated[itemIndex].hints.filter((_, i) => i !== hintIndex);
+    updated[itemIndex].hints = updated[itemIndex].hints.filter(
+      (_, i) => i !== hintIndex
+    );
     setFbItems(updated);
   };
 
-  const updateFbHint = (itemIndex: number, hintIndex: number, value: string) => {
+  const updateFbHint = (
+    itemIndex: number,
+    hintIndex: number,
+    value: string
+  ) => {
     const updated = [...fbItems];
     updated[itemIndex].hints[hintIndex] = value;
     setFbItems(updated);
@@ -187,7 +219,11 @@ export default function NewLessonPage() {
     setMatchingItems(matchingItems.filter((_, i) => i !== index));
   };
 
-  const updateMatchingItem = (index: number, field: "left" | "right", value: string) => {
+  const updateMatchingItem = (
+    index: number,
+    field: "left" | "right",
+    value: string
+  ) => {
     const updated = [...matchingItems];
     updated[index][field] = value;
     setMatchingItems(updated);
@@ -195,22 +231,29 @@ export default function NewLessonPage() {
 
   // Listening Handlers
   const addListeningQuestion = () => {
-    setListeningQuestions([...listeningQuestions, {
-      id: `q${listeningQuestions.length + 1}`,
-      question: "",
-      options: [
-        { key: "A", text: "" },
-        { key: "B", text: "" }
-      ],
-      answer: ""
-    }]);
+    setListeningQuestions([
+      ...listeningQuestions,
+      {
+        id: `q${listeningQuestions.length + 1}`,
+        question: "",
+        options: [
+          { key: "A", text: "" },
+          { key: "B", text: "" },
+        ],
+        answer: "",
+      },
+    ]);
   };
 
   const removeListeningQuestion = (index: number) => {
     setListeningQuestions(listeningQuestions.filter((_, i) => i !== index));
   };
 
-  const updateListeningQuestion = (index: number, field: string, value: any) => {
+  const updateListeningQuestion = (
+    index: number,
+    field: string,
+    value: any
+  ) => {
     const updated = [...listeningQuestions];
     updated[index] = { ...updated[index], [field]: value };
     setListeningQuestions(updated);
@@ -225,11 +268,17 @@ export default function NewLessonPage() {
 
   const removeListeningOption = (qIndex: number, optIndex: number) => {
     const updated = [...listeningQuestions];
-    updated[qIndex].options = updated[qIndex].options.filter((_, i) => i !== optIndex);
+    updated[qIndex].options = updated[qIndex].options.filter(
+      (_, i) => i !== optIndex
+    );
     setListeningQuestions(updated);
   };
 
-  const updateListeningOption = (qIndex: number, optIndex: number, text: string) => {
+  const updateListeningOption = (
+    qIndex: number,
+    optIndex: number,
+    text: string
+  ) => {
     const updated = [...listeningQuestions];
     updated[qIndex].options[optIndex].text = text;
     setListeningQuestions(updated);
@@ -238,31 +287,51 @@ export default function NewLessonPage() {
   // Parse Multi-add text
   const parseMultipleChoice = (text: string) => {
     const questions: MultipleChoiceQuestion[] = [];
-    const blocks = text.split(/\n\s*\n/).filter(b => b.trim());
+    const blocks = text.split(/\n\s*\n/).filter((b) => b.trim());
 
     blocks.forEach((block, idx) => {
-      const lines = block.split('\n').map(l => l.trim()).filter(l => l);
-      const questionLine = lines.find(l => l.startsWith('Q:') || l.startsWith('q:'));
-      const answerLine = lines.find(l => l.toLowerCase().startsWith('answer:'));
-      const explanationLine = lines.find(l => l.toLowerCase().startsWith('explanation:'));
-      const optionLines = lines.filter(l => /^[A-Za-z]\)/.test(l));
+      const lines = block
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l);
+      const questionLine = lines.find(
+        (l) => l.startsWith("Q:") || l.startsWith("q:")
+      );
+      const answerLine = lines.find((l) =>
+        l.toLowerCase().startsWith("answer:")
+      );
+      const explanationLine = lines.find((l) =>
+        l.toLowerCase().startsWith("explanation:")
+      );
+      const optionLines = lines.filter((l) => /^[A-Za-z]\)/.test(l));
 
       if (questionLine && optionLines.length > 0) {
-        const question = questionLine.replace(/^[Qq]:\s*/, '');
-        const options = optionLines.map(opt => {
-          const match = opt.match(/^([A-Za-z])\)\s*(.+)$/);
-          return match ? { key: match[1].toUpperCase(), text: match[2] } : null;
-        }).filter(Boolean) as { key: string; text: string }[];
+        const question = questionLine.replace(/^[Qq]:\s*/, "");
+        const options = optionLines
+          .map((opt) => {
+            const match = opt.match(/^([A-Za-z])\)\s*(.+)$/);
+            return match
+              ? { key: match[1].toUpperCase(), text: match[2] }
+              : null;
+          })
+          .filter(Boolean) as { key: string; text: string }[];
 
-        const answer = answerLine ? answerLine.replace(/^answer:\s*/i, '').trim().toUpperCase() : '';
-        const explanation = explanationLine ? explanationLine.replace(/^explanation:\s*/i, '').trim() : '';
+        const answer = answerLine
+          ? answerLine
+              .replace(/^answer:\s*/i, "")
+              .trim()
+              .toUpperCase()
+          : "";
+        const explanation = explanationLine
+          ? explanationLine.replace(/^explanation:\s*/i, "").trim()
+          : "";
 
         questions.push({
           id: `q${mcQuestions.length + idx + 1}`,
           question,
           options,
           answer,
-          explanation
+          explanation,
         });
       }
     });
@@ -272,24 +341,29 @@ export default function NewLessonPage() {
 
   const parseFillBlank = (text: string) => {
     const items: FillBlankItem[] = [];
-    const blocks = text.split(/\n\s*\n/).filter(b => b.trim());
+    const blocks = text.split(/\n\s*\n/).filter((b) => b.trim());
 
     blocks.forEach((block, idx) => {
-      const lines = block.split('\n').map(l => l.trim()).filter(l => l);
+      const lines = block
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l);
       const sentenceLine = lines[0];
-      const hintLines = lines.filter(l => l.toLowerCase().startsWith('hint:'));
+      const hintLines = lines.filter((l) =>
+        l.toLowerCase().startsWith("hint:")
+      );
 
       const match = sentenceLine.match(/（(.+?)）/);
       if (match) {
         const answer = match[1];
         const sentence = sentenceLine;
-        const hints = hintLines.map(h => h.replace(/^hint:\s*/i, ''));
+        const hints = hintLines.map((h) => h.replace(/^hint:\s*/i, ""));
 
         items.push({
           id: `q${fbItems.length + idx + 1}`,
           sentence,
           answer,
-          hints
+          hints,
         });
       }
     });
@@ -299,14 +373,17 @@ export default function NewLessonPage() {
 
   const parseMatching = (text: string) => {
     const items: MatchingItem[] = [];
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    const lines = text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l);
 
-    lines.forEach(line => {
+    lines.forEach((line) => {
       const match = line.match(/^(.+?)\s*[-=]>\s*(.+)$/);
       if (match) {
         items.push({
           left: match[1].trim(),
-          right: match[2].trim()
+          right: match[2].trim(),
         });
       }
     });
@@ -316,28 +393,44 @@ export default function NewLessonPage() {
 
   const parseListening = (text: string) => {
     const questions: ListeningQuestion[] = [];
-    const blocks = text.split(/\n\s*\n/).filter(b => b.trim());
+    const blocks = text.split(/\n\s*\n/).filter((b) => b.trim());
 
     blocks.forEach((block, idx) => {
-      const lines = block.split('\n').map(l => l.trim()).filter(l => l);
-      const questionLine = lines.find(l => l.startsWith('Q:') || l.startsWith('q:'));
-      const answerLine = lines.find(l => l.toLowerCase().startsWith('answer:'));
-      const optionLines = lines.filter(l => /^[A-Za-z]\)/.test(l));
+      const lines = block
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l);
+      const questionLine = lines.find(
+        (l) => l.startsWith("Q:") || l.startsWith("q:")
+      );
+      const answerLine = lines.find((l) =>
+        l.toLowerCase().startsWith("answer:")
+      );
+      const optionLines = lines.filter((l) => /^[A-Za-z]\)/.test(l));
 
       if (questionLine && optionLines.length > 0) {
-        const question = questionLine.replace(/^[Qq]:\s*/, '');
-        const options = optionLines.map(opt => {
-          const match = opt.match(/^([A-Za-z])\)\s*(.+)$/);
-          return match ? { key: match[1].toUpperCase(), text: match[2] } : null;
-        }).filter(Boolean) as { key: string; text: string }[];
+        const question = questionLine.replace(/^[Qq]:\s*/, "");
+        const options = optionLines
+          .map((opt) => {
+            const match = opt.match(/^([A-Za-z])\)\s*(.+)$/);
+            return match
+              ? { key: match[1].toUpperCase(), text: match[2] }
+              : null;
+          })
+          .filter(Boolean) as { key: string; text: string }[];
 
-        const answer = answerLine ? answerLine.replace(/^answer:\s*/i, '').trim().toUpperCase() : '';
+        const answer = answerLine
+          ? answerLine
+              .replace(/^answer:\s*/i, "")
+              .trim()
+              .toUpperCase()
+          : "";
 
         questions.push({
           id: `q${listeningQuestions.length + idx + 1}`,
           question,
           options,
-          answer
+          answer,
         });
       }
     });
@@ -359,7 +452,9 @@ export default function NewLessonPage() {
           setMultiAddText("");
           setIsMultiAddMode(false);
         } else {
-          setErrors({ multiAdd: "Không thể parse. Vui lòng kiểm tra định dạng" });
+          setErrors({
+            multiAdd: "Không thể parse. Vui lòng kiểm tra định dạng",
+          });
         }
       } else if (taskType === "fill_blank") {
         const parsed = parseFillBlank(multiAddText);
@@ -368,7 +463,9 @@ export default function NewLessonPage() {
           setMultiAddText("");
           setIsMultiAddMode(false);
         } else {
-          setErrors({ multiAdd: "Không thể parse. Vui lòng kiểm tra định dạng" });
+          setErrors({
+            multiAdd: "Không thể parse. Vui lòng kiểm tra định dạng",
+          });
         }
       } else if (taskType === "matching") {
         const parsed = parseMatching(multiAddText);
@@ -377,7 +474,9 @@ export default function NewLessonPage() {
           setMultiAddText("");
           setIsMultiAddMode(false);
         } else {
-          setErrors({ multiAdd: "Không thể parse. Vui lòng kiểm tra định dạng" });
+          setErrors({
+            multiAdd: "Không thể parse. Vui lòng kiểm tra định dạng",
+          });
         }
       } else if (taskType === "listening") {
         const parsed = parseListening(multiAddText);
@@ -386,7 +485,9 @@ export default function NewLessonPage() {
           setMultiAddText("");
           setIsMultiAddMode(false);
         } else {
-          setErrors({ multiAdd: "Không thể parse. Vui lòng kiểm tra định dạng" });
+          setErrors({
+            multiAdd: "Không thể parse. Vui lòng kiểm tra định dạng",
+          });
         }
       }
     } catch (error) {
@@ -445,9 +546,47 @@ Answer: A`;
     if (file && file.type.startsWith("video/")) {
       setVideoFile(file);
       setVideoType("upload");
-      setErrors(prev => ({ ...prev, video: "" }));
+      setErrors((prev) => ({ ...prev, video: "" }));
     } else {
-      setErrors(prev => ({ ...prev, video: "File không hợp lệ" }));
+      setErrors((prev) => ({ ...prev, video: "File không hợp lệ" }));
+    }
+  };
+
+  // Audio file handler
+  const handleAudioFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("audio/")) {
+      setAudioFile(file);
+      setAudioType("upload");
+      setErrors((prev) => ({ ...prev, audio: "" }));
+    } else {
+      setErrors((prev) => ({ ...prev, audio: "File audio không hợp lệ" }));
+    }
+  };
+
+  // Upload audio handler
+  const handleUploadAudio = async () => {
+    if (!audioFile) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioFile);
+
+      const result = await uploadAudio(formData).unwrap();
+      if (result.success && result.data) {
+        // Handle both possible response structures
+        const audioUrl = result.data.audioUrl || result.data;
+        setAudioUrl(audioUrl);
+        success("Upload audio thành công!");
+        setErrors((prev) => ({ ...prev, audio: "" }));
+      } else {
+        throw new Error(result.message || "Upload failed");
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error?.data?.message || error?.message || "Lỗi khi upload audio";
+      showError(errorMessage);
+      setErrors((prev) => ({ ...prev, audio: errorMessage }));
     }
   };
 
@@ -490,8 +629,11 @@ Answer: A`;
       }
 
       if (taskType === "listening") {
-        if (!audioUrl.trim()) {
+        if (audioType === "url" && !audioUrl.trim()) {
           newErrors.audio = "Vui lòng nhập URL audio";
+        }
+        if (audioType === "upload" && !audioFile) {
+          newErrors.audio = "Vui lòng chọn file audio";
         }
         if (listeningQuestions.length === 0) {
           newErrors.task = "Vui lòng thêm ít nhất 1 câu hỏi";
@@ -511,6 +653,27 @@ Answer: A`;
     }
 
     try {
+      let finalAudioUrl = audioUrl;
+
+      // Upload audio nếu cần
+      if (
+        lessonType === "task" &&
+        taskType === "listening" &&
+        audioType === "upload" &&
+        audioFile
+      ) {
+        const audioFormData = new FormData();
+        audioFormData.append("audio", audioFile);
+
+        const audioResult = await uploadAudio(audioFormData).unwrap();
+        if (audioResult.success && audioResult.data) {
+          // Handle both possible response structures
+          finalAudioUrl = audioResult.data.audioUrl || audioResult.data;
+        } else {
+          throw new Error("Không thể upload audio");
+        }
+      }
+
       const formData = new FormData();
       formData.append("courseId", courseId);
       formData.append("title", title);
@@ -529,7 +692,7 @@ Answer: A`;
         const jsonTask: any = {
           type: taskType,
           title: title,
-          instructions: taskInstructions
+          instructions: taskInstructions,
         };
 
         if (taskType === "multiple_choice") {
@@ -539,7 +702,7 @@ Answer: A`;
         } else if (taskType === "matching") {
           jsonTask.items = matchingItems;
         } else if (taskType === "listening") {
-          jsonTask.audioUrl = audioUrl;
+          jsonTask.audioUrl = finalAudioUrl;
           jsonTask.items = listeningQuestions;
         } else if (taskType === "speaking" || taskType === "reading") {
           jsonTask.items = [];
@@ -553,7 +716,8 @@ Answer: A`;
       router.push(`/admin/courses/${courseId}`);
     } catch (error: any) {
       console.error("Error creating lesson:", error);
-      const errorMessage = error?.data?.message || "Đã có lỗi xảy ra khi tạo bài học";
+      const errorMessage =
+        error?.data?.message || "Đã có lỗi xảy ra khi tạo bài học";
       setErrors({
         submit: errorMessage,
       });
@@ -563,12 +727,18 @@ Answer: A`;
 
   const getTaskIcon = (type: TaskType) => {
     switch (type) {
-      case "multiple_choice": return <ListChecks size={18} />;
-      case "fill_blank": return <PenLine size={18} />;
-      case "listening": return <Volume2 size={18} />;
-      case "matching": return <Shuffle size={18} />;
-      case "speaking": return <Mic size={18} />;
-      case "reading": return <BookOpen size={18} />;
+      case "multiple_choice":
+        return <ListChecks size={18} />;
+      case "fill_blank":
+        return <PenLine size={18} />;
+      case "listening":
+        return <Volume2 size={18} />;
+      case "matching":
+        return <Shuffle size={18} />;
+      case "speaking":
+        return <Mic size={18} />;
+      case "reading":
+        return <BookOpen size={18} />;
     }
   };
 
@@ -591,7 +761,9 @@ Answer: A`;
         <div className={styles.typeSwitcher}>
           <button
             type="button"
-            className={`${styles.typeBtn} ${lessonType === "video" ? styles.typeActive : ""}`}
+            className={`${styles.typeBtn} ${
+              lessonType === "video" ? styles.typeActive : ""
+            }`}
             onClick={() => setLessonType("video")}
             disabled={isSubmitting}
           >
@@ -600,7 +772,9 @@ Answer: A`;
           </button>
           <button
             type="button"
-            className={`${styles.typeBtn} ${lessonType === "task" ? styles.typeActive : ""}`}
+            className={`${styles.typeBtn} ${
+              lessonType === "task" ? styles.typeActive : ""
+            }`}
             onClick={() => setLessonType("task")}
             disabled={isSubmitting}
           >
@@ -621,11 +795,15 @@ Answer: A`;
             name="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className={`${styles.input} ${errors.title ? styles.inputError : ""}`}
+            className={`${styles.input} ${
+              errors.title ? styles.inputError : ""
+            }`}
             placeholder="Nhập tên bài học..."
             disabled={isSubmitting}
           />
-          {errors.title && <span className={styles.errorText}>{errors.title}</span>}
+          {errors.title && (
+            <span className={styles.errorText}>{errors.title}</span>
+          )}
         </div>
 
         {/* Content */}
@@ -639,12 +817,16 @@ Answer: A`;
             name="content"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className={`${styles.textarea} ${errors.content ? styles.inputError : ""}`}
+            className={`${styles.textarea} ${
+              errors.content ? styles.inputError : ""
+            }`}
             placeholder="Mô tả chi tiết nội dung bài học..."
             rows={6}
             disabled={isSubmitting}
           />
-          {errors.content && <span className={styles.errorText}>{errors.content}</span>}
+          {errors.content && (
+            <span className={styles.errorText}>{errors.content}</span>
+          )}
         </div>
 
         {/* VIDEO TYPE FIELDS */}
@@ -659,7 +841,9 @@ Answer: A`;
             <div className={styles.videoTypeTabs}>
               <button
                 type="button"
-                className={`${styles.videoTypeBtn} ${videoType === "youtube" ? styles.active : ""}`}
+                className={`${styles.videoTypeBtn} ${
+                  videoType === "youtube" ? styles.active : ""
+                }`}
                 onClick={() => setVideoType("youtube")}
                 disabled={isSubmitting}
               >
@@ -667,7 +851,9 @@ Answer: A`;
               </button>
               <button
                 type="button"
-                className={`${styles.videoTypeBtn} ${videoType === "upload" ? styles.active : ""}`}
+                className={`${styles.videoTypeBtn} ${
+                  videoType === "upload" ? styles.active : ""
+                }`}
                 onClick={() => setVideoType("upload")}
                 disabled={isSubmitting}
               >
@@ -676,16 +862,20 @@ Answer: A`;
             </div>
 
             {videoType === "youtube" ? (
-        <div className={styles.formGroup}>
-          <input
-            type="text"
-                  value={videoUrl || ""}
+              <div className={styles.formGroup}>
+                <input
+                  type="text"
+                  value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
-                  className={`${styles.input} ${errors.video ? styles.inputError : ""}`}
-            placeholder="https://youtube.com/watch?v=..."
-            disabled={isSubmitting}
-          />
-                {errors.video && <span className={styles.errorText}>{errors.video}</span>}
+                  className={`${styles.input} ${
+                    errors.video ? styles.inputError : ""
+                  }`}
+                  placeholder="https://youtube.com/watch?v=..."
+                  disabled={isSubmitting}
+                />
+                {errors.video && (
+                  <span className={styles.errorText}>{errors.video}</span>
+                )}
               </div>
             ) : (
               <div className={styles.uploadArea}>
@@ -705,7 +895,9 @@ Answer: A`;
                   <Upload size={20} />
                   {videoFile ? videoFile.name : "Chọn file video"}
                 </button>
-                {errors.video && <span className={styles.errorText}>{errors.video}</span>}
+                {errors.video && (
+                  <span className={styles.errorText}>{errors.video}</span>
+                )}
               </div>
             )}
           </div>
@@ -725,11 +917,22 @@ Answer: A`;
                 Loại bài tập <span className={styles.required}>*</span>
               </label>
               <div className={styles.taskTypeGrid}>
-                {(["multiple_choice", "fill_blank", "listening", "matching", "speaking", "reading"] as TaskType[]).map((type) => (
+                {(
+                  [
+                    "multiple_choice",
+                    "fill_blank",
+                    "listening",
+                    "matching",
+                    "speaking",
+                    "reading",
+                  ] as TaskType[]
+                ).map((type) => (
                   <button
                     key={type}
                     type="button"
-                    className={`${styles.taskTypeCard} ${taskType === type ? styles.active : ""}`}
+                    className={`${styles.taskTypeCard} ${
+                      taskType === type ? styles.active : ""
+                    }`}
                     onClick={() => setTaskType(type)}
                     disabled={isSubmitting}
                   >
@@ -741,7 +944,7 @@ Answer: A`;
                       {type === "matching" && "Ghép cặp"}
                       {type === "speaking" && "Phát âm"}
                       {type === "reading" && "Đọc hiểu"}
-          </span>
+                    </span>
                   </button>
                 ))}
               </div>
@@ -754,15 +957,21 @@ Answer: A`;
                 Hướng dẫn làm bài <span className={styles.required}>*</span>
               </label>
               <textarea
-                value={taskInstructions || ""}
+                value={taskInstructions}
                 onChange={(e) => setTaskInstructions(e.target.value)}
-                className={`${styles.textarea} ${errors.taskInstructions ? styles.inputError : ""}`}
+                className={`${styles.textarea} ${
+                  errors.taskInstructions ? styles.inputError : ""
+                }`}
                 placeholder="Hướng dẫn chi tiết cho học viên..."
                 rows={3}
                 disabled={isSubmitting}
               />
-              {errors.taskInstructions && <span className={styles.errorText}>{errors.taskInstructions}</span>}
-        </div>
+              {errors.taskInstructions && (
+                <span className={styles.errorText}>
+                  {errors.taskInstructions}
+                </span>
+              )}
+            </div>
 
             {/* MULTIPLE CHOICE */}
             {taskType === "multiple_choice" && (
@@ -772,7 +981,9 @@ Answer: A`;
                   <div className={styles.headerActions}>
                     <button
                       type="button"
-                      className={`${styles.modeToggle} ${!isMultiAddMode ? styles.active : ''}`}
+                      className={`${styles.modeToggle} ${
+                        !isMultiAddMode ? styles.active : ""
+                      }`}
                       onClick={() => setIsMultiAddMode(false)}
                       disabled={isSubmitting}
                     >
@@ -780,7 +991,9 @@ Answer: A`;
                     </button>
                     <button
                       type="button"
-                      className={`${styles.modeToggle} ${isMultiAddMode ? styles.active : ''}`}
+                      className={`${styles.modeToggle} ${
+                        isMultiAddMode ? styles.active : ""
+                      }`}
                       onClick={() => setIsMultiAddMode(true)}
                       disabled={isSubmitting}
                     >
@@ -793,24 +1006,34 @@ Answer: A`;
                   <div className={styles.multiAddContainer}>
                     <div className={styles.formatGuide}>
                       <h5>📋 Định dạng:</h5>
-                      <pre className={styles.formatExample}>{getMultiAddFormat()}</pre>
+                      <pre className={styles.formatExample}>
+                        {getMultiAddFormat()}
+                      </pre>
                       <p className={styles.aiTip}>
-                        💡 <strong>Mẹo:</strong> Paste bài tập của bạn vào ChatGPT với prompt:
-                        <em>"Hãy chuyển đổi các câu hỏi sau sang định dạng trên"</em> để tự động format!
+                        💡 <strong>Mẹo:</strong> Paste bài tập của bạn vào
+                        ChatGPT với prompt:
+                        <em>
+                          "Hãy chuyển đổi các câu hỏi sau sang định dạng trên"
+                        </em>{" "}
+                        để tự động format!
                       </p>
                     </div>
                     <textarea
-                      value={multiAddText || ""}
+                      value={multiAddText}
                       onChange={(e) => {
                         setMultiAddText(e.target.value);
-                        setErrors(prev => ({ ...prev, multiAdd: "" }));
+                        setErrors((prev) => ({ ...prev, multiAdd: "" }));
                       }}
                       className={styles.multiAddTextarea}
                       placeholder="Paste nội dung theo định dạng trên..."
                       rows={15}
                       disabled={isSubmitting}
                     />
-                    {errors.multiAdd && <span className={styles.errorText}>{errors.multiAdd}</span>}
+                    {errors.multiAdd && (
+                      <span className={styles.errorText}>
+                        {errors.multiAdd}
+                      </span>
+                    )}
                     <div className={styles.multiAddActions}>
                       <button
                         type="button"
@@ -818,7 +1041,7 @@ Answer: A`;
                         onClick={() => {
                           setIsMultiAddMode(false);
                           setMultiAddText("");
-                          setErrors(prev => ({ ...prev, multiAdd: "" }));
+                          setErrors((prev) => ({ ...prev, multiAdd: "" }));
                         }}
                         disabled={isSubmitting}
                       >
@@ -836,7 +1059,12 @@ Answer: A`;
                   </div>
                 ) : (
                   <>
-                    <button type="button" className={styles.addBtn} onClick={addMcQuestion} disabled={isSubmitting}>
+                    <button
+                      type="button"
+                      className={styles.addBtn}
+                      onClick={addMcQuestion}
+                      disabled={isSubmitting}
+                    >
                       <Plus size={18} /> Thêm câu hỏi
                     </button>
                   </>
@@ -845,15 +1073,24 @@ Answer: A`;
                 {mcQuestions.map((q, qIdx) => (
                   <div key={q.id} className={styles.questionCard}>
                     <div className={styles.questionHeader}>
-                      <span className={styles.questionNumber}>Câu {qIdx + 1}</span>
-                      <button type="button" className={styles.removeBtn} onClick={() => removeMcQuestion(qIdx)} disabled={isSubmitting}>
+                      <span className={styles.questionNumber}>
+                        Câu {qIdx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.removeBtn}
+                        onClick={() => removeMcQuestion(qIdx)}
+                        disabled={isSubmitting}
+                      >
                         <X size={18} />
                       </button>
                     </div>
                     <input
                       type="text"
-                      value={q.question || ""}
-                      onChange={(e) => updateMcQuestion(qIdx, "question", e.target.value)}
+                      value={q.question}
+                      onChange={(e) =>
+                        updateMcQuestion(qIdx, "question", e.target.value)
+                      }
                       className={styles.input}
                       placeholder="Nhập câu hỏi..."
                       disabled={isSubmitting}
@@ -864,48 +1101,68 @@ Answer: A`;
                           <span className={styles.optionKey}>{opt.key}</span>
                           <input
                             type="text"
-                            value={opt.text || ""}
-                            onChange={(e) => updateMcOption(qIdx, optIdx, e.target.value)}
+                            value={opt.text}
+                            onChange={(e) =>
+                              updateMcOption(qIdx, optIdx, e.target.value)
+                            }
                             className={styles.input}
                             placeholder="Nhập đáp án..."
                             disabled={isSubmitting}
                           />
                           {q.options.length > 2 && (
-                            <button type="button" className={styles.removeOptBtn} onClick={() => removeMcOption(qIdx, optIdx)} disabled={isSubmitting}>
+                            <button
+                              type="button"
+                              className={styles.removeOptBtn}
+                              onClick={() => removeMcOption(qIdx, optIdx)}
+                              disabled={isSubmitting}
+                            >
                               <X size={16} />
                             </button>
                           )}
                         </div>
                       ))}
-                      <button type="button" className={styles.addOptBtn} onClick={() => addMcOption(qIdx)} disabled={isSubmitting}>
+                      <button
+                        type="button"
+                        className={styles.addOptBtn}
+                        onClick={() => addMcOption(qIdx)}
+                        disabled={isSubmitting}
+                      >
                         <Plus size={16} /> Thêm đáp án
                       </button>
                     </div>
                     <div className={styles.answerRow}>
                       <label>Đáp án đúng:</label>
                       <select
-                        value={q.answer || ""}
-                        onChange={(e) => updateMcQuestion(qIdx, "answer", e.target.value)}
+                        value={q.answer}
+                        onChange={(e) =>
+                          updateMcQuestion(qIdx, "answer", e.target.value)
+                        }
                         className={styles.select}
                         disabled={isSubmitting}
                       >
                         <option value="">-- Chọn --</option>
-                        {q.options.map(opt => (
-                          <option key={opt.key} value={opt.key}>{opt.key}</option>
+                        {q.options.map((opt) => (
+                          <option key={opt.key} value={opt.key}>
+                            {opt.key}
+                          </option>
                         ))}
                       </select>
                     </div>
                     <input
                       type="text"
-                      value={q.explanation || ""}
-                      onChange={(e) => updateMcQuestion(qIdx, "explanation", e.target.value)}
+                      value={q.explanation}
+                      onChange={(e) =>
+                        updateMcQuestion(qIdx, "explanation", e.target.value)
+                      }
                       className={styles.input}
                       placeholder="Giải thích (tùy chọn)"
                       disabled={isSubmitting}
                     />
                   </div>
                 ))}
-                {errors.task && <span className={styles.errorText}>{errors.task}</span>}
+                {errors.task && (
+                  <span className={styles.errorText}>{errors.task}</span>
+                )}
               </div>
             )}
 
@@ -917,7 +1174,9 @@ Answer: A`;
                   <div className={styles.headerActions}>
                     <button
                       type="button"
-                      className={`${styles.modeToggle} ${!isMultiAddMode ? styles.active : ''}`}
+                      className={`${styles.modeToggle} ${
+                        !isMultiAddMode ? styles.active : ""
+                      }`}
                       onClick={() => setIsMultiAddMode(false)}
                       disabled={isSubmitting}
                     >
@@ -925,7 +1184,9 @@ Answer: A`;
                     </button>
                     <button
                       type="button"
-                      className={`${styles.modeToggle} ${isMultiAddMode ? styles.active : ''}`}
+                      className={`${styles.modeToggle} ${
+                        isMultiAddMode ? styles.active : ""
+                      }`}
                       onClick={() => setIsMultiAddMode(true)}
                       disabled={isSubmitting}
                     >
@@ -938,24 +1199,34 @@ Answer: A`;
                   <div className={styles.multiAddContainer}>
                     <div className={styles.formatGuide}>
                       <h5>📋 Định dạng:</h5>
-                      <pre className={styles.formatExample}>{getMultiAddFormat()}</pre>
+                      <pre className={styles.formatExample}>
+                        {getMultiAddFormat()}
+                      </pre>
                       <p className={styles.aiTip}>
-                        💡 <strong>Mẹo:</strong> Paste bài tập của bạn vào ChatGPT với prompt:
-                        <em>"Hãy chuyển đổi các câu sau sang định dạng trên"</em> để tự động format!
+                        💡 <strong>Mẹo:</strong> Paste bài tập của bạn vào
+                        ChatGPT với prompt:
+                        <em>
+                          "Hãy chuyển đổi các câu sau sang định dạng trên"
+                        </em>{" "}
+                        để tự động format!
                       </p>
                     </div>
                     <textarea
-                      value={multiAddText || ""}
+                      value={multiAddText}
                       onChange={(e) => {
                         setMultiAddText(e.target.value);
-                        setErrors(prev => ({ ...prev, multiAdd: "" }));
+                        setErrors((prev) => ({ ...prev, multiAdd: "" }));
                       }}
                       className={styles.multiAddTextarea}
                       placeholder="Paste nội dung theo định dạng trên..."
                       rows={15}
                       disabled={isSubmitting}
                     />
-                    {errors.multiAdd && <span className={styles.errorText}>{errors.multiAdd}</span>}
+                    {errors.multiAdd && (
+                      <span className={styles.errorText}>
+                        {errors.multiAdd}
+                      </span>
+                    )}
                     <div className={styles.multiAddActions}>
                       <button
                         type="button"
@@ -963,7 +1234,7 @@ Answer: A`;
                         onClick={() => {
                           setIsMultiAddMode(false);
                           setMultiAddText("");
-                          setErrors(prev => ({ ...prev, multiAdd: "" }));
+                          setErrors((prev) => ({ ...prev, multiAdd: "" }));
                         }}
                         disabled={isSubmitting}
                       >
@@ -981,7 +1252,12 @@ Answer: A`;
                   </div>
                 ) : (
                   <>
-                    <button type="button" className={styles.addBtn} onClick={addFbItem} disabled={isSubmitting}>
+                    <button
+                      type="button"
+                      className={styles.addBtn}
+                      onClick={addFbItem}
+                      disabled={isSubmitting}
+                    >
                       <Plus size={18} /> Thêm câu
                     </button>
                   </>
@@ -990,23 +1266,34 @@ Answer: A`;
                 {fbItems.map((item, idx) => (
                   <div key={item.id} className={styles.questionCard}>
                     <div className={styles.questionHeader}>
-                      <span className={styles.questionNumber}>Câu {idx + 1}</span>
-                      <button type="button" className={styles.removeBtn} onClick={() => removeFbItem(idx)} disabled={isSubmitting}>
+                      <span className={styles.questionNumber}>
+                        Câu {idx + 1}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.removeBtn}
+                        onClick={() => removeFbItem(idx)}
+                        disabled={isSubmitting}
+                      >
                         <X size={18} />
                       </button>
                     </div>
                     <input
                       type="text"
-                      value={item.sentence || ""}
-                      onChange={(e) => updateFbItem(idx, "sentence", e.target.value)}
+                      value={item.sentence}
+                      onChange={(e) =>
+                        updateFbItem(idx, "sentence", e.target.value)
+                      }
                       className={styles.input}
                       placeholder="Câu với chỗ trống (VD: まどを（　）ください。)"
                       disabled={isSubmitting}
                     />
                     <input
                       type="text"
-                      value={item.answer || ""}
-                      onChange={(e) => updateFbItem(idx, "answer", e.target.value)}
+                      value={item.answer}
+                      onChange={(e) =>
+                        updateFbItem(idx, "answer", e.target.value)
+                      }
                       className={styles.input}
                       placeholder="Đáp án"
                       disabled={isSubmitting}
@@ -1017,24 +1304,38 @@ Answer: A`;
                         <div key={hIdx} className={styles.hintRow}>
                           <input
                             type="text"
-                            value={hint || ""}
-                            onChange={(e) => updateFbHint(idx, hIdx, e.target.value)}
+                            value={hint}
+                            onChange={(e) =>
+                              updateFbHint(idx, hIdx, e.target.value)
+                            }
                             className={styles.input}
                             placeholder="Gợi ý..."
                             disabled={isSubmitting}
                           />
-                          <button type="button" className={styles.removeOptBtn} onClick={() => removeFbHint(idx, hIdx)} disabled={isSubmitting}>
+                          <button
+                            type="button"
+                            className={styles.removeOptBtn}
+                            onClick={() => removeFbHint(idx, hIdx)}
+                            disabled={isSubmitting}
+                          >
                             <X size={16} />
                           </button>
                         </div>
                       ))}
-                      <button type="button" className={styles.addOptBtn} onClick={() => addFbHint(idx)} disabled={isSubmitting}>
+                      <button
+                        type="button"
+                        className={styles.addOptBtn}
+                        onClick={() => addFbHint(idx)}
+                        disabled={isSubmitting}
+                      >
                         <Plus size={16} /> Thêm gợi ý
                       </button>
                     </div>
                   </div>
                 ))}
-                {errors.task && <span className={styles.errorText}>{errors.task}</span>}
+                {errors.task && (
+                  <span className={styles.errorText}>{errors.task}</span>
+                )}
               </div>
             )}
 
@@ -1046,7 +1347,9 @@ Answer: A`;
                   <div className={styles.headerActions}>
                     <button
                       type="button"
-                      className={`${styles.modeToggle} ${!isMultiAddMode ? styles.active : ''}`}
+                      className={`${styles.modeToggle} ${
+                        !isMultiAddMode ? styles.active : ""
+                      }`}
                       onClick={() => setIsMultiAddMode(false)}
                       disabled={isSubmitting}
                     >
@@ -1054,7 +1357,9 @@ Answer: A`;
                     </button>
                     <button
                       type="button"
-                      className={`${styles.modeToggle} ${isMultiAddMode ? styles.active : ''}`}
+                      className={`${styles.modeToggle} ${
+                        isMultiAddMode ? styles.active : ""
+                      }`}
                       onClick={() => setIsMultiAddMode(true)}
                       disabled={isSubmitting}
                     >
@@ -1067,24 +1372,35 @@ Answer: A`;
                   <div className={styles.multiAddContainer}>
                     <div className={styles.formatGuide}>
                       <h5>📋 Định dạng:</h5>
-                      <pre className={styles.formatExample}>{getMultiAddFormat()}</pre>
+                      <pre className={styles.formatExample}>
+                        {getMultiAddFormat()}
+                      </pre>
                       <p className={styles.aiTip}>
-                        💡 <strong>Mẹo:</strong> Paste danh sách từ vựng vào ChatGPT với prompt:
-                        <em>&quot;Hãy chuyển đổi sang định dạng: từ {'->'} nghĩa&quot;</em> để tự động format!
+                        💡 <strong>Mẹo:</strong> Paste danh sách từ vựng vào
+                        ChatGPT với prompt:
+                        <em>
+                          &quot;Hãy chuyển đổi sang định dạng: từ {"->"}{" "}
+                          nghĩa&quot;
+                        </em>{" "}
+                        để tự động format!
                       </p>
                     </div>
                     <textarea
-                      value={multiAddText || ""}
+                      value={multiAddText}
                       onChange={(e) => {
                         setMultiAddText(e.target.value);
-                        setErrors(prev => ({ ...prev, multiAdd: "" }));
+                        setErrors((prev) => ({ ...prev, multiAdd: "" }));
                       }}
                       className={styles.multiAddTextarea}
                       placeholder="Paste nội dung theo định dạng trên..."
                       rows={15}
                       disabled={isSubmitting}
                     />
-                    {errors.multiAdd && <span className={styles.errorText}>{errors.multiAdd}</span>}
+                    {errors.multiAdd && (
+                      <span className={styles.errorText}>
+                        {errors.multiAdd}
+                      </span>
+                    )}
                     <div className={styles.multiAddActions}>
                       <button
                         type="button"
@@ -1092,7 +1408,7 @@ Answer: A`;
                         onClick={() => {
                           setIsMultiAddMode(false);
                           setMultiAddText("");
-                          setErrors(prev => ({ ...prev, multiAdd: "" }));
+                          setErrors((prev) => ({ ...prev, multiAdd: "" }));
                         }}
                         disabled={isSubmitting}
                       >
@@ -1110,7 +1426,12 @@ Answer: A`;
                   </div>
                 ) : (
                   <>
-                    <button type="button" className={styles.addBtn} onClick={addMatchingItem} disabled={isSubmitting}>
+                    <button
+                      type="button"
+                      className={styles.addBtn}
+                      onClick={addMatchingItem}
+                      disabled={isSubmitting}
+                    >
                       <Plus size={18} /> Thêm cặp
                     </button>
                   </>
@@ -1121,8 +1442,10 @@ Answer: A`;
                     <span className={styles.questionNumber}>{idx + 1}</span>
                     <input
                       type="text"
-                      value={item.left || ""}
-                      onChange={(e) => updateMatchingItem(idx, "left", e.target.value)}
+                      value={item.left}
+                      onChange={(e) =>
+                        updateMatchingItem(idx, "left", e.target.value)
+                      }
                       className={styles.input}
                       placeholder="Từ/Cụm từ"
                       disabled={isSubmitting}
@@ -1130,38 +1453,134 @@ Answer: A`;
                     <span className={styles.matchArrow}>→</span>
                     <input
                       type="text"
-                      value={item.right || ""}
-                      onChange={(e) => updateMatchingItem(idx, "right", e.target.value)}
+                      value={item.right}
+                      onChange={(e) =>
+                        updateMatchingItem(idx, "right", e.target.value)
+                      }
                       className={styles.input}
                       placeholder="Nghĩa/Giải thích"
                       disabled={isSubmitting}
                     />
-                    <button type="button" className={styles.removeBtn} onClick={() => removeMatchingItem(idx)} disabled={isSubmitting}>
+                    <button
+                      type="button"
+                      className={styles.removeBtn}
+                      onClick={() => removeMatchingItem(idx)}
+                      disabled={isSubmitting}
+                    >
                       <X size={18} />
                     </button>
                   </div>
                 ))}
-                {errors.task && <span className={styles.errorText}>{errors.task}</span>}
+                {errors.task && (
+                  <span className={styles.errorText}>{errors.task}</span>
+                )}
               </div>
             )}
 
             {/* LISTENING */}
             {taskType === "listening" && (
               <>
-        <div className={styles.formGroup}>
+                <div className={styles.formGroup}>
                   <label className={styles.label}>
                     <Volume2 size={18} />
-                    URL Audio <span className={styles.required}>*</span>
-          </label>
-          <input
-                    type="text"
-                    value={audioUrl || ""}
-                    onChange={(e) => setAudioUrl(e.target.value)}
-                    className={`${styles.input} ${errors.audio ? styles.inputError : ""}`}
-                    placeholder="https://cdn.example.com/audio/lesson.mp3"
-                    disabled={isSubmitting}
-                  />
-                  {errors.audio && <span className={styles.errorText}>{errors.audio}</span>}
+                    Audio <span className={styles.required}>*</span>
+                  </label>
+
+                  {/* Audio Type Toggle */}
+                  <div className={styles.audioTypeToggle}>
+                    <button
+                      type="button"
+                      className={`${styles.toggleBtn} ${
+                        audioType === "url" ? styles.active : ""
+                      }`}
+                      onClick={() => {
+                        setAudioType("url");
+                        setAudioFile(null);
+                        setErrors((prev) => ({ ...prev, audio: "" }));
+                      }}
+                      disabled={isSubmitting}
+                    >
+                      URL
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.toggleBtn} ${
+                        audioType === "upload" ? styles.active : ""
+                      }`}
+                      onClick={() => {
+                        setAudioType("upload");
+                        setAudioUrl("");
+                        setErrors((prev) => ({ ...prev, audio: "" }));
+                      }}
+                      disabled={isSubmitting}
+                    >
+                      Upload File
+                    </button>
+                  </div>
+
+                  {/* URL Input */}
+                  {audioType === "url" && (
+                    <input
+                      type="text"
+                      value={audioUrl}
+                      onChange={(e) => {
+                        setAudioUrl(e.target.value);
+                        setErrors((prev) => ({ ...prev, audio: "" }));
+                      }}
+                      className={`${styles.input} ${
+                        errors.audio ? styles.inputError : ""
+                      }`}
+                      placeholder="https://cdn.example.com/audio/lesson.mp3"
+                      disabled={isSubmitting}
+                    />
+                  )}
+
+                  {/* File Upload */}
+                  {audioType === "upload" && (
+                    <div className={styles.fileUploadContainer}>
+                      <input
+                        ref={audioFileInputRef}
+                        type="file"
+                        accept="audio/*"
+                        onChange={handleAudioFileChange}
+                        className={styles.fileInput}
+                        disabled={isSubmitting}
+                      />
+                      <button
+                        type="button"
+                        className={styles.fileUploadBtn}
+                        onClick={() => audioFileInputRef.current?.click()}
+                        disabled={isSubmitting}
+                      >
+                        <Upload size={18} />
+                        {audioFile ? audioFile.name : "Chọn file audio"}
+                      </button>
+                      {audioFile && (
+                        <button
+                          type="button"
+                          className={styles.uploadBtn}
+                          onClick={handleUploadAudio}
+                          disabled={isSubmitting || isUploadingAudio}
+                        >
+                          {isUploadingAudio ? (
+                            <>
+                              <Loader2 size={18} className={styles.spinner} />
+                              Đang upload...
+                            </>
+                          ) : (
+                            <>
+                              <Upload size={18} />
+                              Upload
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {errors.audio && (
+                    <span className={styles.errorText}>{errors.audio}</span>
+                  )}
                 </div>
                 <div className={styles.questionsList}>
                   <div className={styles.questionsHeader}>
@@ -1169,7 +1588,9 @@ Answer: A`;
                     <div className={styles.headerActions}>
                       <button
                         type="button"
-                        className={`${styles.modeToggle} ${!isMultiAddMode ? styles.active : ''}`}
+                        className={`${styles.modeToggle} ${
+                          !isMultiAddMode ? styles.active : ""
+                        }`}
                         onClick={() => setIsMultiAddMode(false)}
                         disabled={isSubmitting}
                       >
@@ -1177,7 +1598,9 @@ Answer: A`;
                       </button>
                       <button
                         type="button"
-                        className={`${styles.modeToggle} ${isMultiAddMode ? styles.active : ''}`}
+                        className={`${styles.modeToggle} ${
+                          isMultiAddMode ? styles.active : ""
+                        }`}
                         onClick={() => setIsMultiAddMode(true)}
                         disabled={isSubmitting}
                       >
@@ -1190,24 +1613,32 @@ Answer: A`;
                     <div className={styles.multiAddContainer}>
                       <div className={styles.formatGuide}>
                         <h5>📋 Định dạng:</h5>
-                        <pre className={styles.formatExample}>{getMultiAddFormat()}</pre>
+                        <pre className={styles.formatExample}>
+                          {getMultiAddFormat()}
+                        </pre>
                         <p className={styles.aiTip}>
-                          💡 <strong>Mẹo:</strong> Paste câu hỏi của bạn vào ChatGPT với prompt:
-                          <em>"Hãy chuyển đổi sang định dạng trên"</em> để tự động format!
+                          💡 <strong>Mẹo:</strong> Paste câu hỏi của bạn vào
+                          ChatGPT với prompt:
+                          <em>"Hãy chuyển đổi sang định dạng trên"</em> để tự
+                          động format!
                         </p>
                       </div>
                       <textarea
-                        value={multiAddText || ""}
+                        value={multiAddText}
                         onChange={(e) => {
                           setMultiAddText(e.target.value);
-                          setErrors(prev => ({ ...prev, multiAdd: "" }));
+                          setErrors((prev) => ({ ...prev, multiAdd: "" }));
                         }}
                         className={styles.multiAddTextarea}
                         placeholder="Paste nội dung theo định dạng trên..."
                         rows={15}
                         disabled={isSubmitting}
                       />
-                      {errors.multiAdd && <span className={styles.errorText}>{errors.multiAdd}</span>}
+                      {errors.multiAdd && (
+                        <span className={styles.errorText}>
+                          {errors.multiAdd}
+                        </span>
+                      )}
                       <div className={styles.multiAddActions}>
                         <button
                           type="button"
@@ -1215,7 +1646,7 @@ Answer: A`;
                           onClick={() => {
                             setIsMultiAddMode(false);
                             setMultiAddText("");
-                            setErrors(prev => ({ ...prev, multiAdd: "" }));
+                            setErrors((prev) => ({ ...prev, multiAdd: "" }));
                           }}
                           disabled={isSubmitting}
                         >
@@ -1233,7 +1664,12 @@ Answer: A`;
                     </div>
                   ) : (
                     <>
-                      <button type="button" className={styles.addBtn} onClick={addListeningQuestion} disabled={isSubmitting}>
+                      <button
+                        type="button"
+                        className={styles.addBtn}
+                        onClick={addListeningQuestion}
+                        disabled={isSubmitting}
+                      >
                         <Plus size={18} /> Thêm câu hỏi
                       </button>
                     </>
@@ -1242,15 +1678,28 @@ Answer: A`;
                   {listeningQuestions.map((q, qIdx) => (
                     <div key={q.id} className={styles.questionCard}>
                       <div className={styles.questionHeader}>
-                        <span className={styles.questionNumber}>Câu {qIdx + 1}</span>
-                        <button type="button" className={styles.removeBtn} onClick={() => removeListeningQuestion(qIdx)} disabled={isSubmitting}>
+                        <span className={styles.questionNumber}>
+                          Câu {qIdx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.removeBtn}
+                          onClick={() => removeListeningQuestion(qIdx)}
+                          disabled={isSubmitting}
+                        >
                           <X size={18} />
                         </button>
                       </div>
                       <input
                         type="text"
-                        value={q.question || ""}
-                        onChange={(e) => updateListeningQuestion(qIdx, "question", e.target.value)}
+                        value={q.question}
+                        onChange={(e) =>
+                          updateListeningQuestion(
+                            qIdx,
+                            "question",
+                            e.target.value
+                          )
+                        }
                         className={styles.input}
                         placeholder="Nhập câu hỏi..."
                         disabled={isSubmitting}
@@ -1261,40 +1710,68 @@ Answer: A`;
                             <span className={styles.optionKey}>{opt.key}</span>
                             <input
                               type="text"
-                              value={opt.text || ""}
-                              onChange={(e) => updateListeningOption(qIdx, optIdx, e.target.value)}
+                              value={opt.text}
+                              onChange={(e) =>
+                                updateListeningOption(
+                                  qIdx,
+                                  optIdx,
+                                  e.target.value
+                                )
+                              }
                               className={styles.input}
                               placeholder="Nhập đáp án..."
-            disabled={isSubmitting}
-          />
+                              disabled={isSubmitting}
+                            />
                             {q.options.length > 2 && (
-                              <button type="button" className={styles.removeOptBtn} onClick={() => removeListeningOption(qIdx, optIdx)} disabled={isSubmitting}>
+                              <button
+                                type="button"
+                                className={styles.removeOptBtn}
+                                onClick={() =>
+                                  removeListeningOption(qIdx, optIdx)
+                                }
+                                disabled={isSubmitting}
+                              >
                                 <X size={16} />
                               </button>
                             )}
                           </div>
                         ))}
-                        <button type="button" className={styles.addOptBtn} onClick={() => addListeningOption(qIdx)} disabled={isSubmitting}>
+                        <button
+                          type="button"
+                          className={styles.addOptBtn}
+                          onClick={() => addListeningOption(qIdx)}
+                          disabled={isSubmitting}
+                        >
                           <Plus size={16} /> Thêm đáp án
                         </button>
                       </div>
                       <div className={styles.answerRow}>
                         <label>Đáp án đúng:</label>
                         <select
-                          value={q.answer || ""}
-                          onChange={(e) => updateListeningQuestion(qIdx, "answer", e.target.value)}
+                          value={q.answer}
+                          onChange={(e) =>
+                            updateListeningQuestion(
+                              qIdx,
+                              "answer",
+                              e.target.value
+                            )
+                          }
                           className={styles.select}
                           disabled={isSubmitting}
                         >
                           <option value="">-- Chọn --</option>
-                          {q.options.map(opt => (
-                            <option key={opt.key} value={opt.key}>{opt.key}</option>
+                          {q.options.map((opt) => (
+                            <option key={opt.key} value={opt.key}>
+                              {opt.key}
+                            </option>
                           ))}
                         </select>
                       </div>
                     </div>
                   ))}
-                  {errors.task && <span className={styles.errorText}>{errors.task}</span>}
+                  {errors.task && (
+                    <span className={styles.errorText}>{errors.task}</span>
+                  )}
                 </div>
               </>
             )}
@@ -1306,8 +1783,8 @@ Answer: A`;
                 <p>Tính năng đang phát triển</p>
                 <span>Loại bài tập này sẽ sớm được hỗ trợ</span>
               </div>
-          )}
-        </div>
+            )}
+          </div>
         )}
 
         {/* Submit Error */}
