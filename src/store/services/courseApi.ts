@@ -82,7 +82,33 @@ export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
-  timestamp: string;
+  timestamp?: string;
+}
+
+export interface UserCourseProgress {
+  _id: string;
+  userId: string;
+  courseId: string;
+  currentLessonId?: string;
+  currentLessonProgress: {
+    videoTimestamp?: number;
+    taskAnswers?: any;
+    lastAccessedAt: string;
+  };
+  completedLessons: Array<{
+    lessonId: string;
+    completedAt: string;
+    score?: number;
+    maxScore?: number;
+    attempts: number;
+  }>;
+  status: "not_started" | "in_progress" | "completed";
+  startedAt?: string;
+  completedAt?: string;
+  totalTimeSpent: number;
+  progressPercentage: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const baseQuery = fetchBaseQuery({
@@ -230,6 +256,152 @@ export const courseApi = createApi({
         },
       }),
     }),
+
+    // ============ USER COURSE PROGRESS ENDPOINTS ============
+
+    // Lấy tiến độ của user trong 1 khóa học
+    getUserCourseProgress: builder.query<
+      ApiResponse<UserCourseProgress>,
+      string
+    >({
+      query: (courseId) => ({
+        url: `/courses/progress/${courseId}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, courseId) => [
+        { type: "Course", id: courseId },
+      ],
+    }),
+
+    // Lấy tất cả tiến độ của user
+    getAllUserProgress: builder.query<
+      ApiResponse<UserCourseProgress[]>,
+      void
+    >({
+      query: () => ({
+        url: "/courses/my-progress",
+        method: "GET",
+      }),
+      providesTags: ["Course"],
+    }),
+
+    // Cập nhật bài học hiện tại (checkpoint)
+    updateCurrentLesson: builder.mutation<
+      ApiResponse<UserCourseProgress>,
+      {
+        courseId: string;
+        lessonId: string;
+        videoTimestamp?: number;
+        taskAnswers?: any;
+      }
+    >({
+      query: ({ courseId, ...body }) => ({
+        url: `/courses/progress/${courseId}/update-lesson`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { courseId }) => [
+        { type: "Course", id: courseId },
+      ],
+    }),
+
+    // Đánh dấu bài học đã hoàn thành
+    markLessonComplete: builder.mutation<
+      ApiResponse<UserCourseProgress>,
+      {
+        courseId: string;
+        lessonId: string;
+        score?: number;
+        maxScore?: number;
+      }
+    >({
+      query: ({ courseId, ...body }) => ({
+        url: `/courses/progress/${courseId}/complete-lesson`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { courseId }) => [
+        { type: "Course", id: courseId },
+        "Course",
+      ],
+    }),
+
+    // Reset tiến độ khóa học
+    resetCourseProgress: builder.mutation<ApiResponse<null>, string>({
+      query: (courseId) => ({
+        url: `/courses/progress/${courseId}/reset`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, courseId) => [
+        { type: "Course", id: courseId },
+        "Course",
+      ],
+    }),
+
+    // ============ USER ACTIVITY TRACKING ENDPOINTS ============
+
+    // Track video lesson activity
+    trackVideoActivity: builder.mutation<
+      ApiResponse<null>,
+      {
+        courseId?: string;
+        lessonId: string;
+        lessonTitle: string;
+        totalDuration: number;
+        watchedDuration?: number;
+        isWatchedCompletely?: boolean;
+        watchCount: number;
+        completedAt?: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/user-activity/track-video",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Course"],
+    }),
+
+    // Track task/quiz lesson activity
+    trackTaskActivity: builder.mutation<
+      ApiResponse<{ passed: boolean }>,
+      {
+        courseId?: string;
+        lessonId: string;
+        lessonTitle: string;
+        taskType: string;
+        score: number;
+        maxScore?: number;
+        correctAnswers?: number;
+        totalQuestions?: number;
+        timeSpent?: number;
+        completedAt?: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/user-activity/track-task",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Course"],
+    }),
+
+    // Track course access
+    trackCourseAccess: builder.mutation<
+      ApiResponse<null>,
+      {
+        courseId: string;
+        action?: "enroll" | "continue" | "complete";
+        isCompleted?: boolean;
+      }
+    >({
+      query: (body) => ({
+        url: "/user-activity/track-course-access",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Course"],
+    }),
   }),
 });
 
@@ -245,4 +417,12 @@ export const {
   useUpdateLessonMutation,
   useDeleteLessonMutation,
   useUploadAudioMutation,
+  useGetUserCourseProgressQuery,
+  useGetAllUserProgressQuery,
+  useUpdateCurrentLessonMutation,
+  useMarkLessonCompleteMutation,
+  useResetCourseProgressMutation,
+  useTrackVideoActivityMutation,
+  useTrackTaskActivityMutation,
+  useTrackCourseAccessMutation,
 } = courseApi;

@@ -34,13 +34,19 @@ import {
   GraduationCap,
   Target,
   Lightbulb,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useGetCourseByIdQuery } from "@/store/services/courseApi";
+import {
+  useGetCourseByIdQuery,
+  useGetUserCourseProgressQuery,
+  useResetCourseProgressMutation,
+} from "@/store/services/courseApi";
 import { LoadingSpinner } from "@/components/loading";
 import { withAuth } from "@/components/auth";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 // Helper function để format giá
 const formatPrice = (price: number) => {
@@ -69,6 +75,7 @@ const formatDate = (dateString: string) => {
 function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [isLiked, setIsLiked] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const router = useRouter();
 
   // Unwrap params Promise
   const { id } = use(params);
@@ -81,6 +88,13 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     refetch,
   } = useGetCourseByIdQuery(id);
 
+  // Fetch user progress
+  const { data: progressData, isLoading: progressLoading } =
+    useGetUserCourseProgressQuery(id);
+
+  const [resetProgress, { isLoading: isResetting }] =
+    useResetCourseProgressMutation();
+
   // Transform lessons data
   const lessons = useMemo(() => {
     if (!courseData?.data?.lessons) return [];
@@ -89,15 +103,55 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   }, [courseData]);
 
   const course = courseData?.data;
+  const userProgress = progressData?.data;
+
   const totalDuration = lessons.reduce(
     (sum, lesson) => sum + (lesson.duration || 0),
     0
   );
-  const completedLessons = lessons.filter(
-    (lesson) => (lesson.userCompleted?.length || 0) > 0
+
+  // Check if lesson is completed using userProgress
+  const isLessonCompleted = (lessonId: string): boolean => {
+    if (!userProgress?.completedLessons) return false;
+    return userProgress.completedLessons.some(
+      (completed) => completed.lessonId === lessonId
+    );
+  };
+
+  const completedLessons = lessons.filter((lesson) =>
+    isLessonCompleted(lesson._id)
   ).length;
-  const progressPercentage =
-    lessons.length > 0 ? (completedLessons / lessons.length) * 100 : 0;
+
+  const progressPercentage = userProgress?.progressPercentage || 0;
+
+  // Determine next lesson to continue
+  const nextLesson = useMemo(() => {
+    if (userProgress?.currentLessonId) {
+      // Resume from current lesson
+      return lessons.find((l) => l._id === userProgress.currentLessonId);
+    }
+    // Or start from first incomplete lesson
+    return lessons.find((l) => !isLessonCompleted(l._id));
+  }, [lessons, userProgress, isLessonCompleted]);
+
+  const handleStartLearning = () => {
+    if (nextLesson) {
+      router.push(`/courses/${id}/learn/${nextLesson._id}`);
+    } else if (lessons.length > 0) {
+      router.push(`/courses/${id}/learn/${lessons[0]._id}`);
+    }
+  };
+
+  const handleResetProgress = async () => {
+    if (confirm("Bạn có chắc muốn reset tiến độ khóa học này?")) {
+      try {
+        await resetProgress(id).unwrap();
+        refetch();
+      } catch (error) {
+        console.error("Failed to reset progress:", error);
+      }
+    }
+  };
 
   // Loading state
   if (isLoading) {
@@ -212,15 +266,28 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                   {course.description}
                 </p>
                 <div className="flex items-center gap-4">
-                  <Link href={`/courses/${course._id}`}>
+                  <Button
+                    size="lg"
+                    onClick={handleStartLearning}
+                    className="bg-orange-500 hover:bg-orange-600"
+                    disabled={lessons.length === 0}
+                  >
+                    <Play className="h-4 w-4 mr-2" />
+                    {userProgress?.status === "in_progress"
+                      ? "Tiếp tục học"
+                      : "Bắt đầu học"}
+                  </Button>
+                  {userProgress?.status === "in_progress" && (
                     <Button
+                      variant="outline"
                       size="lg"
-                      className="bg-orange-500 hover:bg-orange-600"
+                      onClick={handleResetProgress}
+                      disabled={isResetting}
                     >
-                      <Play className="h-4 w-4 mr-2" />
-                      Bắt đầu học
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reset tiến độ
                     </Button>
-                  </Link>
+                  )}
                   <Button variant="outline" size="lg">
                     <Download className="h-4 w-4 mr-2" />
                     Tải tài liệu
@@ -326,38 +393,67 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                     )}
 
                     <div className="space-y-3">
-                      {lessons.map((lesson, index) => (
-                        <div
-                          key={lesson._id}
-                          className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex-shrink-0">
-                            {(lesson.userCompleted?.length || 0) > 0 ? (
-                              <CheckCircle className="h-5 w-5 text-primary" />
-                            ) : (
-                              <Circle className="h-5 w-5 text-muted-foreground" />
+                      {lessons.map((lesson, index) => {
+                        const completed = isLessonCompleted(lesson._id);
+                        const isCurrent =
+                          lesson._id === userProgress?.currentLessonId;
+                        return (
+                          <div
+                            key={lesson._id}
+                            className={cn(
+                              "flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer",
+                              isCurrent && "border-primary bg-primary/5"
                             )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="text-xs">
-                                Bài {index + 1}
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                {lesson.type === "video" ? "Video" : "Bài tập"}
-                              </Badge>
+                            onClick={() =>
+                              router.push(`/courses/${id}/learn/${lesson._id}`)
+                            }
+                          >
+                            <div className="flex-shrink-0">
+                              {completed ? (
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                              ) : isCurrent ? (
+                                <Circle className="h-5 w-5 text-primary fill-primary/20" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-muted-foreground" />
+                              )}
                             </div>
-                            <h4 className="font-medium">{lesson.title}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {lesson.content}
-                            </p>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline" className="text-xs">
+                                  Bài {index + 1}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {lesson.type === "video" ? "Video" : "Bài tập"}
+                                </Badge>
+                                {isCurrent && (
+                                  <Badge
+                                    variant="default"
+                                    className="text-xs bg-primary"
+                                  >
+                                    Đang học
+                                  </Badge>
+                                )}
+                                {completed && (
+                                  <Badge
+                                    variant="default"
+                                    className="text-xs bg-green-600"
+                                  >
+                                    Hoàn thành ✓
+                                  </Badge>
+                                )}
+                              </div>
+                              <h4 className="font-medium">{lesson.title}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {lesson.content}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4" />
+                              <span>{formatDuration(lesson.duration || 0)}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>{formatDuration(lesson.duration || 0)}</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </TabsContent>
@@ -430,12 +526,18 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                     </div>
                   )}
                 </div>
-                <Link href={`/courses/${course._id}`} className="w-full">
-                  <Button className="w-full bg-orange-500 hover:bg-orange-600 mb-4">
-                    <Play className="h-4 w-4 mr-2" />
-                    Bắt đầu học ngay
-                  </Button>
-                </Link>
+                <Button
+                  className="w-full bg-orange-500 hover:bg-orange-600 mb-4"
+                  onClick={handleStartLearning}
+                  disabled={lessons.length === 0}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  {userProgress?.status === "in_progress"
+                    ? nextLesson
+                      ? `Tiếp tục: ${nextLesson.title.slice(0, 20)}...`
+                      : "Tiếp tục học"
+                    : "Bắt đầu học ngay"}
+                </Button>
                 <div className="text-center text-sm text-muted-foreground">
                   Đảm bảo hoàn tiền trong 30 ngày
                 </div>

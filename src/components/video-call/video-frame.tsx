@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shimmer } from "@/components/ui/shimmer";
 import { User, Mic, MicOff, VideoOff } from "lucide-react";
-import Image from "next/image";
+import { RefObject } from "react";
 
 interface VideoFrameProps {
   type: "local" | "remote";
@@ -14,6 +14,7 @@ interface VideoFrameProps {
   isMuted?: boolean;
   userName?: string;
   level?: string;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
 }
 
 export function VideoFrame({
@@ -24,6 +25,7 @@ export function VideoFrame({
   isMuted = false,
   userName = "User",
   level,
+  videoRef,
 }: VideoFrameProps) {
   const isLocal = type === "local";
 
@@ -34,19 +36,19 @@ export function VideoFrame({
         <Shimmer className="w-full h-full" />
       ) : isConnected && !isVideoOff ? (
         <div className="relative w-full h-full bg-gray-800">
-          {/* TODO: Backend integration - Replace with actual video stream */}
-          {/* Example: <video ref={videoRef} autoPlay muted={isLocal} className="w-full h-full object-cover" /> */}
-
-          {/* Demo placeholder */}
-          <Image
-            src={isLocal ? "/sample-user-video.png" : "/sample-remote-user.png"}
-            alt={`${userName} video`}
-            fill
-            className="object-cover"
-          />
-
-          {/* Video overlay for demo */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          {videoRef ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted={isLocal}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <p className="text-gray-400 text-sm">No video stream</p>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex items-center justify-center h-full bg-gray-800">
