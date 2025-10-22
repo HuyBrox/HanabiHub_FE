@@ -34,21 +34,15 @@ export function VideoFrame({
       {/* Video Content */}
       {isLoading ? (
         <Shimmer className="w-full h-full" />
-      ) : isConnected && !isVideoOff ? (
+      ) : !isVideoOff && videoRef ? (
         <div className="relative w-full h-full bg-gray-800">
-          {videoRef ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted={isLocal}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <p className="text-gray-400 text-sm">No video stream</p>
-            </div>
-          )}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted={isLocal}
+            className="w-full h-full object-cover"
+          />
         </div>
       ) : (
         <div className="flex items-center justify-center h-full bg-gray-800">

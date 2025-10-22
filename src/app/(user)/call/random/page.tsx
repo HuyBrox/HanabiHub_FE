@@ -8,21 +8,23 @@ import { NetworkIndicator } from "@/components/video-call/network-indicator";
 import { LevelSelector } from "@/components/video-call/level-selector";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Users, Clock } from "lucide-react";
+import { Users, Clock, Star } from "lucide-react";
 import { useSocketContext } from "@/providers/SocketProvider";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { toast } from "sonner";
 import Peer, { MediaConnection } from "peerjs";
-import { CallRatingModal } from "@/components/video-call/call-rating-modal";
+import { useNotification } from "@/components/notification/NotificationProvider";
 
 const SERVER_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 function RandomCallPage() {
   const { socket, connected } = useSocketContext();
   const { user } = useSelector((s: RootState) => s.auth);
+  const { addNotification } = useNotification();
 
   // States
+  const [isCallModeOn, setIsCallModeOn] = useState(false); // Toggle ON/OFF
   const [isSearching, setIsSearching] = useState(false);
   const [isMatched, setIsMatched] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
@@ -30,6 +32,7 @@ function RandomCallPage() {
   const [partnerInfo, setPartnerInfo] = useState<{
     partnerId: string;
     partnerLevel: string;
+    partnerName?: string;
   } | null>(null);
   const [queueSize, setQueueSize] = useState(0);
   const [callDuration, setCallDuration] = useState(0);
@@ -37,8 +40,8 @@ function RandomCallPage() {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [showRatingModal, setShowRatingModal] = useState(false);
-  const [randomCallId, setRandomCallId] = useState<string | null>(null);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
 
   // Refs
   const joinedQueueRef = useRef(false);
@@ -48,6 +51,7 @@ function RandomCallPage() {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const callStartTimeRef = useRef<number | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const isEndingCallRef = useRef(false); // ✅ Prevent circular handleCallEnd calls
 
   // Call duration timer
   useEffect(() => {
@@ -71,6 +75,7 @@ function RandomCallPage() {
   const initPeer = useCallback(async (): Promise<string> => {
     return new Promise((resolve, reject) => {
       if (peerRef.current) {
+        console.log("[RandomCall] Peer already exists:", peerRef.current.id);
         resolve(peerRef.current.id!);
         return;
       }
@@ -92,29 +97,52 @@ function RandomCallPage() {
         peerConfig.port = Number(url.port);
       }
 
-      const peer = new Peer(peerId, peerConfig);
-
-      console.log("[RandomCall] Initializing peer with config:", {
+      console.log("[RandomCall] Creating new peer with config:", {
         peerId,
         host: url.hostname,
         port: url.port || "default",
         path: "/peerjs",
       });
 
+      const peer = new Peer(peerId, peerConfig);
+
+      // Set timeout to reject if peer doesn't open within 10 seconds
+      const timeoutId = setTimeout(() => {
+        if (!peerRef.current) {
+          console.error("[RandomCall] ⏱️ Peer initialization timeout");
+          peer.destroy();
+          reject(new Error("Peer initialization timeout"));
+        }
+      }, 10000);
+
       peer.on("open", (id) => {
-        console.log("[RandomCall] Peer opened:", id);
+        console.log("[RandomCall] ✅ Peer opened successfully:", id);
+        clearTimeout(timeoutId); // ✅ Clear timeout when peer opens successfully
         peerRef.current = peer;
+        console.log("[RandomCall] ✅ peerRef.current set:", !!peerRef.current);
         resolve(id);
       });
 
       peer.on("error", (err) => {
-        console.error("[RandomCall] Peer error:", err);
+        console.error("[RandomCall] ❌ Peer error:", err);
+        clearTimeout(timeoutId); // ✅ Clear timeout on error too
+        peerRef.current = null;
         reject(err);
+      });
+
+      peer.on("disconnected", () => {
+        console.warn("[RandomCall] ⚠️ Peer disconnected - may reconnect automatically");
+        // Don't end call immediately, peer might reconnect
+      });
+
+      peer.on("close", () => {
+        console.warn("[RandomCall] ⚠️ Peer closed");
+        peerRef.current = null;
       });
 
       // Handle incoming call
       peer.on("call", (conn) => {
-        console.log("[RandomCall] Incoming call from:", conn.peer);
+        console.log("[RandomCall] 📞 Incoming call from:", conn.peer);
         mediaConnRef.current = conn;
 
         if (localStreamRef.current) {
@@ -125,18 +153,21 @@ function RandomCallPage() {
         }
 
         conn.on("stream", (remoteStream) => {
-          console.log("[RandomCall] Received remote stream");
+          console.log("[RandomCall] 📹 Received remote stream");
           setRemoteStream(remoteStream);
           setIsInCall(true);
+          // Set peer connection for network monitoring
+          setPeerConnection(conn.peerConnection);
         });
 
         conn.on("close", () => {
-          console.log("[RandomCall] Call closed");
+          console.log("[RandomCall] 📴 Media connection closed");
           handleCallEnd();
         });
 
         conn.on("error", (err) => {
-          console.error("[RandomCall] Call error:", err);
+          console.error("[RandomCall] ❌ Media connection error:", err);
+          // End call on connection errors
           handleCallEnd();
         });
       });
@@ -185,7 +216,9 @@ function RandomCallPage() {
         joinedQueueRef.current = false;
       }
 
-      // Cleanup
+      // Cleanup - Set flag to prevent event handlers from running during unmount
+      isEndingCallRef.current = true;
+
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
       }
@@ -194,7 +227,8 @@ function RandomCallPage() {
         peerRef.current = null;
       }
     };
-  }, [socket, connected, user, selectedLevel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket, connected, user?._id, selectedLevel]);
 
   // Socket event listeners
   useEffect(() => {
@@ -221,9 +255,17 @@ function RandomCallPage() {
       toast.success("Match found! Connecting...");
 
       try {
-        // Get media and init peer
+        // Get media and init peer (these MUST complete before partner tries to call)
         const stream = await getUserMedia();
+        console.log("[RandomCall] User media ready:", !!stream);
+
         const myPeerId = await initPeer();
+        console.log("[RandomCall] Peer initialized with ID:", myPeerId);
+
+        // Double check that peerRef is actually set
+        if (!peerRef.current) {
+          throw new Error("Peer reference not set after initialization");
+        }
 
         // Send peer ID to partner via socket
         socket.emit("sendRandomCallPeerId", {
@@ -250,14 +292,15 @@ function RandomCallPage() {
         }
 
         // Wait for peer and stream to be ready (with timeout)
-        const waitForReady = async (maxWait: number = 5000): Promise<boolean> => {
+        const waitForReady = async (maxWait: number = 10000): Promise<boolean> => {
           const startTime = Date.now();
           while (Date.now() - startTime < maxWait) {
             if (peerRef.current && localStreamRef.current) {
               console.log("[RandomCall] Peer and stream ready");
               return true;
             }
-            await new Promise((resolve) => setTimeout(resolve, 100));
+            console.log("[RandomCall] Waiting for ready... Peer:", !!peerRef.current, "Stream:", !!localStreamRef.current);
+            await new Promise((resolve) => setTimeout(resolve, 200));
           }
           console.error("[RandomCall] Timeout - Peer ready:", !!peerRef.current, "Stream ready:", !!localStreamRef.current);
           return false;
@@ -272,11 +315,19 @@ function RandomCallPage() {
           return;
         }
 
+        // Verify one more time
+        if (!peerRef.current || !localStreamRef.current) {
+          throw new Error("Peer or stream became null after ready check");
+        }
+
         // Additional delay for stability
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         console.log("[RandomCall] Calling partner with peer:", data.peerId);
-        const conn = peerRef.current!.call(data.peerId, localStreamRef.current!);
+        console.log("[RandomCall] peerRef.current:", peerRef.current);
+        console.log("[RandomCall] localStreamRef.current:", localStreamRef.current);
+
+        const conn = peerRef.current.call(data.peerId, localStreamRef.current);
 
         if (!conn) {
           throw new Error("Failed to create peer connection");
@@ -288,6 +339,8 @@ function RandomCallPage() {
           console.log("[RandomCall] Got remote stream");
           setRemoteStream(remoteStream);
           setIsInCall(true);
+          // Set peer connection for network monitoring
+          setPeerConnection(conn.peerConnection);
         });
 
         conn.on("close", () => {
@@ -319,12 +372,44 @@ function RandomCallPage() {
       setIsSearching(false);
     });
 
-    // Show rating dialog
-    socket.on("showRatingDialog", (data: any) => {
-      console.log("[RandomCall] Show rating dialog:", data);
-      setRandomCallId(data.callId);
-      setCallDuration(data.callDuration);
-      setShowRatingModal(true);
+    // Partner rated you
+    socket.on("partnerRatedYou", (data: any) => {
+      console.log("[RandomCall] Partner rated you:", data);
+      addNotification({
+        title: `${data.partnerName || "Partner"} rated you ${data.rating} stars! 💫`,
+        message: "Your listening & speaking skills have been tracked!",
+        type: "success",
+        duration: 6000,
+      });
+    });
+
+    // Partner skipped to next
+    socket.on("partnerSkipped", (data: any) => {
+      console.log("[RandomCall] Partner skipped:", data);
+      toast.info("Partner moved to next. Finding you a new match...");
+
+      // End current call and search for new match
+      if (mediaConnRef.current) {
+        mediaConnRef.current.close();
+        mediaConnRef.current = null;
+      }
+
+      if (remoteStream) {
+        remoteStream.getTracks().forEach((track) => track.stop());
+        setRemoteStream(null);
+      }
+
+      setIsInCall(false);
+      setIsMatched(false);
+      setPartnerInfo(null);
+      setCallDuration(0);
+      setHoveredRating(0);
+
+      // Auto search for new match if call mode is still on
+      if (isCallModeOn) {
+        setIsSearching(true);
+        socket.emit("startRandomSearch", {});
+      }
     });
 
     // Errors
@@ -361,12 +446,13 @@ function RandomCallPage() {
       socket.off("receiveRandomCallPeerId");
       socket.off("searchingForMatch");
       socket.off("searchStopped");
-      socket.off("showRatingDialog");
+      socket.off("partnerRatedYou");
+      socket.off("partnerSkipped");
       socket.off("randomCallError");
       socket.off("disconnect");
       socket.off("connect");
     };
-  }, [socket, getUserMedia, initPeer, localStream, isInCall, isSearching]);
+  }, [socket, getUserMedia, initPeer, localStream, isInCall, isSearching, isCallModeOn]);
 
   // Attach streams to video elements
   useEffect(() => {
@@ -375,7 +461,7 @@ function RandomCallPage() {
       localVideoRef.current.muted = true;
       localVideoRef.current.play().catch(() => {});
     }
-  }, [localStream]);
+  }, [localStream, isVideoOff]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
@@ -385,23 +471,70 @@ function RandomCallPage() {
   }, [remoteStream]);
 
   // Handlers
-  const handleStartSearch = () => {
+  const handleToggleCallMode = async () => {
     if (!socket || !connected) {
       toast.error("Socket not connected");
       return;
     }
 
-    console.log("[RandomCall] Starting search...");
-    setIsSearching(true);
-    socket.emit("startRandomSearch", {});
+    if (!isCallModeOn) {
+      // Turn ON - Start searching
+      console.log("[RandomCall] Call mode ON - Starting search...");
+
+      try {
+        // Get user media first to show local preview
+        await getUserMedia();
+        console.log("[RandomCall] Local preview ready");
+      } catch (error) {
+        console.error("[RandomCall] Failed to get media:", error);
+        toast.error("Could not access camera/microphone");
+        return;
+      }
+
+      setIsCallModeOn(true);
+      setIsSearching(true);
+      socket.emit("startRandomSearch", {});
+    } else {
+      // Turn OFF - Stop everything
+      console.log("[RandomCall] Call mode OFF - Stopping...");
+      handleCallEnd();
+      setIsCallModeOn(false);
+    }
   };
 
-  const handleStopSearch = () => {
-    if (!socket) return;
+  const handleNextPartner = () => {
+    if (!socket || !partnerInfo) {
+      toast.error("No active call");
+      return;
+    }
 
-    console.log("[RandomCall] Stopping search...");
-    socket.emit("stopRandomSearch", {});
-    setIsSearching(false);
+    console.log("[RandomCall] Next partner - Finding new match...");
+
+    // End current call
+    if (mediaConnRef.current) {
+      mediaConnRef.current.close();
+      mediaConnRef.current = null;
+    }
+
+    if (remoteStream) {
+      remoteStream.getTracks().forEach((track) => track.stop());
+      setRemoteStream(null);
+    }
+
+    // Notify server to find next partner
+    socket.emit("nextPartner", {
+      currentPartnerId: partnerInfo.partnerId,
+    });
+
+    // Reset states but keep searching
+    setIsInCall(false);
+    setIsMatched(false);
+    setPartnerInfo(null);
+    setCallDuration(0);
+    setHoveredRating(0);
+    setIsSearching(true);
+
+    toast.info("Finding next partner...");
   };
 
   const handleLevelChange = (level: string) => {
@@ -439,8 +572,42 @@ function RandomCallPage() {
     }
   };
 
+  const handleRatePartner = (rating: number) => {
+    if (!socket || !partnerInfo) {
+      toast.error("Unable to send rating");
+      return;
+    }
+
+    console.log("[RandomCall] ⭐ Rating partner:", {
+      partnerId: partnerInfo.partnerId,
+      rating,
+      isInCall,
+      isConnected: socket.connected
+    });
+
+    // Send rating to server via socket
+    socket.emit("ratePartner", {
+      partnerId: partnerInfo.partnerId,
+      rating,
+    });
+
+    // Show success toast
+    toast.success(`Sent ${rating} star${rating > 1 ? "s" : ""} 💫 to partner!`);
+
+    // Reset hover state
+    setHoveredRating(0);
+  };
+
   const handleCallEnd = () => {
-    console.log("[RandomCall] Ending call");
+    // ✅ GUARD: Prevent circular calls
+    if (isEndingCallRef.current) {
+      console.log("[RandomCall] ⚠️ Already ending call, skipping duplicate call");
+      return;
+    }
+
+    isEndingCallRef.current = true;
+    console.log("[RandomCall] 🔴 handleCallEnd called - Stack trace:");
+    console.trace(); // ✅ Show where this function was called from
 
     // Notify server
     if (socket && partnerInfo) {
@@ -449,11 +616,14 @@ function RandomCallPage() {
       });
     }
 
-    // Cleanup
+    // Cleanup media connections
     if (mediaConnRef.current) {
       mediaConnRef.current.close();
       mediaConnRef.current = null;
     }
+
+    // Clear peer connection
+    setPeerConnection(null);
 
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
@@ -480,6 +650,16 @@ function RandomCallPage() {
     setPartnerInfo(null);
     setCallDuration(0);
     callStartTimeRef.current = null;
+
+    // Reset rating UI
+    setHoveredRating(0);
+    setIsMuted(false);
+    setIsVideoOff(false);
+
+    // ✅ Reset guard after cleanup
+    setTimeout(() => {
+      isEndingCallRef.current = false;
+    }, 500);
   };
 
   return (
@@ -493,7 +673,7 @@ function RandomCallPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <NetworkIndicator />
+            <NetworkIndicator peerConnection={peerConnection} />
             {isInCall && (
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                 <Clock className="h-4 w-4" />
@@ -504,7 +684,7 @@ function RandomCallPage() {
         </div>
 
         {/* Level Selector */}
-        {!isInCall && !isSearching && (
+        {!isCallModeOn && (
           <div className="mb-6">
             <LevelSelector
               selectedLevel={selectedLevel}
@@ -520,7 +700,7 @@ function RandomCallPage() {
             {/* Local Video */}
             <VideoFrame
               type="local"
-              isLoading={isSearching}
+              isLoading={false}
               isConnected={isInCall}
               isVideoOff={isVideoOff}
               isMuted={isMuted}
@@ -541,55 +721,77 @@ function RandomCallPage() {
           </div>
 
           {/* Connection Status */}
-          {!isInCall && !isSearching && (
+          {!isCallModeOn && (
             <Card className="p-6 text-center mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
               <Users className="h-12 w-12 text-orange-500 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Ready to Practice Japanese?</h3>
               <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Connect with a native speaker at {selectedLevel} level
               </p>
-              <Button onClick={handleStartSearch} size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-8">
-                Start Random Call
+              <Button onClick={handleToggleCallMode} size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-8">
+                🔴 Turn Call Mode ON
               </Button>
             </Card>
           )}
 
-          {isSearching && (
+          {isCallModeOn && isSearching && !isInCall && (
             <Card className="p-6 text-center mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
               <div className="animate-spin h-8 w-8 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Connecting...</h3>
-              <p className="text-gray-600 dark:text-gray-300">Finding a Japanese speaker for you</p>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Searching...</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-2">Finding a Japanese speaker for you</p>
+              <Button onClick={handleToggleCallMode} size="sm" variant="outline" className="mt-2">
+                🔴 Turn Call Mode OFF
+              </Button>
             </Card>
           )}
 
           {/* Call Controls */}
-          {(isInCall || isSearching) && (
+          {isCallModeOn && (
+            <div className="space-y-4">
             <CallControls
               isMuted={isMuted}
               isVideoOff={isVideoOff}
               onToggleMute={handleToggleMute}
               onToggleVideo={handleToggleVideo}
-              onSwitchCamera={() => {}}
-              onEndCall={handleCallEnd}
-              disabled={isSearching}
-            />
+                onNextPartner={handleNextPartner}
+                onEndCall={handleToggleCallMode}
+                disabled={isSearching && !isInCall}
+                isConnected={isInCall}
+              />
+            </div>
           )}
         </div>
       </div>
 
-      {/* Rating Modal */}
-      {randomCallId && partnerInfo && (
-        <CallRatingModal
-          open={showRatingModal}
-          onClose={() => {
-            setShowRatingModal(false);
-            setRandomCallId(null);
-          }}
-          callId={randomCallId}
-          partnerId={partnerInfo.partnerId}
-          partnerLevel={partnerInfo.partnerLevel}
-          callDuration={callDuration}
-        />
+      {/* Rating Widget - Only show during call */}
+      {isInCall && partnerInfo && (
+        <div className="fixed bottom-24 right-6 z-50">
+          <Card className="p-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-lg">
+            <p className="text-xs text-gray-600 dark:text-gray-300 mb-2 text-center">
+              Rate partner's Japanese skills
+            </p>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  className="transition-transform hover:scale-110 focus:outline-none"
+                  onMouseEnter={() => setHoveredRating(star)}
+                  onMouseLeave={() => setHoveredRating(0)}
+                  onClick={() => handleRatePartner(star)}
+                >
+                  <Star
+                    className={`h-8 w-8 ${
+                      star <= hoveredRating
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
+                    } transition-colors`}
+                  />
+                </button>
+              ))}
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   );
