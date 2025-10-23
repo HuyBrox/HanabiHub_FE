@@ -439,20 +439,20 @@ export default function AIPracticePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {timeDistribution.length > 0 && timeDistribution.some((d) => d.value > 0) ? (
+              {timeDistribution.length > 0 && timeDistribution.some((d) => d.percentage > 0) ? (
                 <ResponsiveContainer width="100%" height={250}>
                   <RechartsPieChart>
                     <Pie
-                      data={timeDistribution}
+                      data={timeDistribution.filter((d) => d.percentage > 0)}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
                       label={({ name, percentage }) => `${name}: ${percentage}%`}
                       outerRadius={80}
                       fill="#8884d8"
-                      dataKey="value"
+                      dataKey="percentage"
                     >
-                      {timeDistribution.map((entry, index) => (
+                      {timeDistribution.filter((d) => d.percentage > 0).map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -462,7 +462,10 @@ export default function AIPracticePage() {
                         border: "1px solid hsl(var(--border))",
                         borderRadius: "8px",
                       }}
-                      formatter={(value: number) => `${value} phút`}
+                      formatter={(value: number, name: string) => {
+                        const item = timeDistribution.find((d) => d.name === name);
+                        return [`${item?.value || 0} phút (${value}%)`, name];
+                      }}
                     />
                   </RechartsPieChart>
                 </ResponsiveContainer>

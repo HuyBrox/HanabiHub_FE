@@ -67,11 +67,13 @@ export const activityApi = createApi({
       }),
       // Không invalidate tags vì không cần refetch data
       // Chỉ log error nếu fail, không throw
-      onQueryStarted: async (_, { queryFulfilled }) => {
+      onQueryStarted: async (args, { queryFulfilled }) => {
         try {
           await queryFulfilled;
-        } catch (error) {
-          console.warn("Failed to track video activity (non-blocking):", error);
+        } catch (error: any) {
+          console.error("❌ Failed to track video activity:", error);
+          console.error("❌ Request data was:", args);
+          console.error("❌ Error response:", error?.error?.data || error);
         }
       },
     }),

@@ -81,6 +81,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const watchTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const taskTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const videoWatchedTimeRef = useRef<number>(0); // ✅ Ref để lưu latest watched time cho cleanup
 
   // Page visibility tracking
   const isPageVisible = usePageVisibility();
@@ -127,10 +128,12 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     if (savedProgress) {
       console.log("Restored progress:", savedProgress);
       setVideoWatchedTime(savedProgress.videoWatchedTime);
+      videoWatchedTimeRef.current = savedProgress.videoWatchedTime; // ✅ Sync ref
       setTaskElapsedTime(savedProgress.taskElapsedTime);
     } else {
       // No saved progress - reset timers
       setVideoWatchedTime(0);
+      videoWatchedTimeRef.current = 0; // ✅ Reset ref too
       setTaskElapsedTime(0);
     }
 
@@ -148,7 +151,11 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     if (currentLesson?.type === "video") {
       // For ALL videos (uploaded + YouTube): Start simple timer immediately
       watchTimeIntervalRef.current = setInterval(() => {
-        setVideoWatchedTime((prev) => prev + 1);
+        setVideoWatchedTime((prev) => {
+          const newTime = prev + 1;
+          videoWatchedTimeRef.current = newTime; // ✅ Keep ref in sync
+          return newTime;
+        });
       }, 1000);
     } else if (currentLesson?.type === "task") {
       // Start task timer
@@ -172,34 +179,58 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
   // Save video progress when leaving (cleanup on unmount or lesson change)
   useEffect(() => {
+    // Capture current lesson info at mount for cleanup
+    const lessonAtMount = currentLesson;
+
     return () => {
       // Save watched time when leaving the lesson
-      if (currentLesson?.type === "video" && videoWatchedTime > 0) {
-        const watchedSeconds = videoWatchedTime;
-        const totalDuration = currentLesson.duration || 0; // duration in minutes
-        const totalDurationSeconds = totalDuration * 60;
-        const isComplete = videoWatchedTime >= totalDurationSeconds * 0.9; // 90% of video
+      // ✅ Use ref to get LATEST watch time, not stale closure value
+      const watchedSeconds = videoWatchedTimeRef.current;
 
-        trackVideoActivity({
+      if (lessonAtMount?.type === "video" && watchedSeconds > 0) {
+        const totalDuration = lessonAtMount.duration || 0; // duration in minutes
+        const totalDurationSeconds = totalDuration * 60;
+
+        // Skip if no valid duration (silently to reduce console spam)
+        if (totalDurationSeconds === 0) {
+          return;
+        }
+
+        const isComplete = watchedSeconds >= totalDurationSeconds * 0.9; // 90% of video
+
+        const payload = {
           courseId: id,
-          lessonId: currentLesson._id,
-          lessonTitle: currentLesson.title,
+          lessonId: lessonAtMount._id,
+          lessonTitle: lessonAtMount.title,
           totalDuration: totalDurationSeconds,
           watchedDuration: watchedSeconds,
           isWatchedCompletely: isComplete,
           watchCount: 1,
-        }).catch((err) => console.error("Failed to track video:", err));
+        };
+
+        console.log("🚪 CLEANUP: Saving video progress...", {
+          lesson: lessonAtMount.title,
+          watchedSeconds,
+          totalDurationSeconds,
+          isComplete,
+        });
+
+        trackVideoActivity(payload)
+          .then(() => console.log("✅ Video progress saved"))
+          .catch((err) => {
+            console.error("❌ Failed to track video:", err);
+          });
 
         // Mark complete if watched >= 90%
         if (isComplete) {
           markLessonComplete({
             courseId: id,
-            lessonId: currentLesson._id,
+            lessonId: lessonAtMount._id,
           }).catch((err) => console.error("Failed to mark complete:", err));
         }
       }
     };
-  }, [currentLesson, id, videoWatchedTime, trackVideoActivity, markLessonComplete]);
+  }, [currentLesson?._id, id]); // ✅ Only trigger when lesson ID changes, NOT on every videoWatchedTime tick!
 
   // Page visibility effect - pause/resume timers when tab changes
   useEffect(() => {
@@ -245,34 +276,59 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
       const hasProgress = videoWatchedTime > 0 || taskElapsedTime > 0;
 
       if (hasProgress) {
-        console.log("Auto-saving progress...", {
+        console.log("📹 Auto-saving progress...", {
+          lesson: currentLesson.title,
+          type: currentLesson.type,
           videoWatchedTime,
           taskElapsedTime,
+          timestamp: new Date().toLocaleTimeString(),
         });
+
+        // ✅ Use ref to get latest values without triggering useEffect
+        const currentVideoTime = videoWatchedTimeRef.current;
+        const currentTaskTime = taskElapsedTime;
 
         // Save to localStorage (fast backup)
         saveLessonProgress(currentUser._id, {
           lessonId: currentLesson._id,
-          videoWatchedTime,
-          taskElapsedTime,
+          videoWatchedTime: currentVideoTime,
+          taskElapsedTime: currentTaskTime,
           timestamp: Date.now(),
         });
 
         // Save to backend (for video lessons only, non-blocking)
-        if (currentLesson.type === "video" && videoWatchedTime > 0) {
+        if (currentLesson.type === "video" && currentVideoTime > 0) {
           const totalDuration = currentLesson.duration || 0;
           const totalDurationSeconds = totalDuration * 60;
-          const isComplete = videoWatchedTime >= totalDurationSeconds * 0.9;
 
-          trackVideoActivity({
+          // Skip if no valid duration (silently)
+          if (totalDurationSeconds === 0) {
+            return;
+          }
+
+          const isComplete = currentVideoTime >= totalDurationSeconds * 0.9;
+
+          const payload = {
             courseId: id,
             lessonId: currentLesson._id,
             lessonTitle: currentLesson.title,
             totalDuration: totalDurationSeconds,
-            watchedDuration: videoWatchedTime,
+            watchedDuration: currentVideoTime,
             isWatchedCompletely: isComplete,
             watchCount: 1,
-          }).catch((err) => console.error("Auto-save failed:", err));
+          };
+
+          console.log("📤 Auto-save video progress:", {
+            lesson: currentLesson.title,
+            watched: currentVideoTime,
+            total: totalDurationSeconds,
+          });
+
+          trackVideoActivity(payload)
+            .then(() => console.log("✅ Auto-save success"))
+            .catch((err) => {
+              console.error("❌ Auto-save failed:", err);
+            });
         }
       }
     }, 60000); // 60 seconds
@@ -284,7 +340,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
         autoSaveIntervalRef.current = null;
       }
     };
-  }, [currentUser?._id, currentLesson, videoWatchedTime, taskElapsedTime, id, trackVideoActivity]);
+  }, [currentUser?._id, currentLesson?._id, id]); // ✅ Only trigger when user or lesson changes
 
   // Helper function to check if lesson is completed by current user
   const isLessonCompleted = (lesson: any) => {

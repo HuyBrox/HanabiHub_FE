@@ -3,12 +3,12 @@
 import { useSelector, useDispatch } from "react-redux";
 import { useCallback, useMemo } from "react";
 import { RootState } from "../store";
-import { useLoginMutation, useLogoutMutation } from "../store/services/authApi";
+import { useLoginMutation } from "../store/services/authApi";
 import {
   loginStart,
   loginSuccess,
   loginFailure,
-  logout,
+  logoutThunk,
   clearError,
 } from "../store/slices/authSlice";
 import { LoginRequest } from "../types/auth";
@@ -24,7 +24,6 @@ export const useAuth = () => {
   );
 
   const [loginMutation] = useLoginMutation();
-  const [logoutMutation] = useLogoutMutation();
 
   const login = useCallback(
     async (credentials: LoginRequest) => {
@@ -49,15 +48,9 @@ export const useAuth = () => {
   );
 
   const handleLogout = useCallback(async () => {
-    try {
-      await logoutMutation().unwrap();
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
-      // Luôn clear state dù API có lỗi hay không
-      dispatch(logout());
-    }
-  }, [dispatch, logoutMutation]);
+    // ✅ Sử dụng logoutThunk để gọi backend API và clear cookies
+    dispatch(logoutThunk() as any);
+  }, [dispatch]);
 
   const clearAuthError = useCallback(() => {
     dispatch(clearError());

@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useGetCurrentUserQuery } from "../store/services/authApi";
-import { loginSuccess, logout, setInitialized } from "../store/slices/authSlice";
+import { loginSuccess, logoutThunk, setInitialized } from "../store/slices/authSlice";
 import { RootState } from "../store";
 import { LoadingPage } from "@/components/loading";
 
@@ -35,10 +35,10 @@ export const useAuthInit = () => {
       const errorStatus = (error as any)?.status;
       if (errorStatus === 401 || errorStatus === 403) {
         console.log("🔓 Session expired, logging out...");
-        dispatch(logout());
+        dispatch(logoutThunk() as any);
       } else {
         console.log("❌ No valid session found - token may be expired or invalid");
-        dispatch(logout());
+        dispatch(logoutThunk() as any);
       }
     }
 

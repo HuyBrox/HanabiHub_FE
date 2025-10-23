@@ -1,5 +1,5 @@
 // Quản lý state authentication của user
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import { AuthState, User } from "../../types/auth";
 
 // Khôi phục auth state từ localStorage nếu có
@@ -39,6 +39,35 @@ const getInitialAuthState = (): AuthState => {
 };
 
 const initialState: AuthState = getInitialAuthState();
+
+// Async thunk để logout - gọi backend API để clear cookies
+export const logoutThunk = createAsyncThunk(
+  'auth/logoutThunk',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/logout`,
+        {
+          method: 'POST',
+          credentials: 'include', // Important: gửi cookies
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.warn('Logout API failed, but clearing local state anyway');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Vẫn clear local state kể cả khi API fail
+      return rejectWithValue(error);
+    }
+  }
+);
 
 const authSlice = createSlice({
   name: "auth",
@@ -103,6 +132,42 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+  },
+  extraReducers: (builder) => {
+    // Handle logoutThunk
+    builder
+      .addCase(logoutThunk.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(logoutThunk.fulfilled, (state) => {
+        // Clear toàn bộ state sau khi logout thành công
+        state.user = null;
+        state.isAuthenticated = false;
+        state.isLoading = false;
+        state.error = null;
+        state.isInitialized = true;
+
+        // Xóa khỏi localStorage
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("auth_state");
+        }
+
+        console.log("✅ Logout successful - cookies cleared on backend");
+      })
+      .addCase(logoutThunk.rejected, (state) => {
+        // Vẫn clear state kể cả khi API fail (network error, etc.)
+        state.user = null;
+        state.isAuthenticated = false;
+        state.isLoading = false;
+        state.error = null;
+        state.isInitialized = true;
+
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("auth_state");
+        }
+
+        console.log("⚠️ Logout API failed but local state cleared");
+      });
   },
 });
 

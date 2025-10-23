@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { VideoFrame } from "@/components/video-call/video-frame";
 import { withAuth } from "@/components/auth";
 import { CallControls } from "@/components/video-call/call-controls";
@@ -19,6 +20,7 @@ import { useNotification } from "@/components/notification/NotificationProvider"
 const SERVER_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 function RandomCallPage() {
+  const router = useRouter();
   const { socket, connected } = useSocketContext();
   const { user } = useSelector((s: RootState) => s.auth);
   const { addNotification } = useNotification();
@@ -41,6 +43,7 @@ function RandomCallPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [hoveredRating, setHoveredRating] = useState(0);
+  const [hasRated, setHasRated] = useState(false); // Track if user has rated this partner
   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
 
   // Refs
@@ -52,6 +55,17 @@ function RandomCallPage() {
   const callStartTimeRef = useRef<number | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const isEndingCallRef = useRef(false); // ✅ Prevent circular handleCallEnd calls
+  const socketRef = useRef(socket); // Track socket for cleanup
+  const partnerInfoRef = useRef(partnerInfo); // Track partner for cleanup
+
+  // Sync refs with state for cleanup
+  useEffect(() => {
+    socketRef.current = socket;
+  }, [socket]);
+
+  useEffect(() => {
+    partnerInfoRef.current = partnerInfo;
+  }, [partnerInfo]);
 
   // Call duration timer
   useEffect(() => {
@@ -192,6 +206,79 @@ function RandomCallPage() {
     }
   }, []);
 
+  // 🚨 CRITICAL: Cleanup when leaving page (unmount)
+  useEffect(() => {
+    // Cleanup function to be reused
+    const cleanup = () => {
+      console.log("[RandomCall] 🧹 Running cleanup");
+
+      // Set flag to prevent event handlers from running during cleanup
+      isEndingCallRef.current = true;
+
+      const currentSocket = socketRef.current;
+      const currentPartner = partnerInfoRef.current;
+
+      // 1. Notify server if in active call
+      if (currentSocket && currentPartner) {
+        console.log("[RandomCall] Notifying server: endRandomCall");
+        currentSocket.emit("endRandomCall", {
+          partnerId: currentPartner.partnerId,
+        });
+      }
+
+      // 2. Leave queue if searching
+      if (currentSocket && joinedQueueRef.current) {
+        console.log("[RandomCall] Leaving random queue");
+        currentSocket.emit("leaveRandomQueue", {});
+        joinedQueueRef.current = false;
+      }
+
+      // 3. Close media connection
+      if (mediaConnRef.current) {
+        console.log("[RandomCall] Closing media connection");
+        mediaConnRef.current.close();
+        mediaConnRef.current = null;
+      }
+
+      // 4. Stop all media tracks
+      if (localStreamRef.current) {
+        console.log("[RandomCall] Stopping local stream tracks");
+        localStreamRef.current.getTracks().forEach((track) => {
+          track.stop();
+          console.log(`  - Stopped ${track.kind} track`);
+        });
+        localStreamRef.current = null;
+      }
+
+      // 5. Destroy peer connection
+      if (peerRef.current) {
+        console.log("[RandomCall] Destroying peer connection");
+        peerRef.current.destroy();
+        peerRef.current = null;
+      }
+
+      console.log("[RandomCall] ✅ Cleanup complete");
+    };
+
+    // Handle browser navigation/close
+    const handleBeforeUnload = () => {
+      // Cleanup without blocking (browser will kill the page anyway)
+      cleanup();
+    };
+
+    // Use 'pagehide' instead of 'beforeunload' for better mobile support
+    window.addEventListener("pagehide", handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // Component unmount cleanup
+    return () => {
+      console.log("[RandomCall] 🚪 Component unmounting");
+      window.removeEventListener("pagehide", handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      cleanup();
+    };
+  }, []); // Empty deps = only run on unmount, use refs for current values
+
   // Join random queue on mount
   useEffect(() => {
     if (!socket || !connected || !user?._id || joinedQueueRef.current) return;
@@ -214,17 +301,6 @@ function RandomCallPage() {
       if (socket && joinedQueueRef.current) {
         socket.emit("leaveRandomQueue", {});
         joinedQueueRef.current = false;
-      }
-
-      // Cleanup - Set flag to prevent event handlers from running during unmount
-      isEndingCallRef.current = true;
-
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
-      }
-      if (peerRef.current) {
-        peerRef.current.destroy();
-        peerRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -251,6 +327,7 @@ function RandomCallPage() {
         partnerLevel: data.partnerLevel,
       });
       callStartTimeRef.current = Date.now();
+      setHasRated(false); // Reset rating UI for new partner
 
       toast.success("Match found! Connecting...");
 
@@ -372,6 +449,12 @@ function RandomCallPage() {
       setIsSearching(false);
     });
 
+    // Rating submitted successfully
+    socket.on("ratingSubmitted", (data: any) => {
+      console.log("[RandomCall] ✅ Rating submitted successfully:", data);
+      // Already handled in handleRatePartner (setHasRated + toast)
+    });
+
     // Partner rated you
     socket.on("partnerRatedYou", (data: any) => {
       console.log("[RandomCall] Partner rated you:", data);
@@ -404,6 +487,7 @@ function RandomCallPage() {
       setPartnerInfo(null);
       setCallDuration(0);
       setHoveredRating(0);
+      setHasRated(false); // Reset for new partner
 
       // Auto search for new match if call mode is still on
       if (isCallModeOn) {
@@ -446,6 +530,7 @@ function RandomCallPage() {
       socket.off("receiveRandomCallPeerId");
       socket.off("searchingForMatch");
       socket.off("searchStopped");
+      socket.off("ratingSubmitted");
       socket.off("partnerRatedYou");
       socket.off("partnerSkipped");
       socket.off("randomCallError");
@@ -502,6 +587,49 @@ function RandomCallPage() {
     }
   };
 
+  const handleEndCurrentCall = () => {
+    if (!socket) {
+      toast.error("Socket not connected");
+      return;
+    }
+
+    console.log("[RandomCall] End current call - Starting new search...");
+
+    // End current call if active
+    if (partnerInfo) {
+      // Notify server
+      socket.emit("endRandomCall", {
+        partnerId: partnerInfo.partnerId,
+      });
+    }
+
+    // Cleanup media connections
+    if (mediaConnRef.current) {
+      mediaConnRef.current.close();
+      mediaConnRef.current = null;
+    }
+
+    if (remoteStream) {
+      remoteStream.getTracks().forEach((track) => track.stop());
+      setRemoteStream(null);
+    }
+
+    // Keep local stream for next call
+    // Start new search
+    socket.emit("startRandomSearch", {});
+
+    // Reset states but keep searching
+    setIsInCall(false);
+    setIsMatched(false);
+    setPartnerInfo(null);
+    setCallDuration(0);
+    setHoveredRating(0);
+    setHasRated(false); // Reset for new partner
+    setIsSearching(true);
+
+    toast.info("Finding new partner...");
+  };
+
   const handleNextPartner = () => {
     if (!socket || !partnerInfo) {
       toast.error("No active call");
@@ -532,6 +660,7 @@ function RandomCallPage() {
     setPartnerInfo(null);
     setCallDuration(0);
     setHoveredRating(0);
+    setHasRated(false); // Reset for new partner
     setIsSearching(true);
 
     toast.info("Finding next partner...");
@@ -590,6 +719,9 @@ function RandomCallPage() {
       partnerId: partnerInfo.partnerId,
       rating,
     });
+
+    // Hide rating UI
+    setHasRated(true);
 
     // Show success toast
     toast.success(`Sent ${rating} star${rating > 1 ? "s" : ""} 💫 to partner!`);
@@ -653,6 +785,7 @@ function RandomCallPage() {
 
     // Reset rating UI
     setHoveredRating(0);
+    setHasRated(false);
     setIsMuted(false);
     setIsVideoOff(false);
 
@@ -754,7 +887,12 @@ function RandomCallPage() {
               onToggleMute={handleToggleMute}
               onToggleVideo={handleToggleVideo}
                 onNextPartner={handleNextPartner}
-                onEndCall={handleToggleCallMode}
+                onEndCall={handleEndCurrentCall}
+                onStartCall={async () => {
+                  await getUserMedia();
+                  socket?.emit("startRandomSearch", {});
+                  setIsSearching(true);
+                }}
                 disabled={isSearching && !isInCall}
                 isConnected={isInCall}
               />
@@ -763,8 +901,8 @@ function RandomCallPage() {
         </div>
       </div>
 
-      {/* Rating Widget - Only show during call */}
-      {isInCall && partnerInfo && (
+      {/* Rating Widget - Only show during call and hasn't rated yet */}
+      {isInCall && partnerInfo && !hasRated && (
         <div className="fixed bottom-24 right-6 z-50">
           <Card className="p-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-lg">
             <p className="text-xs text-gray-600 dark:text-gray-300 mb-2 text-center">
