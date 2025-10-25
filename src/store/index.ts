@@ -8,6 +8,7 @@ import { courseApi } from "./services/courseApi";
 import { activityApi } from "./services/activityApi";
 import { learningInsightsApi } from "./services/learningInsightsApi";
 import { aiChatApi } from "./services/aiChatApi";
+import { dashboardApi } from "./services/admin/dashboardApi";
 import authReducer from "./slices/authSlice";
 import {
   authMiddleware, // để tự động refresh token
@@ -25,6 +26,7 @@ export const store = configureStore({
     [activityApi.reducerPath]: activityApi.reducer,
     [learningInsightsApi.reducerPath]: learningInsightsApi.reducer,
     [aiChatApi.reducerPath]: aiChatApi.reducer,
+    [dashboardApi.reducerPath]: dashboardApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -36,6 +38,7 @@ export const store = configureStore({
       .concat(activityApi.middleware)
       .concat(learningInsightsApi.middleware)
       .concat(aiChatApi.middleware)
+      .concat(dashboardApi.middleware)
       .concat(authMiddleware)
       .prepend(authListenerMiddleware.middleware),
 });
