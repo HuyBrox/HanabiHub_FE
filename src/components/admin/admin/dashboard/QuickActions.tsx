@@ -43,6 +43,7 @@ export const QuickActions = ({
         email: userForm.email,
         username: userForm.username,
         password: userForm.password,
+        level: userForm.level, // 👈 thêm level vào payload
       };
 
       const result = await createAdmin(adminData).unwrap();

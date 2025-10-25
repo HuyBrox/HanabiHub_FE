@@ -46,6 +46,7 @@ export const dashboardApi = createApi({
         email: string;
         username: string;
         password: string;
+        level: string;
       }) => ({
         url: "/admin/create-admin",
         method: "POST",
