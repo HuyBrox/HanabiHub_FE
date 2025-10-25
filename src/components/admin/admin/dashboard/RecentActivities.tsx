@@ -28,7 +28,8 @@ export const RecentActivities = ({ activities, className = "" }: RecentActivitie
     const lowerType = type?.toLowerCase() || "";
     const lowerMsg = message?.toLowerCase() || "";
 
-    if (lowerType.includes("profile") || lowerMsg.includes("cập nhật")) return "profile_updated";
+    if (lowerType === "profile_update" || lowerMsg.includes("cập nhật hồ sơ"))
+      return "profile_updated";
     if (
       lowerType.includes("registration") ||
       lowerType.includes("signup") ||
