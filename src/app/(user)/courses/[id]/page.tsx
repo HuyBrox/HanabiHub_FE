@@ -3,12 +3,7 @@
 import { useState, useMemo, use, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
-import { usePageVisibility } from "@/hooks/usePageVisibility";
-import {
-  saveLessonProgress,
-  loadLessonProgress,
-  clearLessonProgress,
-} from "@/utils/lessonProgressStorage";
+// 🗑️ REMOVED: Page visibility and localStorage (not needed for simple tracking)
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -39,11 +34,13 @@ import {
 import { cn } from "@/lib/utils";
 import {
   useGetCourseByIdQuery,
+  useMarkLessonCompleteMutation,
+} from "@/store/services/courseApi";
+import {
   useTrackVideoActivityMutation,
   useTrackTaskActivityMutation,
   useTrackCourseAccessMutation,
-  useMarkLessonCompleteMutation,
-} from "@/store/services/courseApi";
+} from "@/store/services/activityApi";
 import { LoadingSpinner } from "@/components/loading";
 import { withAuth } from "@/components/auth";
 import { useRouter } from "next/navigation";
@@ -74,17 +71,16 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [showResults, setShowResults] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [score, setScore] = useState<number | null>(null);
-  const [startTime, setStartTime] = useState<Date | null>(null);
+  // 🗑️ REMOVED: startTime (not needed)
   const [videoWatchedTime, setVideoWatchedTime] = useState(0); // seconds
   const [taskElapsedTime, setTaskElapsedTime] = useState(0); // seconds for task timer
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const watchTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const taskTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // 🗑️ REMOVED: autoSaveIntervalRef (not needed)
   const videoWatchedTimeRef = useRef<number>(0); // ✅ Ref để lưu latest watched time cho cleanup
 
-  // Page visibility tracking
-  const isPageVisible = usePageVisibility();
+  // 🗑️ REMOVED: Page visibility tracking
 
   const { id } = use(params);
   const {
@@ -117,25 +113,16 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     }
   }, [id, trackCourseAccess]);
 
-  // Restore progress from localStorage when lesson changes
+  // 🎯 SIMPLE TRACKING: Start timer when entering video lesson
   useEffect(() => {
     if (!currentUser?._id || !currentLesson?._id) return;
 
-    setStartTime(new Date());
+    console.log("🎬 Entering lesson:", currentLesson.title, "Type:", currentLesson.type);
 
-    // Try to restore progress from localStorage
-    const savedProgress = loadLessonProgress(currentUser._id, currentLesson._id);
-    if (savedProgress) {
-      console.log("Restored progress:", savedProgress);
-      setVideoWatchedTime(savedProgress.videoWatchedTime);
-      videoWatchedTimeRef.current = savedProgress.videoWatchedTime; // ✅ Sync ref
-      setTaskElapsedTime(savedProgress.taskElapsedTime);
-    } else {
-      // No saved progress - reset timers
-      setVideoWatchedTime(0);
-      videoWatchedTimeRef.current = 0; // ✅ Reset ref too
-      setTaskElapsedTime(0);
-    }
+    // Reset timers
+    setVideoWatchedTime(0);
+    videoWatchedTimeRef.current = 0;
+    setTaskElapsedTime(0);
 
     // Clear any existing intervals
     if (watchTimeIntervalRef.current) {
@@ -147,13 +134,13 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
       taskTimerRef.current = null;
     }
 
-    // Start timers based on lesson type
+    // 🎯 SIMPLE: Start timer immediately for video lessons
     if (currentLesson?.type === "video") {
-      // For ALL videos (uploaded + YouTube): Start simple timer immediately
+      console.log("⏰ Starting video timer...");
       watchTimeIntervalRef.current = setInterval(() => {
         setVideoWatchedTime((prev) => {
           const newTime = prev + 1;
-          videoWatchedTimeRef.current = newTime; // ✅ Keep ref in sync
+          videoWatchedTimeRef.current = newTime;
           return newTime;
         });
       }, 1000);
@@ -164,7 +151,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
       }, 1000);
     }
 
-    // Cleanup
+    // Cleanup when leaving lesson
     return () => {
       if (watchTimeIntervalRef.current) {
         clearInterval(watchTimeIntervalRef.current);
@@ -177,170 +164,67 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     };
   }, [currentLessonIndex, currentLesson?._id, currentLesson?.type, currentUser?._id]);
 
-  // Save video progress when leaving (cleanup on unmount or lesson change)
+  // 🎯 SIMPLE: Save video progress when leaving lesson
   useEffect(() => {
-    // Capture current lesson info at mount for cleanup
     const lessonAtMount = currentLesson;
 
     return () => {
-      // Save watched time when leaving the lesson
-      // ✅ Use ref to get LATEST watch time, not stale closure value
       const watchedSeconds = videoWatchedTimeRef.current;
 
       if (lessonAtMount?.type === "video" && watchedSeconds > 0) {
-        const totalDuration = lessonAtMount.duration || 0; // duration in minutes
-        const totalDurationSeconds = totalDuration * 60;
+        console.log("🚪 Leaving lesson, sending time:", {
+          lesson: lessonAtMount.title,
+          watchedSeconds
+        });
 
-        // Skip if no valid duration (silently to reduce console spam)
-        if (totalDurationSeconds === 0) {
-          return;
-        }
-
-        const isComplete = watchedSeconds >= totalDurationSeconds * 0.9; // 90% of video
-
+        // 🎯 SIMPLE: Just send watched time, no complex calculations
         const payload = {
           courseId: id,
           lessonId: lessonAtMount._id,
           lessonTitle: lessonAtMount.title,
-          totalDuration: totalDurationSeconds,
+          totalDuration: watchedSeconds, // Use watched time as total
           watchedDuration: watchedSeconds,
-          isWatchedCompletely: isComplete,
+          isWatchedCompletely: false, // Don't care about completion
           watchCount: 1,
         };
 
-        console.log("🚪 CLEANUP: Saving video progress...", {
-          lesson: lessonAtMount.title,
-          watchedSeconds,
-          totalDurationSeconds,
-          isComplete,
+        trackVideoActivity(payload).catch((err) => {
+          console.error("Failed to track video:", err);
         });
-
-        trackVideoActivity(payload)
-          .then(() => console.log("✅ Video progress saved"))
-          .catch((err) => {
-            console.error("❌ Failed to track video:", err);
-          });
-
-        // Mark complete if watched >= 90%
-        if (isComplete) {
-          markLessonComplete({
-            courseId: id,
-            lessonId: lessonAtMount._id,
-          }).catch((err) => console.error("Failed to mark complete:", err));
-        }
       }
     };
-  }, [currentLesson?._id, id]); // ✅ Only trigger when lesson ID changes, NOT on every videoWatchedTime tick!
+  }, [currentLesson?._id, id]);
 
-  // Page visibility effect - pause/resume timers when tab changes
+  // 🎯 SIMPLE: Handle page unload (user closes tab, navigates away)
   useEffect(() => {
-    if (!currentLesson) return;
+    const handleBeforeUnload = () => {
+      if (currentLesson?.type === "video" && videoWatchedTimeRef.current > 0) {
+        console.log("📡 Page unload, sending beacon:", videoWatchedTimeRef.current, "seconds");
 
-    if (!isPageVisible) {
-      // Page hidden - pause all timers
-      if (watchTimeIntervalRef.current) {
-        clearInterval(watchTimeIntervalRef.current);
-        watchTimeIntervalRef.current = null;
-      }
-      if (taskTimerRef.current) {
-        clearInterval(taskTimerRef.current);
-        taskTimerRef.current = null;
-      }
-    } else {
-      // Page visible - resume timers
-      if (currentLesson.type === "video" && !watchTimeIntervalRef.current) {
-        // Resume video timer (both uploaded and YouTube)
-        watchTimeIntervalRef.current = setInterval(() => {
-          setVideoWatchedTime((prev) => prev + 1);
-        }, 1000);
-      } else if (currentLesson.type === "task" && !showResults && !taskTimerRef.current) {
-        // Resume task timer if not showing results
-        taskTimerRef.current = setInterval(() => {
-          setTaskElapsedTime((prev) => prev + 1);
-        }, 1000);
-      }
-    }
-  }, [isPageVisible, currentLesson, showResults]);
-
-  // Auto-save progress to localStorage + backend every 60 seconds
-  useEffect(() => {
-    if (!currentUser?._id || !currentLesson?._id) return;
-
-    // Clear existing auto-save interval
-    if (autoSaveIntervalRef.current) {
-      clearInterval(autoSaveIntervalRef.current);
-    }
-
-    // Set up auto-save interval (60 seconds)
-    autoSaveIntervalRef.current = setInterval(() => {
-      const hasProgress = videoWatchedTime > 0 || taskElapsedTime > 0;
-
-      if (hasProgress) {
-        console.log("📹 Auto-saving progress...", {
-          lesson: currentLesson.title,
-          type: currentLesson.type,
-          videoWatchedTime,
-          taskElapsedTime,
-          timestamp: new Date().toLocaleTimeString(),
-        });
-
-        // ✅ Use ref to get latest values without triggering useEffect
-        const currentVideoTime = videoWatchedTimeRef.current;
-        const currentTaskTime = taskElapsedTime;
-
-        // Save to localStorage (fast backup)
-        saveLessonProgress(currentUser._id, {
+        const payload = {
+          courseId: id,
           lessonId: currentLesson._id,
-          videoWatchedTime: currentVideoTime,
-          taskElapsedTime: currentTaskTime,
-          timestamp: Date.now(),
-        });
+          lessonTitle: currentLesson.title,
+          totalDuration: videoWatchedTimeRef.current,
+          watchedDuration: videoWatchedTimeRef.current,
+          isWatchedCompletely: false,
+          watchCount: 1,
+        };
 
-        // Save to backend (for video lessons only, non-blocking)
-        if (currentLesson.type === "video" && currentVideoTime > 0) {
-          const totalDuration = currentLesson.duration || 0;
-          const totalDurationSeconds = totalDuration * 60;
-
-          // Skip if no valid duration (silently)
-          if (totalDurationSeconds === 0) {
-            return;
-          }
-
-          const isComplete = currentVideoTime >= totalDurationSeconds * 0.9;
-
-          const payload = {
-            courseId: id,
-            lessonId: currentLesson._id,
-            lessonTitle: currentLesson.title,
-            totalDuration: totalDurationSeconds,
-            watchedDuration: currentVideoTime,
-            isWatchedCompletely: isComplete,
-            watchCount: 1,
-          };
-
-          console.log("📤 Auto-save video progress:", {
-            lesson: currentLesson.title,
-            watched: currentVideoTime,
-            total: totalDurationSeconds,
-          });
-
-          trackVideoActivity(payload)
-            .then(() => console.log("✅ Auto-save success"))
-            .catch((err) => {
-              console.error("❌ Auto-save failed:", err);
-            });
-        }
-      }
-    }, 60000); // 60 seconds
-
-    // Cleanup
-    return () => {
-      if (autoSaveIntervalRef.current) {
-        clearInterval(autoSaveIntervalRef.current);
-        autoSaveIntervalRef.current = null;
+        const data = JSON.stringify(payload);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/user-activity/track-video`;
+        navigator.sendBeacon(url, blob);
       }
     };
-  }, [currentUser?._id, currentLesson?._id, id]); // ✅ Only trigger when user or lesson changes
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [currentLesson, id]);
+
+  // 🗑️ REMOVED: Page visibility tracking (too complex, not needed)
+
+  // 🗑️ REMOVED: Auto-save (not needed, only save on exit)
 
   // Helper function to check if lesson is completed by current user
   const isLessonCompleted = (lesson: any) => {
@@ -431,7 +315,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
           courseId: id,
           lessonId: currentLesson._id,
           lessonTitle: currentLesson.title,
-          taskType: currentLesson.taskType || "unknown",
+          taskType: (currentLesson.taskType as "multiple_choice" | "fill_blank" | "listening" | "matching" | "speaking" | "reading") || "multiple_choice",
           score: calculatedScore,
           maxScore: 100,
           correctAnswers,
@@ -455,16 +339,48 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     }
   };
 
-  const handleNextLesson = () => {
+  // 🎯 SIMPLE: Save video progress before switching lessons
+  const saveCurrentVideoProgress = async () => {
+    const currentWatchedTime = videoWatchedTimeRef.current;
+
+    if (!currentLesson || currentLesson.type !== "video" || currentWatchedTime === 0) {
+      return;
+    }
+
+    console.log("🔄 Switching lesson, saving time:", {
+      lesson: currentLesson.title,
+      watchedSeconds: currentWatchedTime
+    });
+
+    const payload = {
+      courseId: id,
+      lessonId: currentLesson._id,
+      lessonTitle: currentLesson.title,
+      totalDuration: currentWatchedTime,
+      watchedDuration: currentWatchedTime,
+      isWatchedCompletely: false,
+      watchCount: 1,
+    };
+
+    try {
+      await trackVideoActivity(payload);
+    } catch (err) {
+      console.error("Failed to save video progress:", err);
+    }
+  };
+
+  const handleNextLesson = async () => {
     if (currentLessonIndex < lessons.length - 1) {
+      await saveCurrentVideoProgress();
       setCurrentLessonIndex(currentLessonIndex + 1);
       resetAnswers();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
-  const handlePrevLesson = () => {
+  const handlePrevLesson = async () => {
     if (currentLessonIndex > 0) {
+      await saveCurrentVideoProgress();
       setCurrentLessonIndex(currentLessonIndex - 1);
       resetAnswers();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -632,7 +548,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                     return (
                       <button
                         key={lesson._id}
-                        onClick={() => {
+                        onClick={async () => {
+                          await saveCurrentVideoProgress();
                           setCurrentLessonIndex(index);
                           resetAnswers();
                           setIsSidebarOpen(false);

@@ -7,6 +7,7 @@ import { flashcardApi } from "./services/flashcardApi";
 import { courseApi } from "./services/courseApi";
 import { activityApi } from "./services/activityApi";
 import { learningInsightsApi } from "./services/learningInsightsApi";
+import { aiChatApi } from "./services/aiChatApi";
 import authReducer from "./slices/authSlice";
 import {
   authMiddleware, // để tự động refresh token
@@ -23,6 +24,7 @@ export const store = configureStore({
     [courseApi.reducerPath]: courseApi.reducer,
     [activityApi.reducerPath]: activityApi.reducer,
     [learningInsightsApi.reducerPath]: learningInsightsApi.reducer,
+    [aiChatApi.reducerPath]: aiChatApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -33,6 +35,7 @@ export const store = configureStore({
       .concat(courseApi.middleware)
       .concat(activityApi.middleware)
       .concat(learningInsightsApi.middleware)
+      .concat(aiChatApi.middleware)
       .concat(authMiddleware)
       .prepend(authListenerMiddleware.middleware),
 });

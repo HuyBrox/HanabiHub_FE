@@ -46,12 +46,15 @@ function CoursesPage() {
   const [selectedLevel, setSelectedLevel] = useState("All");
 
   // Fetch courses từ API
+  // Memoize query params to prevent infinite re-fetching
+  const coursesQueryParams = useMemo(() => ({ limit: 50 }), []);
+
   const {
     data: coursesData,
     isLoading,
     isError,
     refetch,
-  } = useGetAllCoursesQuery({ limit: 50 });
+  } = useGetAllCoursesQuery(coursesQueryParams);
 
   // Transform và filter courses
   const filteredCourses = useMemo(() => {

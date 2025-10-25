@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -93,12 +93,15 @@ export default function CourseTable() {
   const [dragConstraint, setDragConstraint] = useState(0);
 
   // Sử dụng RTK Query thay vì fetch trực tiếp
+  // Memoize query params to prevent infinite re-fetching
+  const coursesQueryParams = useMemo(() => ({ limit: 20 }), []);
+
   const {
     data: coursesData,
     isLoading,
     isError,
     error,
-  } = useGetAllCoursesQuery({ limit: 20 });
+  } = useGetAllCoursesQuery(coursesQueryParams);
 
   const courses = coursesData?.data || [];
 

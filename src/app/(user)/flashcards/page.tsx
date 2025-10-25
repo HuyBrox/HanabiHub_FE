@@ -76,7 +76,7 @@ function FlashcardsPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
   const [selectedType, setSelectedType] = useState<"flashcard" | "flashlist">(
-    "flashlist"
+    "flashcard"
   );
   const [openModal, setOpenModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);

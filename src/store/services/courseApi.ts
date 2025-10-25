@@ -338,70 +338,6 @@ export const courseApi = createApi({
       ],
     }),
 
-    // ============ USER ACTIVITY TRACKING ENDPOINTS ============
-
-    // Track video lesson activity
-    trackVideoActivity: builder.mutation<
-      ApiResponse<null>,
-      {
-        courseId?: string;
-        lessonId: string;
-        lessonTitle: string;
-        totalDuration: number;
-        watchedDuration?: number;
-        isWatchedCompletely?: boolean;
-        watchCount: number;
-        completedAt?: string;
-      }
-    >({
-      query: (body) => ({
-        url: "/user-activity/track-video",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Course"],
-    }),
-
-    // Track task/quiz lesson activity
-    trackTaskActivity: builder.mutation<
-      ApiResponse<{ passed: boolean }>,
-      {
-        courseId?: string;
-        lessonId: string;
-        lessonTitle: string;
-        taskType: string;
-        score: number;
-        maxScore?: number;
-        correctAnswers?: number;
-        totalQuestions?: number;
-        timeSpent?: number;
-        completedAt?: string;
-      }
-    >({
-      query: (body) => ({
-        url: "/user-activity/track-task",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Course"],
-    }),
-
-    // Track course access
-    trackCourseAccess: builder.mutation<
-      ApiResponse<null>,
-      {
-        courseId: string;
-        action?: "enroll" | "continue" | "complete";
-        isCompleted?: boolean;
-      }
-    >({
-      query: (body) => ({
-        url: "/user-activity/track-course-access",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Course"],
-    }),
   }),
 });
 
@@ -422,7 +358,4 @@ export const {
   useUpdateCurrentLessonMutation,
   useMarkLessonCompleteMutation,
   useResetCourseProgressMutation,
-  useTrackVideoActivityMutation,
-  useTrackTaskActivityMutation,
-  useTrackCourseAccessMutation,
 } = courseApi;

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import styles from "./page.module.css";
 import { useParams, useRouter } from "next/navigation";
 import {
   useGetFlashCardByIdQuery,
@@ -286,18 +287,20 @@ export default function FlashcardPracticePage() {
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
-    if (!isFlipped) {
-      setStudiedCards((prev) => new Set([...prev, currentCard.id]));
-    }
+    // Don't add to studiedCards here - will be added when user answers
   };
 
   const handleCorrect = async () => {
+    // Mark as studied when user answers (whether flipped or not)
+    setStudiedCards((prev) => new Set([...prev, currentCard.id]));
     setCorrectCards((prev) => new Set([...prev, currentCard.id]));
     await trackCardLearningData(currentCard, true);
     handleNext();
   };
 
   const handleIncorrect = async () => {
+    // Mark as studied when user answers (whether flipped or not)
+    setStudiedCards((prev) => new Set([...prev, currentCard.id]));
     correctCards.delete(currentCard.id);
     setCorrectCards(new Set(correctCards));
     await trackCardLearningData(currentCard, false);
@@ -384,42 +387,63 @@ export default function FlashcardPracticePage() {
         <div className="max-w-2xl w-full">
           {/* Flashcard */}
           <div className="relative mb-8">
-            <Card
-              className={cn(
-                "w-full h-80 cursor-pointer transition-all duration-500 transform-gpu",
-                "hover:shadow-lg",
-                isFlipped && "rotate-y-180"
-              )}
-              onClick={handleFlip}
-            >
-              <CardContent className="flex items-center justify-center h-full p-8 relative">
-                {!isFlipped ? (
-                  // Front of card
-                  <div className="text-center">
-                    <div className="text-8xl font-bold text-primary mb-4">
-                      {currentCard.vocabulary}
+            <div className={styles.cardContainer}>
+              <div
+                className={styles.cardSlider}
+                style={{
+                  transform: `translateX(-${currentIndex * 100}%)`
+                }}
+              >
+                {flashcards.map((card, index) => (
+                  <div key={card._id} className={styles.cardSlide}>
+                    <div
+                      className={cn(
+                        "w-full h-80 cursor-pointer",
+                        styles.flipCard
+                      )}
+                      onClick={handleFlip}
+                    >
+                      <div className={cn(styles.flipCardInner, isFlipped && styles.flipped)}>
+                        {/* Front of card */}
+                        <Card className={cn("w-full h-full", styles.flipCardFront)}>
+                          <CardContent className="flex items-center justify-center h-full p-8 relative">
+                            <div className="text-center">
+                              <div className="text-8xl font-bold text-primary mb-4">
+                                {card.vocabulary}
+                              </div>
+                              <p className="text-muted-foreground">Click to reveal</p>
+                            </div>
+                          </CardContent>
+                          <div className="absolute top-4 right-4">
+                            <RotateCcw className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        </Card>
+
+                        {/* Back of card */}
+                        <Card className={cn("w-full h-full", styles.flipCardBack)}>
+                          <CardContent className="flex items-center justify-center h-full p-8 relative">
+                            <div className="text-center space-y-4">
+                              <div className="text-4xl font-bold text-foreground">
+                                {card.vocabulary}
+                              </div>
+                              <div className="text-2xl text-muted-foreground">
+                                {card.meaning}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Did you get it right?
+                              </p>
+                            </div>
+                          </CardContent>
+                          <div className="absolute top-4 right-4">
+                            <RotateCcw className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        </Card>
+                      </div>
                     </div>
-                    <p className="text-muted-foreground">Click to reveal</p>
                   </div>
-                ) : (
-                  // Back of card
-                  <div className="text-center space-y-4">
-                    <div className="text-4xl font-bold text-foreground">
-                      {currentCard.vocabulary}
-                    </div>
-                    <div className="text-2xl text-muted-foreground">
-                      {currentCard.meaning}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Did you get it right?
-                    </p>
-                  </div>
-                )}
-                <div className="absolute top-4 right-4">
-                  <RotateCcw className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Controls */}
@@ -435,27 +459,25 @@ export default function FlashcardPracticePage() {
               Previous
             </Button>
 
-            {isFlipped && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  onClick={handleIncorrect}
-                  className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
-                >
-                  <X className="h-4 w-4" />
-                  Incorrect
-                </Button>
-                <Button
-                  size="lg"
-                  onClick={handleCorrect}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                >
-                  <Check className="h-4 w-4" />
-                  Correct
-                </Button>
-              </div>
-            )}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleIncorrect}
+                className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
+              >
+                <X className="h-4 w-4" />
+                Không thuộc
+              </Button>
+              <Button
+                size="lg"
+                onClick={handleCorrect}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Check className="h-4 w-4" />
+                Thuộc
+              </Button>
+            </div>
 
             <Button
               variant="outline"

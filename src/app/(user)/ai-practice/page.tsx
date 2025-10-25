@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -66,11 +66,16 @@ import {
   useGetProgressTimelineQuery,
   useGetDetailedPerformanceQuery,
 } from "@/store/services/learningInsightsApi";
+import { useSendChatMessageMutation } from "@/store/services/aiChatApi";
 import { LoadingSpinner } from "@/components/loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AIPracticePage() {
-  const [messages, setMessages] = useState([
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<
+    Array<{ role: "user" | "ai"; content: string; source?: string }>
+  >([
     {
       role: "ai",
       content: "Xin chào! Tôi là trợ lý học tập AI của bạn. 👋",
@@ -81,9 +86,10 @@ export default function AIPracticePage() {
         "Dựa trên dữ liệu học tập, hôm nay bạn nên ôn lại phần flashcard về thời gian.",
     },
   ]);
-  const [inputMessage, setInputMessage] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isChatbotOpen, setIsChatbotOpen] = useState(true);
   const [timeRange, setTimeRange] = useState<7 | 30>(7);
+  const [isSending, setIsSending] = useState(false);
 
   // Fetch data from BE
   const {
@@ -93,7 +99,10 @@ export default function AIPracticePage() {
     refetch,
   } = useGetMyLearningInsightsQuery();
 
-  const { data: dailyStatsData } = useGetDailyStatsQuery({ days: timeRange });
+  // Memoize query params to prevent infinite re-fetching
+  const dailyStatsParams = useMemo(() => ({ days: timeRange }), [timeRange]);
+
+  const { data: dailyStatsData } = useGetDailyStatsQuery(dailyStatsParams);
   const { data: timeAnalyticsData } = useGetTimeAnalyticsQuery();
   const { data: weakAreasData } = useGetWeakAreasQuery();
   const { data: timelineData } = useGetProgressTimelineQuery();
@@ -102,33 +111,90 @@ export default function AIPracticePage() {
   const [forceUpdate, { isLoading: isUpdating }] =
     useForceUpdateInsightsMutation();
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+  const [sendChatMessage] = useSendChatMessageMutation();
 
-    setMessages((prev) => [...prev, { role: "user", content: inputMessage }]);
+  // Format date for charts - move before early returns
+  const formatDate = useCallback((dateStr: string) => {
+    const date = new Date(dateStr);
+    return `${date.getDate()}/${date.getMonth() + 1}`;
+  }, []);
 
-    setTimeout(() => {
+  // Prepare daily stats chart data - MUST be before early returns
+  const dailyChartData = useMemo(
+    () =>
+      dailyStatsData?.data?.map((stat) => ({
+        date: formatDate(stat.date),
+        "Thời gian học": stat.studyTime,
+        "Bài đã làm": stat.lessonsCompleted,
+        "Thẻ ôn": stat.cardsReviewed,
+      })) || [],
+    [dailyStatsData, formatDate]
+  );
+
+  // Prepare time distribution data - MUST be before early returns
+  const timeDistribution = useMemo(
+    () => timeAnalyticsData?.data?.byContentType || [],
+    [timeAnalyticsData]
+  );
+
+  // Get weak areas - MUST be before early returns
+  const weakAreas = useMemo(() => weakAreasData?.data, [weakAreasData]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!inputRef.current || !user?._id) {
+      return;
+    }
+
+    const trimmedMessage = inputRef.current.value.trim();
+
+    if (!trimmedMessage) {
+      return;
+    }
+
+    // Add user message to chat
+    setMessages((prev) => [...prev, { role: "user", content: trimmedMessage }]);
+
+    // Clear input
+    inputRef.current.value = "";
+    setIsSending(true);
+
+    try {
+      const response = await sendChatMessage({
+        user_id: user._id,
+        message: trimmedMessage,
+      }).unwrap();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          content: response.reply,
+          source: response.source,
+        },
+      ]);
+    } catch (error) {
+      console.error("Failed to send message:", error);
       setMessages((prev) => [
         ...prev,
         {
           role: "ai",
           content:
-            "Tôi đã nhận được tin nhắn của bạn. Đây là nơi bạn sẽ kết nối với AI backend để xử lý câu hỏi.",
+            "Xin lỗi, có lỗi xảy ra khi xử lý tin nhắn. Vui lòng thử lại sau.",
         },
       ]);
-    }, 1000);
+    } finally {
+      setIsSending(false);
+    }
+  }, [user, sendChatMessage]);
 
-    setInputMessage("");
-  };
-
-  const handleForceUpdate = async () => {
+  const handleForceUpdate = useCallback(async () => {
     try {
       await forceUpdate().unwrap();
       refetch();
     } catch (error) {
       console.error("Failed to update insights:", error);
     }
-  };
+  }, [forceUpdate, refetch]);
 
   if (isLoading) {
     return (
@@ -205,27 +271,6 @@ export default function AIPracticePage() {
     return levelMap[level as keyof typeof levelMap] || "Sơ cấp";
   };
 
-  // Format date for charts
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getDate()}/${date.getMonth() + 1}`;
-  };
-
-  // Prepare daily stats chart data
-  const dailyChartData =
-    dailyStatsData?.data?.map((stat) => ({
-      date: formatDate(stat.date),
-      "Thời gian học": stat.studyTime,
-      "Bài đã làm": stat.lessonsCompleted,
-      "Thẻ ôn": stat.cardsReviewed,
-    })) || [];
-
-  // Prepare time distribution data
-  const timeDistribution = timeAnalyticsData?.data?.byContentType || [];
-
-  // Get weak areas
-  const weakAreas = weakAreasData?.data;
-
   // Get timeline data
   const timeline = timelineData?.data;
 
@@ -233,7 +278,7 @@ export default function AIPracticePage() {
   const detailedPerf = detailedPerfData?.data;
 
   return (
-    <div className="h-full flex flex-col lg:flex-row gap-4 p-2 sm:p-4 bg-background">
+    <div className="h-full flex flex-col lg:flex-row gap-4 p-2 sm:p-4 bg-background overflow-hidden">
       {/* Left Column - Analytics Dashboard */}
       <div
         className={`flex-1 overflow-auto space-y-4 pr-0 lg:pr-2 transition-all duration-300 ${
@@ -1034,9 +1079,9 @@ export default function AIPracticePage() {
         </Button>
 
         {isChatbotOpen && (
-          <div className="flex-1 flex flex-col pl-4 animate-in slide-in-from-right duration-300">
-            <Card className="flex-1 flex flex-col shadow-lg">
-              <CardHeader className="border-b bg-primary/5">
+          <div className="h-full flex flex-col pl-4 animate-in slide-in-from-right duration-300">
+            <Card className="h-full flex flex-col shadow-lg">
+              <CardHeader className="border-b bg-primary/5 flex-shrink-0">
                 <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <Brain className="h-5 w-5 text-primary" />
                   Trợ lý học tập AI 🤖
@@ -1046,7 +1091,7 @@ export default function AIPracticePage() {
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="flex-1 overflow-auto p-4 space-y-4">
+              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                 {messages.map((message, index) => (
                   <div
                     key={index}
@@ -1064,23 +1109,53 @@ export default function AIPracticePage() {
                       <p className="text-xs sm:text-sm whitespace-pre-wrap">
                         {message.content}
                       </p>
+                      {message.source && (
+                        <div className="mt-1 flex items-center gap-1">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                            {message.source === "RAG"
+                              ? "📚 Ngữ pháp"
+                              : message.source === "Translator"
+                              ? "🌐 Dịch thuật"
+                              : "🤖 AI"}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
+                {isSending && (
+                  <div className="flex justify-start animate-in slide-in-from-bottom-2">
+                    <div className="bg-muted rounded-lg px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"></div>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          Đang suy nghĩ...
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
 
-              <div className="p-3 sm:p-4 border-t bg-muted/30">
+              <div className="p-3 sm:p-4 border-t bg-muted/30 flex-shrink-0">
                 <div className="flex gap-2">
                   <Input
+                    ref={inputRef}
                     placeholder="Nhập câu hỏi của bạn..."
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && !isSending && handleSendMessage()
+                    }
+                    disabled={isSending}
                     className="flex-1 text-xs sm:text-sm"
                   />
                   <Button
                     onClick={handleSendMessage}
                     size="icon"
+                    disabled={isSending}
                     className="shrink-0 hover:scale-110 transition-transform"
                   >
                     <Send className="h-4 w-4" />
