@@ -1,18 +1,20 @@
 import axios, { AxiosInstance } from "axios";
+import { API_CONFIG } from "@/config/api";
 
 const axiosClient: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "https://api.example.com",
+  baseURL: API_CONFIG.BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 5000,
+  timeout: API_CONFIG.TIMEOUT,
+  withCredentials: true, // Enable cookies
 });
 
+// Use cookies for authentication (backend uses httpOnly cookies)
 axiosClient.interceptors.request.use((config) => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  console.log("🔍 Request URL:", config.url);
+  console.log("🍪 Using cookies for authentication");
+  // Backend uses httpOnly cookies, no need for Authorization header
   return config;
 });
 
@@ -20,6 +22,14 @@ axiosClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
     console.error("API Error:", error);
+    
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401) {
+      console.log("❌ 401 Unauthorized - Session expired or invalid");
+      // For cookie-based auth, we don't need to clear localStorage
+      // The backend will handle cookie expiration
+    }
+    
     return Promise.reject(error);
   }
 );

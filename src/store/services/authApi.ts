@@ -13,8 +13,9 @@ console.log("API_URL:", process.env.NEXT_PUBLIC_API_URL);
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
   credentials: "include", // để gửi cookies
-  prepareHeaders: (headers) => {
+  prepareHeaders: (headers, { getState }) => {
     headers.set("Content-Type", "application/json");
+    // No need to set Authorization header as we're using cookies
     return headers;
   },
 });

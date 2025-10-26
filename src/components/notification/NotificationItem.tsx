@@ -12,7 +12,7 @@ export default function NotificationItem({
 
   const handleRemove = () => {
     setIsExiting(true);
-    setTimeout(() => onRemove(notification.id), 300);
+    setTimeout(() => onRemove(notification.id, notification.notificationId), 300);
   };
 
   const icons: any = {

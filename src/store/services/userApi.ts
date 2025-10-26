@@ -1,35 +1,89 @@
-// RTK Query API cho quản lý user
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import axiosClient from "@/api/axioxClient";
 
-export const userApi = createApi({
-  reducerPath: "userApi",
-  baseQuery: fetchBaseQuery({
-    baseUrl: process.env.API_URL,
-    credentials: "include",
-  }),
-  tagTypes: ["User"],
-  endpoints: (builder) => ({
-    // Lấy danh sách tất cả user
-    getUsers: builder.query<any[], void>({
-      query: () => "/users",
-      providesTags: ["User"],
-    }),
-    // Lấy thông tin user theo ID
-    getUserById: builder.query<any, string>({
-      query: (id) => `/users/${id}`,
-      providesTags: (result, error, id) => [{ type: "User", id }],
-    }),
-    // Cập nhật thông tin user
-    updateUser: builder.mutation<any, { id: string; body: any }>({
-      query: ({ id, body }) => ({
-        url: `/users/${id}`,
-        method: "PUT",
-        body,
-      }),
-      invalidatesTags: (result, error, { id }) => [{ type: "User", id }],
-    }),
-  }),
-});
+// Types
+export interface UserItem {
+  _id: string;
+  fullname: string;
+  username: string;
+  email: string;
+  role: "admin" | "premium" | "basic";
+  avatar?: string;
+}
 
-export const { useGetUsersQuery, useGetUserByIdQuery, useUpdateUserMutation } =
-  userApi;
+export interface UserListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: string;
+}
+
+export interface UserStats {
+  total: number;
+  admin: number;
+  premium: number;
+  basic: number;
+}
+
+// API Functions
+export const userApi = {
+  // Get users list for admin (notification recipients)
+  getUsersList: async (params: UserListParams = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.role) queryParams.append('role', params.role);
+
+    const response: any = await axiosClient.get(`/user/search?${queryParams.toString()}`);
+    
+    // Transform backend response to frontend expected format
+    if (response.success && response.data) {
+      const { users, total, page, limit } = response.data;
+      return {
+        success: true,
+        data: users || [],
+        pagination: {
+          page: page || 1,
+          limit: limit || 20,
+          total: total || 0,
+          totalPages: Math.ceil((total || 0) / (limit || 20))
+        }
+      };
+    }
+    
+    return response;
+  },
+
+  // Search users for admin (notification recipients)
+  searchUsers: async (params: UserListParams = {}) => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.search) queryParams.append('search', params.search);
+    if (params.role) queryParams.append('role', params.role);
+
+    const response: any = await axiosClient.get(`/user/search?${queryParams.toString()}`);
+    
+    // Transform backend response to frontend expected format
+    if (response.success && response.data) {
+      const { users, total, page, limit } = response.data;
+      return {
+        success: true,
+        data: users || [],
+        pagination: {
+          page: page || 1,
+          limit: limit || 20,
+          total: total || 0,
+          totalPages: Math.ceil((total || 0) / (limit || 20))
+        }
+      };
+    }
+    
+    return response;
+  },
+
+  // Get user statistics
+  getUserStats: async () => {
+    return axiosClient.get('/user/stats');
+  }
+};
