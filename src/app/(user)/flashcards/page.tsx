@@ -686,7 +686,7 @@ function FlashcardsPage() {
                         href={
                           set.type === "flashlist"
                             ? `/flashcards/flashlist/${set._id}`
-                            : `/flashcards/practice/${set._id}`
+                            : `/flashcards/${set._id}`
                         }
                       >
                         <Button

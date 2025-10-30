@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Heart, MessageCircle, RotateCcw } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import React from "react";
 import { useLanguage } from "@/lib/language-context";
 
@@ -23,9 +24,6 @@ type ImageWithSkeletonProps = {
   lqip: string;
   className?: string;
 };
-import Image from "next/image";
- 
-
 
 export default function HomePage() {
   const { t } = useLanguage();
@@ -286,12 +284,16 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">
-                  日
-                </span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
+                <Image
+                  src="/images/logos/logohanabi.png"
+                  alt="HanabiHub Logo"
+                  width={32}
+                  height={32}
+                  className="object-contain"
+                />
               </div>
-              <span className="font-semibold text-foreground">JapanLearn</span>
+              <span className="font-semibold text-foreground">HanabiHub</span>
             </div>
             <div className="flex gap-6 text-sm">
               <Link

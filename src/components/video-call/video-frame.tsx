@@ -4,8 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shimmer } from "@/components/ui/shimmer";
 import { User, Mic, MicOff, VideoOff } from "lucide-react";
-import Image from "next/image";
-import { useLanguage } from "@/lib/language-context";
+import { RefObject } from "react";
 
 interface VideoFrameProps {
   type: "local" | "remote";
@@ -15,6 +14,7 @@ interface VideoFrameProps {
   isMuted?: boolean;
   userName?: string;
   level?: string;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
 }
 
 export function VideoFrame({
@@ -25,8 +25,8 @@ export function VideoFrame({
   isMuted = false,
   userName = "User",
   level,
+  videoRef,
 }: VideoFrameProps) {
-  const { t } = useLanguage();
   const isLocal = type === "local";
 
   return (
@@ -34,28 +34,22 @@ export function VideoFrame({
       {/* Video Content */}
       {isLoading ? (
         <Shimmer className="w-full h-full" />
-      ) : isConnected && !isVideoOff ? (
+      ) : !isVideoOff && videoRef ? (
         <div className="relative w-full h-full bg-gray-800">
-          {/* TODO: Backend integration - Replace with actual video stream */}
-          {/* Example: <video ref={videoRef} autoPlay muted={isLocal} className="w-full h-full object-cover" /> */}
-
-          {/* Demo placeholder */}
-          <Image
-            src={isLocal ? "/sample-user-video.png" : "/sample-remote-user.png"}
-            alt={`${userName} video`}
-            fill
-            className="object-cover"
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted={isLocal}
+            className="w-full h-full object-cover"
           />
-
-          {/* Video overlay for demo */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
         </div>
       ) : (
         <div className="flex items-center justify-center h-full bg-gray-800">
           {isVideoOff ? (
             <div className="text-center">
               <VideoOff className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-400 text-sm">{t("video.cameraOff")}</p>
+              <p className="text-gray-400 text-sm">Camera is off</p>
             </div>
           ) : (
             <div className="text-center">
@@ -106,7 +100,7 @@ export function VideoFrame({
             variant="secondary"
             className="bg-black/50 text-white border-0 backdrop-blur-sm text-xs"
           >
-            {t("video.you")}
+            You
           </Badge>
         </div>
       )}
@@ -117,7 +111,7 @@ export function VideoFrame({
           <div className="text-center">
             <div className="w-3 h-3 bg-gray-400 rounded-full mx-auto mb-2 animate-pulse" />
             <p className="text-gray-400 text-sm">
-              {isLocal ? t("video.cameraReady") : t("video.waitingConnection")}
+              {isLocal ? "Camera ready" : "Waiting for connection..."}
             </p>
           </div>
         </div>

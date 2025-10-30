@@ -28,6 +28,11 @@ import {
   PieChart,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
+  AlertCircle,
+  TrendingDown,
+  Calendar,
+  Activity,
 } from "lucide-react";
 import {
   LineChart,
@@ -46,7 +51,23 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
+  BarChart,
+  Bar,
+  Area,
+  AreaChart,
+  ComposedChart,
 } from "recharts";
+import {
+  useGetMyLearningInsightsQuery,
+  useForceUpdateInsightsMutation,
+  useGetDailyStatsQuery,
+  useGetTimeAnalyticsQuery,
+  useGetWeakAreasQuery,
+  useGetProgressTimelineQuery,
+  useGetDetailedPerformanceQuery,
+} from "@/store/services/learningInsightsApi";
+import { LoadingSpinner } from "@/components/loading";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AIPracticePage() {
   const [messages, setMessages] = useState([
@@ -62,6 +83,24 @@ export default function AIPracticePage() {
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isChatbotOpen, setIsChatbotOpen] = useState(true);
+  const [timeRange, setTimeRange] = useState<7 | 30>(7);
+
+  // Fetch data from BE
+  const {
+    data: insightsData,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetMyLearningInsightsQuery();
+
+  const { data: dailyStatsData } = useGetDailyStatsQuery({ days: timeRange });
+  const { data: timeAnalyticsData } = useGetTimeAnalyticsQuery();
+  const { data: weakAreasData } = useGetWeakAreasQuery();
+  const { data: timelineData } = useGetProgressTimelineQuery();
+  const { data: detailedPerfData } = useGetDetailedPerformanceQuery();
+
+  const [forceUpdate, { isLoading: isUpdating }] =
+    useForceUpdateInsightsMutation();
 
   const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
@@ -82,32 +121,116 @@ export default function AIPracticePage() {
     setInputMessage("");
   };
 
-  const weeklyProgressData = [
-    { day: "T2", hours: 2.5, accuracy: 75 },
-    { day: "T3", hours: 3.2, accuracy: 78 },
-    { day: "T4", hours: 1.8, accuracy: 72 },
-    { day: "T5", hours: 4.1, accuracy: 85 },
-    { day: "T6", hours: 3.5, accuracy: 82 },
-    { day: "T7", hours: 2.9, accuracy: 80 },
-    { day: "CN", hours: 5.2, accuracy: 88 },
-  ];
+  const handleForceUpdate = async () => {
+    try {
+      await forceUpdate().unwrap();
+      refetch();
+    } catch (error) {
+      console.error("Failed to update insights:", error);
+    }
+  };
 
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-background">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (isError || !insightsData?.data) {
+    return (
+      <div className="h-full flex flex-col gap-4 p-4 items-center justify-center bg-background">
+        <p className="text-muted-foreground">
+          Chưa có dữ liệu học tập. Hãy bắt đầu học để thấy phân tích!
+        </p>
+        <Button onClick={() => refetch()}>Thử lại</Button>
+      </div>
+    );
+  }
+
+  const insights = insightsData.data;
+  const performance = insights.performance;
+  const analysis = insights.analysis;
+  const patterns = insights.patterns;
+
+  // Guard: Ensure all required data exists
+  if (!performance || !analysis || !patterns || !analysis.skillMastery) {
+    return (
+      <div className="h-full flex flex-col gap-4 p-4 items-center justify-center bg-background">
+        <p className="text-muted-foreground">
+          Dữ liệu chưa đầy đủ. Hãy học thêm để có phân tích chi tiết!
+        </p>
+        <Button onClick={() => refetch()}>Thử lại</Button>
+      </div>
+    );
+  }
+
+  // Transform skill mastery data for radar chart
   const skillRadarData = [
-    { skill: "Ngữ pháp", value: 78 },
-    { skill: "Từ vựng", value: 85 },
-    { skill: "Kanji", value: 65 },
-    { skill: "Nghe", value: 72 },
-    { skill: "Đọc", value: 80 },
-    { skill: "Viết", value: 70 },
+    { skill: "Nghe", value: analysis.skillMastery.listening.level },
+    { skill: "Nói", value: analysis.skillMastery.speaking.level },
+    { skill: "Đọc", value: analysis.skillMastery.reading.level },
+    { skill: "Viết", value: analysis.skillMastery.writing.level },
   ];
 
+  // Flashcard distribution for pie chart
   const flashcardDistribution = [
-    { name: "Thành thạo", value: 156, color: "#22c55e" },
-    { name: "Đang học", value: 89, color: "#3b82f6" },
-    { name: "Khó nhớ", value: 23, color: "#f97316" },
+    {
+      name: "Thành thạo",
+      value: analysis.flashcardMastery.masteredCards,
+      color: "#22c55e",
+    },
+    {
+      name: "Đang học",
+      value: analysis.flashcardMastery.learningCards,
+      color: "#3b82f6",
+    },
+    {
+      name: "Khó nhớ",
+      value: analysis.flashcardMastery.difficultCards,
+      color: "#f97316",
+    },
   ];
 
   const COLORS = ["#22c55e", "#3b82f6", "#f97316"];
+
+  // Map overall level to display text
+  const getLevelDisplay = (level: string) => {
+    const levelMap = {
+      beginner: "Sơ cấp",
+      intermediate: "Trung cấp",
+      advanced: "Nâng cao",
+    };
+    return levelMap[level as keyof typeof levelMap] || "Sơ cấp";
+  };
+
+  // Format date for charts
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return `${date.getDate()}/${date.getMonth() + 1}`;
+  };
+
+  // Prepare daily stats chart data
+  const dailyChartData =
+    dailyStatsData?.data?.map((stat) => ({
+      date: formatDate(stat.date),
+      "Thời gian học": stat.studyTime,
+      "Bài đã làm": stat.lessonsCompleted,
+      "Thẻ ôn": stat.cardsReviewed,
+    })) || [];
+
+  // Prepare time distribution data
+  const timeDistribution = timeAnalyticsData?.data?.byContentType || [];
+
+  // Get weak areas
+  const weakAreas = weakAreasData?.data;
+
+  // Get timeline data
+  const timeline = timelineData?.data;
+
+  // Get detailed performance
+  const detailedPerf = detailedPerfData?.data;
 
   return (
     <div className="h-full flex flex-col lg:flex-row gap-4 p-2 sm:p-4 bg-background">
@@ -117,7 +240,28 @@ export default function AIPracticePage() {
           isChatbotOpen ? "lg:flex-[3]" : "lg:flex-1"
         }`}
       >
-        {/* Overview Cards with animation */}
+        {/* Header with Refresh Button */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Phân tích học tập</h2>
+            <p className="text-sm text-muted-foreground">
+              Cập nhật lần cuối: {new Date(insights.lastUpdated).toLocaleString("vi-VN")}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleForceUpdate}
+            disabled={isUpdating}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isUpdating ? "animate-spin" : ""}`}
+            />
+            {isUpdating ? "Đang cập nhật..." : "Cập nhật"}
+          </Button>
+        </div>
+
+        {/* Overview Cards with real data */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
             <CardHeader className="pb-3">
@@ -128,9 +272,11 @@ export default function AIPracticePage() {
             </CardHeader>
             <CardContent>
               <div className="text-xl sm:text-2xl font-bold text-primary">
-                N4
+                {getLevelDisplay(performance.overallLevel)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Trung cấp</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {performance.overallLevel}
+              </p>
             </CardContent>
           </Card>
 
@@ -142,8 +288,14 @@ export default function AIPracticePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">+12%</div>
-              <Progress value={75} className="mt-2 h-2" />
+              <div className="text-xl sm:text-2xl font-bold">
+                {performance.weeklyProgress >= 0 ? "+" : ""}
+                {Math.round(performance.weeklyProgress)}%
+              </div>
+              <Progress
+                value={Math.min(Math.abs(performance.weeklyProgress), 100)}
+                className="mt-2 h-2"
+              />
             </CardContent>
           </Card>
 
@@ -155,8 +307,10 @@ export default function AIPracticePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">85%</div>
-              <Progress value={85} className="mt-2 h-2" />
+              <div className="text-xl sm:text-2xl font-bold">
+                {Math.round(performance.consistency)}%
+              </div>
+              <Progress value={performance.consistency} className="mt-2 h-2" />
             </CardContent>
           </Card>
 
@@ -168,78 +322,273 @@ export default function AIPracticePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">78%</div>
-              <Progress value={78} className="mt-2 h-2" />
+              <div className="text-xl sm:text-2xl font-bold">
+                {Math.round(performance.retention)}%
+              </div>
+              <Progress value={performance.retention} className="mt-2 h-2" />
             </CardContent>
           </Card>
         </div>
 
-        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-300">
+        {/* Weak Areas Alert */}
+        {weakAreas?.hasWeakAreas && (
+          <Alert variant="destructive" className="border-orange-500 bg-orange-50 dark:bg-orange-950/30 animate-in fade-in slide-in-from-bottom-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Cần cải thiện</AlertTitle>
+            <AlertDescription className="mt-2 space-y-2">
+              {weakAreas.weakSkills.map((skill, idx) => (
+                <div key={idx} className="text-sm">
+                  • Kỹ năng <strong>{skill.skill}</strong>: {skill.level}/100 - {skill.suggestion}
+                </div>
+              ))}
+              {weakAreas.difficultCards.count > 0 && (
+                <div className="text-sm">
+                  • <strong>{weakAreas.difficultCards.count}</strong> thẻ flashcard khó - {weakAreas.difficultCards.suggestion}
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Daily Learning Activity Chart */}
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Tiến độ tuần này
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              Thời gian học và độ chính xác theo ngày
-            </CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Hoạt động học tập hàng ngày
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Thống kê {timeRange} ngày gần nhất
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant={timeRange === 7 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTimeRange(7)}
+                >
+                  7 ngày
+                </Button>
+                <Button
+                  variant={timeRange === 30 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTimeRange(30)}
+                >
+                  30 ngày
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={weeklyProgressData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="day" className="text-xs" />
-                <YAxis yAxisId="left" className="text-xs" />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  className="text-xs"
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Legend />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="hours"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2}
-                  name="Giờ học"
-                  dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="accuracy"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  name="Độ chính xác (%)"
-                  dot={{ fill: "#22c55e", r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {dailyChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={dailyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" className="text-xs" />
+                  <YAxis className="text-xs" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--background))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Legend />
+                  <Area
+                    type="monotone"
+                    dataKey="Thời gian học"
+                    fill="hsl(var(--primary))"
+                    fillOpacity={0.3}
+                    stroke="hsl(var(--primary))"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Bài đã làm"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Thẻ ôn"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                Chưa có dữ liệu học tập trong khoảng thời gian này
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-400">
+        {/* Time Distribution */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Time by Content Type */}
+          <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <PieChart className="h-5 w-5 text-primary" />
+                Phân bố thời gian
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Theo loại nội dung
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {timeDistribution.length > 0 && timeDistribution.some((d) => d.percentage > 0) ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={timeDistribution.filter((d) => d.percentage > 0)}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percentage }) => `${name}: ${percentage}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="percentage"
+                    >
+                      {timeDistribution.filter((d) => d.percentage > 0).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--background))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number, name: string) => {
+                        const item = timeDistribution.find((d) => d.name === name);
+                        return [`${item?.value || 0} phút (${value}%)`, name];
+                      }}
+                    />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[250px] flex items-center justify-center text-muted-foreground text-sm">
+                  Chưa có dữ liệu thời gian học
+                </div>
+              )}
+              <div className="mt-4 space-y-2">
+                {timeDistribution.map((item, index) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span>{item.name}</span>
+                    <span className="font-medium">{item.value} phút</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Additional Metrics */}
+          <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Số liệu tổng quan
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {detailedPerf && (
+                <>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Tổng bài học</span>
+                    <span className="text-lg font-bold">{detailedPerf.additionalMetrics.totalLessons}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Đã hoàn thành</span>
+                    <span className="text-lg font-bold text-green-600">
+                      {detailedPerf.additionalMetrics.completedLessons}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Tỷ lệ hoàn thành</span>
+                    <span className="text-lg font-bold text-primary">
+                      {detailedPerf.additionalMetrics.completionRate}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Tổng flashcard</span>
+                    <span className="text-lg font-bold">{detailedPerf.additionalMetrics.totalCards}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Phiên học</span>
+                    <span className="text-lg font-bold">{detailedPerf.additionalMetrics.totalSessions}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg border border-primary/20">
+                    <span className="text-sm font-medium">Độ tin cậy dữ liệu</span>
+                    <span className="text-lg font-bold text-primary">
+                      {detailedPerf.metadata.confidence}%
+                    </span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Progress Timeline */}
+        {timeline && timeline.timeline.length > 0 && (
+          <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <Calendar className="h-5 w-5 text-primary" />
+                Tiến trình 30 ngày
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                {timeline.summary.activeDays}/{timeline.summary.totalDays} ngày học tập - Điểm TB: {timeline.summary.averageScore}%
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={timeline.timeline.map((t) => ({
+                  date: formatDate(t.date),
+                  score: t.score,
+                  time: t.studyTime,
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" className="text-xs" />
+                  <YAxis className="text-xs" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--background))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                  />
+                  <Legend />
+                  <Area
+                    type="monotone"
+                    dataKey="score"
+                    name="Điểm (%)"
+                    fill="#22c55e"
+                    fillOpacity={0.6}
+                    stroke="#22c55e"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Skill Analysis (4 skills radar chart) */}
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-300">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Target className="h-5 w-5 text-primary" />
-              Phân tích kỹ năng
+              Phân tích 4 kỹ năng (Nghe - Nói - Đọc - Viết)
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Đánh giá toàn diện các kỹ năng tiếng Nhật
+              Đánh giá dựa trên flashcard và bài tập đã làm
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={350}>
               <RadarChart data={skillRadarData}>
                 <PolarGrid className="stroke-muted" />
                 <PolarAngleAxis dataKey="skill" className="text-xs" />
@@ -264,69 +613,96 @@ export default function AIPracticePage() {
                 />
               </RadarChart>
             </ResponsiveContainer>
+
+            {/* Skill Details */}
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              {Object.entries(analysis.skillMastery).map(([key, skill]: [string, any]) => (
+                <div
+                  key={key}
+                  className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-medium capitalize">
+                      {key === "listening"
+                        ? "Nghe"
+                        : key === "speaking"
+                        ? "Nói"
+                        : key === "reading"
+                        ? "Đọc"
+                        : "Viết"}
+                    </span>
+                    <span className="text-xl font-bold text-primary">
+                      {skill.level}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>Bài đã làm: {skill.tasksCompleted}</p>
+                    <p>Điểm TB: {Math.round(skill.averageScore)}%</p>
+                    {skill.lastPracticed && (
+                      <p>
+                        Lần cuối:{" "}
+                        {new Date(skill.lastPracticed).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
         {/* Course Progress */}
-        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-500">
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-400">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <BarChart3 className="h-5 w-5 text-primary" />
               Tiến độ khóa học
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Các khóa học đang học và mức độ hoàn thành
+              {analysis.courseProgress.coursesInProgress} khóa đang học
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2 group hover:bg-muted/50 p-3 rounded-lg transition-colors">
-              <div className="flex justify-between text-sm">
-                <span className="font-medium">Hiragana cơ bản</span>
-                <span className="text-muted-foreground">95%</span>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-muted-foreground">Đang học</p>
+                <p className="text-2xl font-bold text-primary">
+                  {analysis.courseProgress.coursesInProgress}
+                </p>
               </div>
-              <Progress
-                value={95}
-                className="h-2 transition-all duration-500"
-              />
-              <p className="text-xs text-muted-foreground">
-                Thời gian trung bình: 2.5 giờ/tuần
-              </p>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-muted-foreground">Thời gian TB</p>
+                <p className="text-2xl font-bold text-primary">
+                  {analysis.courseProgress.averageCompletionTime} ngày
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-2 group hover:bg-muted/50 p-3 rounded-lg transition-colors">
-              <div className="flex justify-between text-sm">
-                <span className="font-medium">Katakana nâng cao</span>
-                <span className="text-muted-foreground">67%</span>
+            {analysis.courseProgress.strugglingCourses.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm text-orange-600">
+                  ⚠️ Khóa đang gặp khó khăn
+                </h4>
+                {analysis.courseProgress.strugglingCourses.map((course: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200"
+                  >
+                    <p className="text-sm text-orange-600">
+                      Khóa: {course.courseId}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Bị kẹt tại: {course.stuckAt}
+                    </p>
+                  </div>
+                ))}
               </div>
-              <Progress
-                value={67}
-                className="h-2 transition-all duration-500"
-              />
-              <p className="text-xs text-muted-foreground">
-                Thời gian trung bình: 1.8 giờ/tuần
-              </p>
-            </div>
-
-            <div className="space-y-2 group hover:bg-muted/50 p-3 rounded-lg transition-colors">
-              <div className="flex justify-between text-sm">
-                <span className="font-medium text-orange-600">
-                  Kanji cơ bản
-                </span>
-                <span className="text-orange-600">32%</span>
-              </div>
-              <Progress
-                value={32}
-                className="h-2 bg-orange-100 transition-all duration-500"
-              />
-              <p className="text-xs text-orange-600">
-                ⚠️ Đang gặp khó khăn - Cần ôn tập thêm
-              </p>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Lesson Analysis */}
-        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-600">
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-500">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <BookOpen className="h-5 w-5 text-primary" />
@@ -356,7 +732,7 @@ export default function AIPracticePage() {
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
-                      89%
+                      {analysis.lessonMastery.videoLessons.completionRate}%
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Tỷ lệ xem hết
@@ -364,7 +740,7 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
-                      12 phút
+                      {analysis.lessonMastery.videoLessons.averageWatchTime} phút
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Thời lượng TB
@@ -372,7 +748,7 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
-                      2.3 lần
+                      {analysis.lessonMastery.videoLessons.rewatch} lần
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Số lần xem lại
@@ -385,7 +761,7 @@ export default function AIPracticePage() {
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-green-600">
-                      8.2/10
+                      {analysis.lessonMastery.taskLessons.averageScore}%
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Điểm TB
@@ -393,15 +769,15 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                      1.5 lần
+                      {analysis.lessonMastery.taskLessons.averageAttempts} lần
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Làm lại
                     </p>
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                    <div className="text-xl sm:text-2xl font-bold text-orange-600">
-                      Ngữ pháp
+                    <div className="text-base sm:text-lg font-bold text-orange-600">
+                      {analysis.lessonMastery.taskLessons.commonMistakes.length}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Lỗi thường
@@ -413,7 +789,8 @@ export default function AIPracticePage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-700">
+        {/* Flashcard Statistics */}
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-600">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <PieChart className="h-5 w-5 text-primary" />
@@ -479,10 +856,12 @@ export default function AIPracticePage() {
                 <span className="text-sm font-medium">
                   Tỷ lệ đúng (24h gần nhất)
                 </span>
-                <span className="text-lg font-bold text-primary">82%</span>
+                <span className="text-lg font-bold text-primary">
+                  {analysis.flashcardMastery.dailyRetention}%
+                </span>
               </div>
               <Progress
-                value={82}
+                value={analysis.flashcardMastery.dailyRetention}
                 className="mt-2 h-2 transition-all duration-500"
               />
             </div>
@@ -490,7 +869,7 @@ export default function AIPracticePage() {
         </Card>
 
         {/* Study Patterns */}
-        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-800">
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-700">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Clock className="h-5 w-5 text-primary" />
@@ -503,97 +882,138 @@ export default function AIPracticePage() {
                 <p className="text-xs text-muted-foreground">
                   Khung giờ học tốt nhất
                 </p>
-                <p className="text-base sm:text-lg font-bold mt-1">
-                  19:00 - 21:00
+                <p className="text-base sm:text-lg font-bold mt-1 capitalize">
+                  {patterns.bestStudyTime}
                 </p>
               </div>
               <div className="p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted hover:scale-105 transition-all">
                 <p className="text-xs text-muted-foreground">
                   Độ dài phiên học TB
                 </p>
-                <p className="text-base sm:text-lg font-bold mt-1">45 phút</p>
+                <p className="text-base sm:text-lg font-bold mt-1">
+                  {patterns.averageSessionLength} phút
+                </p>
               </div>
               <div className="p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted hover:scale-105 transition-all">
                 <p className="text-xs text-muted-foreground">Chuỗi ngày học</p>
                 <p className="text-base sm:text-lg font-bold mt-1">
-                  12 ngày 🔥
+                  {patterns.currentStreak} ngày 🔥
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Dài nhất: 28 ngày
+                  Dài nhất: {patterns.longestStreak} ngày
                 </p>
               </div>
               <div className="p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted hover:scale-105 transition-all">
                 <p className="text-xs text-muted-foreground">
                   Nội dung yêu thích
                 </p>
-                <p className="text-base sm:text-lg font-bold mt-1">
-                  Flashcards
+                <p className="text-base sm:text-lg font-bold mt-1 capitalize">
+                  {patterns.preferredContent === "video"
+                    ? "Video"
+                    : patterns.preferredContent === "task"
+                    ? "Bài tập"
+                    : "Flashcards"}
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* AI Suggestions */}
-        <Card className="shadow-sm border-primary/30 animate-in fade-in slide-in-from-bottom-4 delay-900">
+        {/* System Suggestions (Rule-based, not AI) */}
+        <Card className="shadow-sm border-primary/30 animate-in fade-in slide-in-from-bottom-4 delay-800">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Sparkles className="h-5 w-5 text-primary" />
-              Gợi ý từ AI
+              Gợi ý từ hệ thống
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
               Dựa trên phân tích học tập của bạn
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer">
-              <div className="flex items-start gap-3">
-                <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium text-xs sm:text-sm">
-                    Ôn lại flashcard N5 về thời gian
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Bạn đã không ôn phần này trong 3 ngày. Tỷ lệ ghi nhớ có thể
-                    giảm.
-                  </p>
+            {/* Dynamic suggestions based on data */}
+            {analysis.flashcardMastery.difficultCards > 5 && (
+              <div className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer">
+                <div className="flex items-start gap-3">
+                  <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-xs sm:text-sm">
+                      Ôn lại {analysis.flashcardMastery.difficultCards} thẻ khó
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Bạn có {analysis.flashcardMastery.difficultCards} thẻ
+                      flashcard cần ôn lại. Hãy dành 10 phút ôn tập!
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            <div className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer">
-              <div className="flex items-start gap-3">
-                <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium text-xs sm:text-sm">
-                    Làm bài luyện ngữ pháp N4
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Điểm ngữ pháp của bạn đang thấp hơn trung bình. Hãy luyện
-                    tập thêm!
-                  </p>
+            {Object.entries(analysis.skillMastery).map(([skill, data]: [string, any]) =>
+              data.level < 50 ? (
+                <div
+                  key={skill}
+                  className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer"
+                >
+                  <div className="flex items-start gap-3">
+                    <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-medium text-xs sm:text-sm">
+                        Cải thiện kỹ năng{" "}
+                        {skill === "listening"
+                          ? "Nghe"
+                          : skill === "speaking"
+                          ? "Nói"
+                          : skill === "reading"
+                          ? "Đọc"
+                          : "Viết"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Kỹ năng này đang ở mức {data.level}/100. Hãy luyện tập
+                        thêm để cải thiện!
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              ) : null
+            )}
 
-            <div className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer">
-              <div className="flex items-start gap-3">
-                <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium text-xs sm:text-sm">
-                    Thử học Kanji theo chủ đề
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Bạn học tốt hơn khi Kanji được nhóm theo chủ đề thay vì theo
-                    thứ tự.
-                  </p>
+            {patterns.currentStreak === 0 && (
+              <div className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer">
+                <div className="flex items-start gap-3">
+                  <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-xs sm:text-sm">
+                      Bắt đầu chuỗi học tập mới
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Hãy học ít nhất 15 phút mỗi ngày để xây dựng thói quen!
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {weakAreas && !weakAreas.hasWeakAreas && (
+              <div className="p-3 sm:p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Award className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-xs sm:text-sm text-green-700 dark:text-green-400">
+                      Bạn đang học rất tốt! 🎉
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tiếp tục duy trì nhịp độ học tập như vậy nhé!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
+      {/* Right Column - AI Chatbot (placeholder) */}
       <div
         className={`flex flex-col transition-all duration-300 ${
           isChatbotOpen ? "flex-[2] lg:flex-[2]" : "w-12"

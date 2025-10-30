@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import type React from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,159 +16,344 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  ArrowRight,
-  AlertCircle,
-  User,
-  Mail,
-  Lock,
   Eye,
   EyeOff,
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+  AlertCircle,
   Key,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { AuthFormProps } from "@/types/auth";
+import { useAuth } from "@/hooks/useAuth";
+import { useNotification } from "@/components/notification";
+import styles from "./AuthForm.module.css";
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { cn } from "@/lib/utils";
-import { AuthFormProps } from "@/types/auth";
-import { useAuth } from "@/hooks/useAuth";
-import { useNotification } from "@/components/notification";
+import {
+  useSendOtpRegisterMutation,
+  useRegisterUserMutation,
+} from "@/store/services/authApi";
 
-export function AuthForm({ mode, onModeChange, isModal = false }: AuthFormProps) {
+export function AuthForm({
+  mode,
+  onModeChange,
+  isModal = false,
+}: AuthFormProps) {
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    username: "",
     email: "",
     password: "",
+    username: "",
     fullname: "",
     confirmPassword: "",
     otp: "",
   });
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"form" | "otp">("form");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
 
-  const { login, sendOtp, verifyOtp, isLoading, isAuthenticated } = useAuth();
-  const { success } = useNotification();
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+    username?: string;
+    fullname?: string;
+    confirmPassword?: string;
+  }>({});
+
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+
+  const { login, isLoading, isAuthenticated } = useAuth();
+  const { success, error: notifyError } = useNotification();
   const router = useRouter();
 
-  // Reset khi đổi mode
+  // RTK Query hooks
+  const [sendOtpRegister, { isLoading: isSendingOtp }] =
+    useSendOtpRegisterMutation();
+  const [registerUser, { isLoading: isRegistering }] =
+    useRegisterUserMutation();
+
+  // Clear error khi chuyển mode
   useEffect(() => {
-    setErrors({});
+    setFieldErrors({});
     setLocalError(null);
-    setStep("form");
+    setOtpSent(false);
+    setFormData({
+      email: "",
+      password: "",
+      username: "",
+      fullname: "",
+      confirmPassword: "",
+      otp: "",
+    });
   }, [mode]);
 
-  // Redirect khi login thành công
+  // Chỉ redirect sau khi login thành công và không phải modal
   useEffect(() => {
     if (isAuthenticated && !isModal) {
-      success("Đăng nhập thành công", { title: "Thành công" });
-      router.push("/");
+      try {
+        success("Đăng nhập thành công", { title: "Thành công" });
+      } catch (e) {}
+      try {
+        router.push("/");
+      } catch (e) {
+        try {
+          window.location.assign("/");
+        } catch (e) {}
+      }
     }
-  }, [isAuthenticated, isModal, router, success]);
+  }, [isAuthenticated, isModal, router]);
 
-  // Validate
-  const validateForm = useCallback(() => {
-    const newErrors: Record<string, string> = {};
+  // Validation functions với useCallback để tránh re-create
+  const validateEmail = useCallback((email: string): string | undefined => {
+    if (!email) return "Email là bắt buộc";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return "Email không hợp lệ";
+    return undefined;
+  }, []);
 
-    if (!formData.email) newErrors.email = "Email là bắt buộc";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
-      newErrors.email = "Email không hợp lệ";
+  const validatePassword = useCallback(
+    (password: string): string | undefined => {
+      if (!password) return "Mật khẩu là bắt buộc";
+      if (password.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
+      return undefined;
+    },
+    []
+  );
 
-    if (!formData.password) newErrors.password = "Mật khẩu là bắt buộc";
-    else if (formData.password.length < 6)
-      newErrors.password = "Mật khẩu phải ≥ 6 ký tự";
+  const validateUsername = useCallback(
+    (username: string): string | undefined => {
+      if (mode === "register" && !username) return "Tên người dùng là bắt buộc";
+      if (mode === "register" && username.length < 3) return "Tên người dùng phải có ít nhất 3 ký tự";
+      if (mode === "register" && username.length > 100) return "Tên người dùng không được quá 100 ký tự";
+      return undefined;
+    },
+    [mode]
+  );
 
-    if (mode === "register") {
-      if (!formData.username) newErrors.username = "Tên đăng nhập là bắt buộc";
-      if (!formData.fullname) newErrors.fullname = "Họ tên là bắt buộc";
-      if (!formData.confirmPassword)
-        newErrors.confirmPassword = "Xác nhận mật khẩu là bắt buộc";
-      else if (formData.confirmPassword !== formData.password)
-        newErrors.confirmPassword = "Mật khẩu xác nhận không khớp";
-    }
+  const validateFullname = useCallback(
+    (fullname: string): string | undefined => {
+      if (mode === "register" && !fullname) return "Họ tên là bắt buộc";
+      if (mode === "register" && fullname.length > 200) return "Họ tên không được quá 200 ký tự";
+      return undefined;
+    },
+    [mode]
+  );
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData, mode]);
+  const validateConfirmPassword = useCallback(
+    (confirmPassword: string, password: string): string | undefined => {
+      if (mode === "register") {
+        if (!confirmPassword) return "Xác nhận mật khẩu là bắt buộc";
+        if (confirmPassword !== password) return "Mật khẩu xác nhận không khớp";
+      }
+      return undefined;
+    },
+    [mode]
+  );
 
-  // Submit form
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Validate form trước khi submit
+  const validateForm = useCallback((): boolean => {
+    const errors: typeof fieldErrors = {};
+
+    errors.email = validateEmail(formData.email);
+    errors.password = validatePassword(formData.password);
+    errors.username = validateUsername(formData.username);
+    errors.fullname = validateFullname(formData.fullname);
+    errors.confirmPassword = validateConfirmPassword(
+      formData.confirmPassword,
+      formData.password
+    );
+
+    // Remove undefined errors
+    Object.keys(errors).forEach((key) => {
+      if (errors[key as keyof typeof errors] === undefined) {
+        delete errors[key as keyof typeof errors];
+      }
+    });
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [
+    formData,
+    validateEmail,
+    validatePassword,
+    validateUsername,
+    validateFullname,
+    validateConfirmPassword,
+  ]);
+
+  // Hàm gửi OTP
+  const handleSendOtp = useCallback(async () => {
     setLocalError(null);
 
-    if (!validateForm()) return;
-
-    if (mode === "login") {
-      const result = await login({
-        email: formData.email,
-        password: formData.password,
-      });
-      if (!result.success) {
-        setLocalError(result.error || "Đăng nhập thất bại");
-      } else if (isModal) {
-        window.dispatchEvent(new CustomEvent("auth-success"));
-      }
-    } else {
-      const otpResult = await sendOtp(formData.email);
-      if (!otpResult.success) {
-        setLocalError(otpResult.error || "Không thể gửi OTP");
-        return;
-      }
-      setStep("otp");
-      success("OTP đã được gửi về email", { title: "Vui lòng kiểm tra" });
-    }
-  };
-
-  // Submit OTP
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError(null);
-
-    if (!otp || otp.length < 6) {
-      setLocalError("Vui lòng nhập OTP hợp lệ");
+    // Validate form trước khi gửi OTP
+    if (!validateForm()) {
       return;
     }
 
-    const result = await verifyOtp({ ...formData, otp });
-
-    if (!result.success) {
-      setLocalError(result.error || "Xác thực OTP thất bại");
-    } else {
-      success("Tạo tài khoản thành công", { title: "Hoàn tất" });
-
-      if (isModal) {
-        // 🔔 Gửi event để AuthModal bắt và tự đóng modal + redirect
-        window.dispatchEvent(new CustomEvent("auth-success"));
-      } else {
-        // 🔁 Nếu không nằm trong modal thì redirect trực tiếp
-        router.push("/");
-      }
+    try {
+      const result = await sendOtpRegister({ email: formData.email }).unwrap();
+      success("OTP đã được gửi đến email của bạn", { title: "Thành công" });
+      setOtpSent(true);
+    } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.message || "Không thể gửi OTP";
+      setLocalError(errorMessage);
+      notifyError(errorMessage, { title: "Lỗi" });
     }
-  };
+  }, [formData.email, sendOtpRegister, validateForm, success, notifyError]);
+
+  // Hàm xác thực OTP và đăng ký
+  const handleVerifyAndRegister = useCallback(async () => {
+    setLocalError(null);
+
+    if (!formData.otp || formData.otp.length !== 6) {
+      setLocalError("Vui lòng nhập đầy đủ mã OTP");
+      return;
+    }
+
+    try {
+      const result = await registerUser({
+        username: formData.username,
+        fullname: formData.fullname,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        otp: formData.otp,
+      }).unwrap();
+
+      success("Đăng ký thành công! Vui lòng đăng nhập.", { title: "Thành công" });
+
+      // Chuyển về màn hình login
+      setOtpSent(false);
+      setFormData({
+        email: "",
+        password: "",
+        username: "",
+        fullname: "",
+        confirmPassword: "",
+        otp: "",
+      });
+      onModeChange("login");
+    } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.message || "Đăng ký thất bại";
+      setLocalError(errorMessage);
+      notifyError(errorMessage, { title: "Lỗi" });
+    }
+  }, [formData, registerUser, success, notifyError, onModeChange]);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      setLocalError(null); // Clear local error
+
+      // Validate form
+      if (!validateForm()) {
+        return;
+      }
+
+      if (mode === "login") {
+        const result = await login({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (!result.success) {
+          setLocalError(result.error || "Đăng nhập thất bại");
+        } else if (isModal) {
+          window.dispatchEvent(new CustomEvent("auth-success"));
+        }
+      } else if (mode === "register") {
+        // Nếu chưa gửi OTP, gửi OTP
+        if (!otpSent) {
+          await handleSendOtp();
+        } else {
+          // Nếu đã gửi OTP, xác thực và đăng ký
+          await handleVerifyAndRegister();
+        }
+      }
+    },
+    [mode, formData, validateForm, login, isModal, otpSent, handleSendOtp, handleVerifyAndRegister]
+  );
+
+  const handleModeSwitch = useCallback(
+    (newMode: "login" | "register") => {
+      onModeChange(newMode);
+    },
+    [onModeChange]
+  );
+
+  // Optimized input handlers
+  const handleInputChange = useCallback(
+    (field: keyof typeof formData) =>
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+      },
+    []
+  );
+
+  const handleUsernameChange = useMemo(
+    () => handleInputChange("username"),
+    [handleInputChange]
+  );
+  const handleFullnameChange = useMemo(
+    () => handleInputChange("fullname"),
+    [handleInputChange]
+  );
+  const handleEmailChange = useMemo(
+    () => handleInputChange("email"),
+    [handleInputChange]
+  );
+  const handlePasswordChange = useMemo(
+    () => handleInputChange("password"),
+    [handleInputChange]
+  );
+  const handleConfirmPasswordChange = useMemo(
+    () => handleInputChange("confirmPassword"),
+    [handleInputChange]
+  );
+
+  const handleOtpChange = useCallback((value: string) => {
+    setFormData((prev) => ({ ...prev, otp: value }));
+  }, []);
 
   return (
-    <Card className={cn("w-full", isModal && "border-0 shadow-none")}>
+    <Card
+      key="auth-form" // Stable key để tránh re-mount
+      className={cn(
+        "w-full transition-all duration-500 ease-in-out transform",
+        isModal && "border-0 shadow-none"
+      )}
+    >
       <CardHeader className="space-y-1 text-center">
+        <div className="flex items-center justify-center mb-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+            <Image
+              src="/images/logos/logohanabi.png"
+              alt="HanabiHub Logo"
+              width={48}
+              height={48}
+              className="object-contain"
+            />
+          </div>
+        </div>
         <CardTitle className="text-2xl font-bold">
-          {mode === "login"
-            ? "Welcome back"
-            : step === "form"
-              ? "Create account"
-              : "Verify OTP"}
+          {mode === "login" ? "Welcome back" : "Create account"}
         </CardTitle>
         <CardDescription>
           {mode === "login"
-            ? "Sign in to continue"
-            : step === "form"
-              ? "Fill in details to create account"
-              : "Enter the 6-digit OTP we sent to your email"}
+            ? "Sign in to continue your Japanese learning journey"
+            : "Start your Japanese learning adventure today"}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Error message */}
         {localError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -174,151 +361,217 @@ export function AuthForm({ mode, onModeChange, isModal = false }: AuthFormProps)
           </Alert>
         )}
 
-        {step === "form" && (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === "register" && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    value={formData.username}
-                    onChange={(e) =>
-                      setFormData((p) => ({ ...p, username: e.target.value }))
-                    }
-                    placeholder="Enter your username"
-                  />
-                  {errors.username && (
-                    <p className="text-red-500 text-xs">{errors.username}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fullname">Full Name</Label>
-                  <Input
-                    id="fullname"
-                    value={formData.fullname}
-                    onChange={(e) =>
-                      setFormData((p) => ({ ...p, fullname: e.target.value }))
-                    }
-                    placeholder="Enter your full name"
-                  />
-                  {errors.fullname && (
-                    <p className="text-red-500 text-xs">{errors.fullname}</p>
-                  )}
-                </div>
-              </>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Username field for register mode */}
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              mode === "register" && !otpSent ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
             )}
-
+          >
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  className={cn(
+                    "pl-10",
+                    fieldErrors.username &&
+                      "border-red-500 focus:ring-red-500 focus:border-red-500"
+                  )}
+                  value={formData.username}
+                  onChange={handleUsernameChange}
+                  disabled={isLoading || isSendingOtp || isRegistering}
+                />
+              </div>
+              {fieldErrors.username && (
+                <p className="text-red-500 text-xs mt-1">{fieldErrors.username}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Fullname field for register mode */}
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              mode === "register" && !otpSent ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="fullname">Full Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="fullname"
+                  type="text"
+                  placeholder="Enter your full name"
+                  className={cn(
+                    "pl-10",
+                    fieldErrors.fullname &&
+                      "border-red-500 focus:ring-red-500 focus:border-red-500"
+                  )}
+                  value={formData.fullname}
+                  onChange={handleFullnameChange}
+                  disabled={isLoading || isSendingOtp || isRegistering}
+                />
+              </div>
+              {fieldErrors.fullname && (
+                <p className="text-red-500 text-xs mt-1">{fieldErrors.fullname}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, email: e.target.value }))
-                }
                 placeholder="Enter your email"
+                className={cn(
+                  "pl-10",
+                  fieldErrors.email &&
+                    "border-red-500 focus:ring-red-500 focus:border-red-500"
+                )}
+                value={formData.email}
+                onChange={handleEmailChange}
+                disabled={isLoading || isSendingOtp || isRegistering || (mode === "register" && otpSent)}
               />
-              {errors.email && (
-                <p className="text-red-500 text-xs">{errors.email}</p>
-              )}
             </div>
+            {fieldErrors.email && (
+              <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>
+            )}
+          </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter your password"
+                className={cn(
+                  "pl-10 pr-10",
+                  fieldErrors.password &&
+                    "border-red-500 focus:ring-red-500 focus:border-red-500"
+                )}
+                value={formData.password}
+                onChange={handlePasswordChange}
+                disabled={isLoading || isSendingOtp || isRegistering || (mode === "register" && otpSent)}
+              />
+              <Button type="button" variant="ghost" size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+              </Button>
+            </div>
+            {fieldErrors.password && (
+              <p className="text-red-500 text-xs mt-1">
+                {fieldErrors.password}
+              </p>
+            )}
+          </div>
+
+          {/* Confirm Password field for register mode */}
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              mode === "register" && !otpSent ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
               <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData((p) => ({ ...p, password: e.target.value }))
-                  }
-                  placeholder="Enter your password"
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              {errors.password && (
-                <p className="text-red-500 text-xs">{errors.password}</p>
-              )}
-            </div>
-
-            {mode === "register" && (
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
                   type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) =>
-                    setFormData((p) => ({
-                      ...p,
-                      confirmPassword: e.target.value,
-                    }))
-                  }
                   placeholder="Confirm your password"
+                  className={cn(
+                    "pl-10",
+                    fieldErrors.confirmPassword &&
+                      "border-red-500 focus:ring-red-500 focus:border-red-500"
+                  )}
+                  value={formData.confirmPassword}
+                  onChange={handleConfirmPasswordChange}
+                  disabled={isLoading || isSendingOtp || isRegistering}
                 />
-                {errors.confirmPassword && (
-                  <p className="text-red-500 text-xs">
-                    {errors.confirmPassword}
-                  </p>
-                )}
               </div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading
-                ? "Processing..."
-                : mode === "login"
-                  ? "Sign In"
-                  : "Send OTP"}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </form>
-        )}
-
-        {step === "otp" && (
-          <form onSubmit={handleVerifyOtp} className="space-y-6">
-            <div className="flex justify-center">
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={(v) => setOtp(v)}
-                className="gap-3"
-              >
-                <InputOTPGroup className="flex gap-3">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <InputOTPSlot
-                      key={i}
-                      index={i}
-                      className="w-12 h-12 text-xl rounded-lg border"
-                    />
-                  ))}
-                </InputOTPGroup>
-              </InputOTP>
+              {fieldErrors.confirmPassword && (
+                <p className="text-red-500 text-xs mt-1">
+                  {fieldErrors.confirmPassword}
+                </p>
+              )}
             </div>
+          </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Verifying..." : "Verify & Register"}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </form>
-        )}
+          {/* OTP field - hiện sau khi gửi OTP thành công */}
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              mode === "register" && otpSent ? "max-h-40 opacity-100" : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="otp">Enter OTP Code</Label>
+              <p className="text-sm text-muted-foreground">
+                We&apos;ve sent a 6-digit code to {formData.email}
+              </p>
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={formData.otp}
+                  onChange={handleOtpChange}
+                  disabled={isRegistering}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <Button
+                type="button"
+                variant="link"
+                className="w-full text-sm"
+                onClick={handleSendOtp}
+                disabled={isSendingOtp}
+              >
+                {isSendingOtp ? "Sending..." : "Resend OTP"}
+              </Button>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+            disabled={isLoading || isSendingOtp || isRegistering}>
+            {(isLoading || isSendingOtp || isRegistering)
+              ? <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  {mode === "login"
+                    ? "Signing in..."
+                    : otpSent
+                      ? "Verifying..."
+                      : "Sending OTP..."}
+                </div>
+              : <div className="flex items-center gap-2">
+                  {mode === "login"
+                    ? "Sign In"
+                    : otpSent
+                      ? "Verify & Register"
+                      : "Send OTP"}
+                  <ArrowRight className="h-4 w-4" />
+                </div>}
+          </Button>
+        </form>
 
         <div className="text-center pt-4 border-t">
           <p className="text-sm text-muted-foreground">
@@ -326,12 +579,10 @@ export function AuthForm({ mode, onModeChange, isModal = false }: AuthFormProps)
               ? "Don't have an account?"
               : "Already have an account?"}
           </p>
-          <Button
-            type="button"
-            variant="link"
-            className="p-0 h-auto font-semibold text-primary"
+          <Button type="button" variant="link"
+            className="p-0 h-auto font-semibold text-primary hover:text-primary/80"
             onClick={() =>
-              onModeChange(mode === "login" ? "register" : "login")
+              handleModeSwitch(mode === "login" ? "register" : "login")
             }
           >
             {mode === "login" ? "Create one now" : "Sign in instead"}

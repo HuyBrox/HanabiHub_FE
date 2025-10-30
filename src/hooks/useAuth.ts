@@ -15,6 +15,7 @@ import {
   loginSuccess,
   loginFailure,
   logout as logoutAction,
+  logoutThunk,
   clearError,
 } from "../store/slices/authSlice";
 import { LoginRequest,RegisterRequest  } from "../types/auth";
@@ -59,14 +60,9 @@ export const useAuth = () => {
 
   // ================== LOGOUT ==================
   const logout = useCallback(async () => {
-    try {
-      await logoutMutation().unwrap();
-    } catch (err) {
-      console.error("Logout error:", err);
-    } finally {
-      dispatch(logoutAction());
-    }
-  }, [dispatch, logoutMutation]);
+    // ✅ Sử dụng logoutThunk để gọi backend API và clear cookies
+    dispatch(logoutThunk() as any);
+  }, [dispatch]);
 
   // ================== SEND OTP (REGISTER) ==================
   const sendOtp = useCallback(

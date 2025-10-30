@@ -1,32 +1,72 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useLanguage } from "@/lib/language-context";
 import { Wifi, WifiOff } from "lucide-react";
 
 interface NetworkIndicatorProps {
   className?: string;
+  peerConnection?: RTCPeerConnection | null;
 }
 
-export function NetworkIndicator({ className = "" }: NetworkIndicatorProps) {
-  const { t } = useLanguage();
+export function NetworkIndicator({ className = "", peerConnection }: NetworkIndicatorProps) {
   const [signalStrength, setSignalStrength] = useState(5); // 0-5 bars
   const [isConnected, setIsConnected] = useState(true);
+  const [rtt, setRtt] = useState<number | null>(null); // Round Trip Time in ms
 
-  // Mock network monitoring
+  // Real network monitoring via WebRTC stats
   useEffect(() => {
-    const interval = setInterval(() => {
-      // TODO: Backend integration - Replace with actual network monitoring
-      // Example: const strength = await getNetworkStrength()
+    if (!peerConnection) {
+      setIsConnected(false);
+      setSignalStrength(0);
+      return;
+    }
 
-      // Mock fluctuating signal strength
-      const mockStrength = Math.floor(Math.random() * 6); // 0-5
-      setSignalStrength(mockStrength);
-      setIsConnected(mockStrength > 0);
-    }, 3000);
+    const measureNetworkQuality = async () => {
+      try {
+        const stats = await peerConnection.getStats();
+        let currentRtt: number | null = null;
+
+        stats.forEach((report) => {
+          // Get RTT from candidate-pair stats
+          if (report.type === "candidate-pair" && report.state === "succeeded") {
+            currentRtt = report.currentRoundTripTime ? report.currentRoundTripTime * 1000 : null;
+          }
+        });
+
+        if (currentRtt !== null) {
+          setRtt(currentRtt);
+          setIsConnected(true);
+
+          // Convert RTT to signal strength (0-5 bars)
+          if (currentRtt < 50) {
+            setSignalStrength(5); // Excellent
+          } else if (currentRtt < 150) {
+            setSignalStrength(4); // Good
+          } else if (currentRtt < 300) {
+            setSignalStrength(3); // Fair
+          } else if (currentRtt < 500) {
+            setSignalStrength(2); // Poor
+          } else {
+            setSignalStrength(1); // Very Poor
+          }
+        } else {
+          // No RTT data yet - use default good connection
+          setSignalStrength(4);
+          setIsConnected(true);
+        }
+      } catch (error) {
+        console.error("Failed to get network stats:", error);
+        setIsConnected(false);
+        setSignalStrength(0);
+      }
+    };
+
+    // Measure every 2 seconds
+    measureNetworkQuality();
+    const interval = setInterval(measureNetworkQuality, 2000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [peerConnection]);
 
   const getSignalColor = () => {
     if (!isConnected) return "text-red-500";
@@ -36,11 +76,15 @@ export function NetworkIndicator({ className = "" }: NetworkIndicatorProps) {
   };
 
   const getSignalText = () => {
-    if (!isConnected) return t("network.noConnection");
-    if (signalStrength >= 4) return t("network.excellent");
-    if (signalStrength >= 3) return t("network.good");
-    if (signalStrength >= 2) return t("network.fair");
-    return t("network.poor");
+    if (!isConnected) return "No Connection";
+    if (rtt !== null) {
+      return `${Math.round(rtt)}ms`;
+    }
+    // Fallback when no RTT data
+    if (signalStrength >= 4) return "Excellent";
+    if (signalStrength >= 3) return "Good";
+    if (signalStrength >= 2) return "Fair";
+    return "Poor";
   };
 
   return (
@@ -77,9 +121,7 @@ export function NetworkIndicator({ className = "" }: NetworkIndicatorProps) {
 
       {/* Screen Reader Text */}
       <span className="sr-only">
-        {t("network.sr")
-          .replace("{status}", getSignalText())
-          .replace("{bars}", String(signalStrength))}
+        Network connection: {getSignalText()}, {signalStrength} out of 5 bars
       </span>
     </div>
   );

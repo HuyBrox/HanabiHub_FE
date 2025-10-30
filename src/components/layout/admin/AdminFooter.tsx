@@ -14,7 +14,7 @@ export function AdminFooter({ className }: AdminFooterProps) {
     <footer className={cn("border-t bg-white px-6 py-4", className)}>
       <div className="flex items-center justify-between text-sm text-slate-600">
         <div className="flex items-center space-x-4">
-          <span>&copy; {currentYear} JapanLearn Admin Panel</span>
+          <span>&copy; {currentYear} HanabiHub Admin Panel</span>
           <span>•</span>
           <span>Version 1.0.0</span>
         </div>

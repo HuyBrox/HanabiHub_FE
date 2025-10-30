@@ -115,6 +115,7 @@ export interface SearchFlashListResponse {
 
 // FlashCard Types
 export interface IFlashCardItem {
+  _id?: string; // MongoDB ObjectId for each card
   vocabulary: string;
   meaning: string;
 }
@@ -184,4 +185,67 @@ export interface CreateFlashCardResponse {
   message: string;
   data: IFlashCard;
   timestamp: string;
+}
+
+export interface GetFlashCardByIdResponse {
+  success: boolean;
+  message: string;
+  data: IFlashCard;
+  timestamp: string;
+}
+
+export interface UpdateFlashCardRequest {
+  name?: string;
+  cards?: IFlashCardItem[];
+  isPublic?: boolean;
+  description?: string;
+  level?: "N5" | "N4" | "N3" | "N2" | "N1";
+  thumbnail?: File | string;
+}
+
+export interface UpdateFlashCardResponse {
+  success: boolean;
+  message: string;
+  data: IFlashCard;
+  timestamp: string;
+}
+
+export interface DeleteFlashCardResponse {
+  success: boolean;
+  message: string;
+  timestamp: string;
+}
+
+// Tracking Types
+export type DifficultyLevel = "again" | "hard" | "good" | "easy";
+export type MasteryLevel = "learning" | "reviewing" | "mastered";
+
+export interface TrackFlashcardSessionRequest {
+  flashcardId: string;
+  cardsStudied: number;
+  correctAnswers: number;
+  sessionDuration: number; // seconds
+  difficulty?: DifficultyLevel;
+  studiedAt?: string; // ISO string
+}
+
+export interface TrackFlashcardSessionResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface TrackCardLearningRequest {
+  cardId: string;
+  flashcardId: string;
+  isCorrect: boolean;
+  responseTime?: number; // milliseconds
+  difficulty?: DifficultyLevel;
+  reviewCount?: number;
+  studiedAt?: string; // ISO string
+}
+
+export interface TrackCardLearningResponse {
+  success: boolean;
+  message: string;
+  masteryLevel: MasteryLevel;
 }

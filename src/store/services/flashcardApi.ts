@@ -13,10 +13,19 @@ import {
   SearchFlashListResponse,
   // FlashCard
   GetAllFlashCardsResponse,
+  GetFlashCardByIdResponse,
   CreateFlashCardRequest,
   CreateFlashCardResponse,
+  UpdateFlashCardRequest,
+  UpdateFlashCardResponse,
+  DeleteFlashCardResponse,
   SearchFlashCardParams,
   SearchFlashCardResponse,
+  // Tracking
+  TrackFlashcardSessionRequest,
+  TrackFlashcardSessionResponse,
+  TrackCardLearningRequest,
+  TrackCardLearningResponse,
 } from "@/types/flashcard";
 
 const baseQuery = fetchBaseQuery({
@@ -185,6 +194,15 @@ export const flashcardApi = createApi({
       providesTags: ["FlashCard"],
     }),
 
+    // Lấy chi tiết FlashCard theo ID
+    getFlashCardById: builder.query<GetFlashCardByIdResponse, string>({
+      query: (id) => ({
+        url: `/flashcards/get-flashcard-detail/${id}`,
+        method: "GET",
+      }),
+      providesTags: (_result, _error, id) => [{ type: "FlashCard", id }],
+    }),
+
     // Tạo FlashCard mới
     createFlashCard: builder.mutation<
       CreateFlashCardResponse,
@@ -216,6 +234,42 @@ export const flashcardApi = createApi({
       invalidatesTags: ["FlashCard"],
     }),
 
+    // Cập nhật FlashCard
+    updateFlashCard: builder.mutation<
+      UpdateFlashCardResponse,
+      { id: string; data: UpdateFlashCardRequest }
+    >({
+      query: ({ id, data }) => {
+        const formData = new FormData();
+        if (data.name) formData.append("name", data.name);
+        if (data.cards) formData.append("cards", JSON.stringify(data.cards));
+        if (data.isPublic !== undefined)
+          formData.append("isPublic", String(data.isPublic));
+        if (data.level) formData.append("level", data.level);
+        if (data.description) formData.append("description", data.description);
+        if (data.thumbnail) formData.append("thumbnail", data.thumbnail);
+
+        return {
+          url: `/flashcards/update-flashcard/${id}`,
+          method: "PUT",
+          body: formData,
+        };
+      },
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: "FlashCard", id },
+        "FlashCard",
+      ],
+    }),
+
+    // Xóa FlashCard
+    deleteFlashCard: builder.mutation<DeleteFlashCardResponse, string>({
+      query: (id) => ({
+        url: `/flashcards/delete-flashcard/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["FlashCard"],
+    }),
+
     // Tìm kiếm FlashCard
     searchFlashCard: builder.query<
       SearchFlashCardResponse,
@@ -243,6 +297,36 @@ export const flashcardApi = createApi({
       },
       providesTags: ["FlashCard"],
     }),
+
+    // Track flashcard session
+    trackFlashcardSession: builder.mutation<
+      TrackFlashcardSessionResponse,
+      TrackFlashcardSessionRequest
+    >({
+      query: (data) => ({
+        url: "/activity/track-flashcard-session",
+        method: "POST",
+        body: data,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+    }),
+
+    // Track individual card learning
+    trackCardLearning: builder.mutation<
+      TrackCardLearningResponse,
+      TrackCardLearningRequest
+    >({
+      query: (data) => ({
+        url: "/activity/track-card",
+        method: "POST",
+        body: data,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+    }),
   }),
 });
 
@@ -258,7 +342,12 @@ export const {
   useSearchFlashListQuery,
   useLazySearchFlashListQuery,
   useGetAllFlashCardsQuery,
+  useGetFlashCardByIdQuery,
   useCreateFlashCardMutation,
+  useUpdateFlashCardMutation,
+  useDeleteFlashCardMutation,
   useSearchFlashCardQuery,
   useLazySearchFlashCardQuery,
+  useTrackFlashcardSessionMutation,
+  useTrackCardLearningMutation,
 } = flashcardApi;

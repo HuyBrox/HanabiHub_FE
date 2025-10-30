@@ -1,4 +1,3 @@
-// src/store/services/authApi.ts
 // RTK Query API cho authentication
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import {
@@ -12,10 +11,9 @@ console.log("API_URL:", process.env.NEXT_PUBLIC_API_URL);
 
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
-  credentials: "include", // để gửi cookies
-  prepareHeaders: (headers, { getState }) => {
+  credentials: "include", // Để gửi cookies
+  prepareHeaders: (headers) => {
     headers.set("Content-Type", "application/json");
-    // No need to set Authorization header as we're using cookies
     return headers;
   },
 });
@@ -25,7 +23,7 @@ export const authApi = createApi({
   baseQuery,
   tagTypes: ["Auth"],
   endpoints: (builder) => ({
-    // ================== LOGIN ==================
+    // API đăng nhập
     login: builder.mutation<AuthResponse, LoginRequest>({
       query: (credentials) => ({
         url: "/login",
@@ -34,8 +32,7 @@ export const authApi = createApi({
       }),
       invalidatesTags: ["Auth"],
     }),
-
-    // ================== LOGOUT ==================
+    // API đăng xuất
     logout: builder.mutation<void, void>({
       query: () => ({
         url: "/logout",
@@ -43,16 +40,14 @@ export const authApi = createApi({
       }),
       invalidatesTags: ["Auth"],
     }),
-
-    // ================== REFRESH TOKEN ==================
+    // API refresh token
     refreshToken: builder.mutation<AuthResponse, void>({
       query: () => ({
         url: "/refresh-token",
         method: "POST",
       }),
     }),
-
-    // ================== GET CURRENT USER ==================
+    // API lấy thông tin user hiện tại
     getCurrentUser: builder.query<UserProfileResponse, void>({
       query: () => ({
         url: "/user/profile",
@@ -60,21 +55,33 @@ export const authApi = createApi({
       }),
       providesTags: ["Auth"],
     }),
-
-    // ================== SEND OTP (REGISTER) ==================
-    sendOtpRegister: builder.mutation<
-      { message: string; userId: string },
-      { email: string }
-    >({
+    // Gửi OTP để đăng ký
+    sendOtpRegister: builder.mutation<any, { email: string }>({
       query: (body) => ({
         url: "/send-otp-register",
         method: "POST",
         body,
       }),
     }),
-
-    // ================== REGISTER ==================
-    // ⚠️ Có thể bỏ nếu backend gộp verify + register
+    // Đăng ký tài khoản với OTP
+    registerUser: builder.mutation<
+      any,
+      {
+        username: string
+        fullname: string
+        email: string
+        password: string
+        confirmPassword: string
+        otp: string
+      }
+    >({
+      query: (body) => ({
+        url: "/register",
+        method: "POST",
+        body,
+      }),
+    }),
+    // Đăng ký tài khoản (alternative endpoint nếu cần)
     register: builder.mutation<
       { message: string; userId: string },
       RegisterRequest
@@ -82,11 +89,10 @@ export const authApi = createApi({
       query: (body) => ({
         url: "/register",
         method: "POST",
-        body, // { username, email, password, confirmPassword, fullname }
+        body,
       }),
     }),
-
-    // ================== VERIFY OTP + REGISTER ==================
+    // Xác thực OTP
     verifyOtp: builder.mutation<
       { message: string; token: string },
       {
@@ -114,6 +120,7 @@ export const {
   useRefreshTokenMutation,
   useGetCurrentUserQuery,
   useSendOtpRegisterMutation,
+  useRegisterUserMutation,
   useRegisterMutation,
   useVerifyOtpMutation,
 } = authApi;
