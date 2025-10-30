@@ -7,6 +7,11 @@ import { flashcardApi } from "./services/flashcardApi";
 import { courseApi } from "./services/courseApi";
 import { activityApi } from "./services/activityApi";
 import { learningInsightsApi } from "./services/learningInsightsApi";
+import { newsApi } from "./services/newsApi";
+import { notificationApi } from "./services/notificationApi";
+import { scheduledNotificationApi } from "./services/scheduledNotificationApi";
+import { templateApi } from "./services/templateApi";
+import { reportApi } from "./services/reportApi";
 import authReducer from "./slices/authSlice";
 import {
   authMiddleware, // để tự động refresh token
@@ -23,6 +28,11 @@ export const store = configureStore({
     [courseApi.reducerPath]: courseApi.reducer,
     [activityApi.reducerPath]: activityApi.reducer,
     [learningInsightsApi.reducerPath]: learningInsightsApi.reducer,
+    [newsApi.reducerPath]: newsApi.reducer,
+    [notificationApi.reducerPath]: notificationApi.reducer,
+    [scheduledNotificationApi.reducerPath]: scheduledNotificationApi.reducer,
+    [templateApi.reducerPath]: templateApi.reducer,
+    [reportApi.reducerPath]: reportApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -33,6 +43,11 @@ export const store = configureStore({
       .concat(courseApi.middleware)
       .concat(activityApi.middleware)
       .concat(learningInsightsApi.middleware)
+      .concat(newsApi.middleware)
+      .concat(notificationApi.middleware)
+      .concat(scheduledNotificationApi.middleware)
+      .concat(templateApi.middleware)
+      .concat(reportApi.middleware)
       .concat(authMiddleware)
       .prepend(authListenerMiddleware.middleware),
 });

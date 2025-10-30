@@ -1,6 +1,8 @@
-import axiosClient from "@/api/axioxClient";
+// src/store/services/reportApi.ts
+// ✅ RTK Query API for Report Management
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-// Types
+// ==================== TYPES ====================
 export interface ReportItem {
   _id: string;
   reason: string;
@@ -27,55 +29,134 @@ export interface ReportStats {
   highPriority: number;
 }
 
-// API Functions using axiosClient (with cookie authentication)
-export const reportApi = {
-  // Get reports list
-  getReportsList: async (params: { page?: number; limit?: number; search?: string; status?: string } = {}) => {
-    const queryParams = new URLSearchParams();
-    if (params.page) queryParams.append('page', params.page.toString());
-    if (params.limit) queryParams.append('limit', params.limit.toString());
-    if (params.search) queryParams.append('search', params.search);
-    if (params.status) queryParams.append('status', params.status);
+export interface GetReportsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+}
 
-    const response: any = await axiosClient.get(`/reports?${queryParams.toString()}`);
-    
-    // Transform backend response to frontend expected format
-    if (response.success && response.data) {
-      const { items, total, page, limit } = response.data;
-      return {
-        success: true,
-        data: items || [],
-        pagination: {
-          page: page || 1,
-          limit: limit || 20,
-          total: total || 0,
-          totalPages: Math.ceil((total || 0) / (limit || 20))
+export interface ReportListResponse {
+  success: boolean;
+  data: ReportItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface ReportResponse {
+  success: boolean;
+  data: ReportItem;
+  message?: string;
+}
+
+export interface ReportStatsResponse {
+  success: boolean;
+  data: ReportStats;
+}
+
+export interface ReportActionRequest {
+  adminNote: string;
+}
+
+// ==================== BASE QUERY ====================
+const baseQuery = fetchBaseQuery({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
+  credentials: "include", // Cookie authentication
+  prepareHeaders: (headers) => {
+    headers.set("Content-Type", "application/json");
+    return headers;
+  },
+});
+
+// ==================== RTK QUERY API ====================
+export const reportApi = createApi({
+  reducerPath: "reportApi",
+  baseQuery,
+  tagTypes: ["Reports", "ReportStats"],
+  endpoints: (builder) => ({
+    // ================== GET REPORTS LIST ==================
+    getReportsList: builder.query<ReportListResponse, GetReportsParams>({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page.toString());
+        if (params.limit) queryParams.append("limit", params.limit.toString());
+        if (params.search) queryParams.append("search", params.search);
+        if (params.status) queryParams.append("status", params.status);
+
+        return {
+          url: `/reports?${queryParams.toString()}`,
+          method: "GET",
+        };
+      },
+      transformResponse: (response: any) => {
+        // Transform backend response to expected format
+        if (response.success && response.data) {
+          const { items, total, page, limit } = response.data;
+          return {
+            success: true,
+            data: items || [],
+            pagination: {
+              page: page || 1,
+              limit: limit || 20,
+              total: total || 0,
+              totalPages: Math.ceil((total || 0) / (limit || 20)),
+            },
+          };
         }
-      };
-    }
-    
-    return response;
-  },
+        return response;
+      },
+      providesTags: ["Reports"],
+    }),
 
-  // Approve report
-  approveReport: async (id: string, data: { adminNote: string }) => {
-    return axiosClient.put(`/reports/${id}/approve`, data);
-  },
+    // ================== APPROVE REPORT ==================
+    approveReport: builder.mutation<ReportResponse, { id: string; data: ReportActionRequest }>({
+      query: ({ id, data }) => ({
+        url: `/reports/${id}/approve`,
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: ["Reports", "ReportStats"],
+    }),
 
-  // Reject report
-  rejectReport: async (id: string, data: { adminNote: string }) => {
-    return axiosClient.put(`/reports/${id}/reject`, data);
-  },
+    // ================== REJECT REPORT ==================
+    rejectReport: builder.mutation<ReportResponse, { id: string; data: ReportActionRequest }>({
+      query: ({ id, data }) => ({
+        url: `/reports/${id}/reject`,
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: ["Reports", "ReportStats"],
+    }),
 
-  // Get report stats
-  getReportStats: async () => {
-    return axiosClient.get('/reports/stats');
-  },
+    // ================== GET REPORT STATS ==================
+    getReportStats: builder.query<ReportStatsResponse, void>({
+      query: () => ({
+        url: "/reports/stats",
+        method: "GET",
+      }),
+      providesTags: ["ReportStats"],
+    }),
 
-  // Export reports
-  exportReports: async (format: 'excel' | 'csv' = 'excel') => {
-    return axiosClient.get(`/reports/export?format=${format}`, {
-      responseType: 'blob'
-    });
-  }
-};
+    // ================== EXPORT REPORTS ==================
+    exportReports: builder.query<Blob, "excel" | "csv">({
+      query: (format = "excel") => ({
+        url: `/reports/export?format=${format}`,
+        method: "GET",
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+  }),
+});
+
+// ==================== EXPORT HOOKS ====================
+export const {
+  useGetReportsListQuery,
+  useApproveReportMutation,
+  useRejectReportMutation,
+  useGetReportStatsQuery,
+  useLazyExportReportsQuery,
+} = reportApi;

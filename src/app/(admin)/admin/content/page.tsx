@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import styles from "./datepicker.module.css";
 import { 
   Search, Filter, Plus, Grid, List, Eye, EyeOff, Heart, MessageCircle, Edit, Trash2, Star, StarOff, 
   BarChart3, User, Tag, Calendar, Bell, Mail, Send, Settings, BookOpen, Video, HelpCircle, FileText,
   Users, AlertTriangle, Newspaper, History, SendHorizontal, UserCheck, FileEdit, Clock,
-  CheckCircle, XCircle, MoreHorizontal, Flag, UserX
+  CheckCircle, XCircle, MoreHorizontal, Flag, UserX, Image as ImageIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,12 +44,67 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useNotification } from "@/components/notification";
 import BackendStatus from "@/components/BackendStatus";
 
-// API Services
-import { notificationApi, type NotificationRequest, type NotificationHistory, type NotificationStats } from "@/store/services/notificationApi";
-import { newsApi, type NewsItem, type CreateNewsRequest, type NewsStats } from "@/store/services/newsApi";
-import { reportApi, type ReportItem, type ReportStats } from "@/store/services/reportApi";
-import { templateApi, type TemplateItem, type CreateTemplateRequest, type TemplateStats } from "@/store/services/templateApi";
-import { userApi, type UserItem, type UserStats } from "@/store/services/userApi";
+// ✅ RTK Query Hooks - Auto caching & refetching
+import { 
+  useSendSystemNotificationMutation,
+  useSendSpecificNotificationMutation,
+  useGetNotificationHistoryQuery,
+  useGetNotificationStatsQuery,
+  useUpdateNotificationMutation,
+  useDeleteNotificationMutation,
+  type NotificationRequest, 
+  type NotificationHistory, 
+  type NotificationStats 
+} from "@/store/services/notificationApi";
+
+import { 
+  useScheduleNotificationMutation,
+  useGetScheduledNotificationsQuery,
+  useUpdateScheduledNotificationMutation,
+  useCancelScheduledNotificationMutation,
+  useGetScheduledStatsQuery,
+  type ScheduledNotificationItem, 
+  type ScheduleNotificationRequest, 
+  type ScheduledNotificationStats 
+} from "@/store/services/scheduledNotificationApi";
+
+import { 
+  useGetNewsListQuery,
+  useCreateNewsMutation,
+  useUpdateNewsMutation,
+  useDeleteNewsMutation,
+  useGetNewsStatsQuery,
+  type NewsItem, 
+  type CreateNewsRequest, 
+  type NewsStats 
+} from "@/store/services/newsApi";
+
+import { 
+  useGetReportsListQuery,
+  useApproveReportMutation,
+  useRejectReportMutation,
+  useGetReportStatsQuery,
+  type ReportItem, 
+  type ReportStats 
+} from "@/store/services/reportApi";
+
+import { 
+  useGetTemplatesListQuery,
+  useCreateTemplateMutation,
+  useUpdateTemplateMutation,
+  useDeleteTemplateMutation,
+  useGetTemplateStatsQuery,
+  type TemplateItem, 
+  type CreateTemplateRequest, 
+  type TemplateStats 
+} from "@/store/services/templateApi";
+
+import { 
+  useSearchUsersQuery,
+  useGetUserStatsQuery,
+  type UserItem, 
+  type UserStats 
+} from "@/store/services/userApi";
 
 // Utils
 import { handleApiResponse, handlePaginatedResponse, formatTimeAgo, getErrorMessage, debounce } from "@/utils/apiHelper";
@@ -90,11 +148,25 @@ export default function AdminContentAndNotificationsPage() {
   // Form states
   const [notificationTitle, setNotificationTitle] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
+  const [showVariableHelper, setShowVariableHelper] = useState(false); // Template variables helper
   const [newsTitle, setNewsTitle] = useState("");
   const [newsContent, setNewsContent] = useState("");
+  const [newsImage, setNewsImage] = useState<string | null>(null); // Base64 or URL
+  const [newsImagePreview, setNewsImagePreview] = useState<string | null>(null); // For preview
+  const [newsPublishedAt, setNewsPublishedAt] = useState<Date | null>(null); // Publish date
   const [templateName, setTemplateName] = useState("");
   const [templateTitle, setTemplateTitle] = useState("");
   const [templateMessage, setTemplateMessage] = useState("");
+  
+  // Schedule Notification states
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [scheduleTitle, setScheduleTitle] = useState("");
+  const [scheduleContent, setScheduleContent] = useState("");
+  const [scheduleDate, setScheduleDate] = useState<Date | null>(null);
+  const [scheduleRecurring, setScheduleRecurring] = useState<"none" | "daily" | "weekly" | "monthly">("none");
+  const [scheduleEndDate, setScheduleEndDate] = useState<Date | null>(null);
+  const [scheduleIsSystem, setScheduleIsSystem] = useState(true);
+  const [scheduleSelectedUsers, setScheduleSelectedUsers] = useState<string[]>([]);
   
   // Data states
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -102,6 +174,11 @@ export default function AdminContentAndNotificationsPage() {
   const [reports, setReports] = useState<ReportItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationHistory[]>([]);
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [scheduledNotifications, setScheduledNotifications] = useState<ScheduledNotificationItem[]>([]);
+  
+  // History tab date range filter states
+  const [historyFromDate, setHistoryFromDate] = useState<Date | null>(null);
+  const [historyToDate, setHistoryToDate] = useState<Date | null>(null);
   
   // Statistics states
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -109,6 +186,7 @@ export default function AdminContentAndNotificationsPage() {
   const [reportStats, setReportStats] = useState<ReportStats | null>(null);
   const [notificationStats, setNotificationStats] = useState<NotificationStats | null>(null);
   const [templateStats, setTemplateStats] = useState<TemplateStats | null>(null);
+  const [scheduledStats, setScheduledStats] = useState<ScheduledNotificationStats | null>(null);
   
   // Loading states
   const [loading, setLoading] = useState({
@@ -117,6 +195,7 @@ export default function AdminContentAndNotificationsPage() {
     reports: LOADING_STATES.IDLE,
     notifications: LOADING_STATES.IDLE,
     templates: LOADING_STATES.IDLE,
+    scheduled: LOADING_STATES.IDLE,
     sending: LOADING_STATES.IDLE
   });
   
@@ -126,11 +205,15 @@ export default function AdminContentAndNotificationsPage() {
   const [showEditNewsModal, setShowEditNewsModal] = useState(false);
   const [showViewNewsModal, setShowViewNewsModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [showEditNotificationModal, setShowEditNotificationModal] = useState(false);
+  const [showDeleteNotificationModal, setShowDeleteNotificationModal] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const [editingTemplate, setEditingTemplate] = useState<TemplateItem | null>(null);
   const [editingNews, setEditingNews] = useState<NewsItem | null>(null);
   const [viewingNews, setViewingNews] = useState<NewsItem | null>(null);
   const [deletingNews, setDeletingNews] = useState<NewsItem | null>(null);
+  const [editingNotification, setEditingNotification] = useState<NotificationHistory | null>(null);
+  const [deletingNotification, setDeletingNotification] = useState<NotificationHistory | null>(null);
   const [showAdminNoteModal, setShowAdminNoteModal] = useState(false);
   const [currentReport, setCurrentReport] = useState<ReportItem | null>(null);
   const [adminNote, setAdminNote] = useState("");
@@ -257,7 +340,9 @@ export default function AdminContentAndNotificationsPage() {
         page: historyCurrentPage,
         limit: historyPerPage,
         search: historySearchQuery,
-        type: historyTypeFilter !== "all" ? historyTypeFilter : undefined
+        type: historyTypeFilter !== "all" ? historyTypeFilter : undefined,
+        fromDate: historyFromDate ? historyFromDate.toISOString() : undefined,
+        toDate: historyToDate ? historyToDate.toISOString() : undefined
       });
       const data = handlePaginatedResponse<NotificationHistory>(response);
       setNotifications(data.data);
@@ -266,6 +351,35 @@ export default function AdminContentAndNotificationsPage() {
       error(getErrorMessage(err));
       setLoading(prev => ({ ...prev, notifications: LOADING_STATES.ERROR }));
       setNotifications([]); // Set empty array on error
+    }
+  };
+
+  // Quick date range filters for History tab
+  const setHistoryDateRange = (range: 'today' | 'week' | 'month' | 'all') => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (range) {
+      case 'today':
+        setHistoryFromDate(today);
+        setHistoryToDate(now);
+        break;
+      case 'week':
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        setHistoryFromDate(weekAgo);
+        setHistoryToDate(now);
+        break;
+      case 'month':
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        setHistoryFromDate(monthAgo);
+        setHistoryToDate(now);
+        break;
+      case 'all':
+        setHistoryFromDate(null);
+        setHistoryToDate(null);
+        break;
     }
   };
 
@@ -383,6 +497,33 @@ export default function AdminContentAndNotificationsPage() {
     }
   };
 
+  // Handle image file upload
+  const handleNewsImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      error("Vui lòng chọn file hình ảnh");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      error("Kích thước ảnh không được vượt quá 5MB");
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setNewsImage(base64String);
+      setNewsImagePreview(base64String);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreateNews = async () => {
     if (!newsTitle || !newsContent) {
       error("Vui lòng điền đầy đủ tiêu đề và nội dung");
@@ -395,13 +536,19 @@ export default function AdminContentAndNotificationsPage() {
       await newsApi.createNews({
         title: newsTitle,
         content: newsContent,
-        category: "general",
+        image: newsImage || undefined,
+        publishedAt: newsPublishedAt ? newsPublishedAt.toISOString() : undefined,
+        status: "published",
         tags: []
       });
       
       success("Đã tạo bài tin tức mới");
+      // Reset form
       setNewsTitle("");
       setNewsContent("");
+      setNewsImage(null);
+      setNewsImagePreview(null);
+      setNewsPublishedAt(null);
       fetchNews(); // Refresh news list
       fetchStats(); // Refresh stats
     } catch (err) {
@@ -446,7 +593,8 @@ export default function AdminContentAndNotificationsPage() {
       setPreviewData({
         title: newsTitle,
         content: newsContent,
-        author: "Admin"
+        author: "Admin",
+        image: newsImagePreview // Add image preview
       });
       setShowPreviewModal(true);
     } else {
@@ -463,7 +611,7 @@ export default function AdminContentAndNotificationsPage() {
   // Use Template Handler
   const handleUseTemplate = async (template: TemplateItem) => {
     try {
-      await templateApi.useTemplate(template.id);
+      await templateApi.useTemplate(template._id);
       setActiveTab("notifications");
       setNotificationTitle(template.title);
       setNotificationMessage(template.message);
@@ -480,7 +628,7 @@ export default function AdminContentAndNotificationsPage() {
       try {
         setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
         
-        await templateApi.updateTemplate(editingTemplate.id, {
+        await templateApi.updateTemplate(editingTemplate._id, {
           name: editingTemplate.name,
           title: editingTemplate.title,
           message: editingTemplate.message,
@@ -505,7 +653,7 @@ export default function AdminContentAndNotificationsPage() {
     try {
       setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
       
-      await templateApi.deleteTemplate(template.id);
+      await templateApi.deleteTemplate(template._id);
       
       success(`Template "${template.name}" đã được xóa thành công!`);
       fetchTemplates(); // Refresh templates list
@@ -541,7 +689,9 @@ export default function AdminContentAndNotificationsPage() {
         await newsApi.updateNews(editingNews._id, {
           title: editingNews.title,
           content: editingNews.content,
-          status: editingNews.status
+          image: editingNews.image,
+          status: editingNews.status,
+          publishedAt: editingNews.publishedAt
         });
         
         success(`Tin tức "${editingNews.title}" đã được cập nhật thành công!`);
@@ -574,6 +724,168 @@ export default function AdminContentAndNotificationsPage() {
       } finally {
         setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
       }
+    }
+  };
+
+  // Notification History Handlers
+  const handleEditNotification = (notification: NotificationHistory) => {
+    setEditingNotification(notification);
+    setShowEditNotificationModal(true);
+  };
+
+  const handleDeleteNotification = (notification: NotificationHistory) => {
+    setDeletingNotification(notification);
+    setShowDeleteNotificationModal(true);
+  };
+
+  const handleUpdateNotification = async () => {
+    if (editingNotification) {
+      try {
+        setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
+        
+        await notificationApi.updateNotification(editingNotification._id, {
+          title: editingNotification.title,
+          content: editingNotification.content
+        });
+        
+        success(`Thông báo "${editingNotification.title}" đã được cập nhật thành công!`);
+        setShowEditNotificationModal(false);
+        setEditingNotification(null);
+        fetchNotifications(); // Refresh notifications list
+        fetchStats(); // Refresh stats
+      } catch (err) {
+        error(getErrorMessage(err));
+      } finally {
+        setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+      }
+    }
+  };
+
+  const handleConfirmDeleteNotification = async () => {
+    if (deletingNotification) {
+      try {
+        setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
+        
+        await notificationApi.deleteNotification(deletingNotification._id);
+        
+        success(`Thông báo "${deletingNotification.title}" đã được xóa thành công!`);
+        setShowDeleteNotificationModal(false);
+        setDeletingNotification(null);
+        fetchNotifications(); // Refresh notifications list
+        fetchStats(); // Refresh stats
+        
+      } catch (err) {
+        error(getErrorMessage(err));
+      } finally {
+        setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+      }
+    }
+  };
+
+  // ============================================
+  // SCHEDULED NOTIFICATION HANDLERS
+  // ============================================
+  
+  const fetchScheduledNotifications = async () => {
+    try {
+      setLoading(prev => ({ ...prev, scheduled: LOADING_STATES.LOADING }));
+      const response = await scheduledNotificationApi.getScheduled({ limit: 100 });
+      
+      if (response.success && response.data) {
+        setScheduledNotifications(response.data);
+        setLoading(prev => ({ ...prev, scheduled: LOADING_STATES.SUCCESS }));
+      }
+    } catch (err) {
+      error("Không thể tải danh sách lịch gửi");
+      setLoading(prev => ({ ...prev, scheduled: LOADING_STATES.ERROR }));
+      setScheduledNotifications([]);
+    }
+  };
+
+  const fetchScheduledStats = async () => {
+    try {
+      const stats = await scheduledNotificationApi.getStats();
+      setScheduledStats(stats);
+    } catch (err) {
+      console.error("Error fetching scheduled stats:", err);
+    }
+  };
+
+  const handleScheduleNotification = async () => {
+    if (!scheduleTitle || !scheduleContent || !scheduleDate) {
+      error("Vui lòng nhập đầy đủ tiêu đề, nội dung và thời gian gửi");
+      return;
+    }
+
+    // Validate future date
+    if (scheduleDate <= new Date()) {
+      error("Thời gian gửi phải ở tương lai");
+      return;
+    }
+
+    // Validate recurring end date
+    if (scheduleRecurring !== "none" && scheduleEndDate && scheduleEndDate <= scheduleDate) {
+      error("Ngày kết thúc lặp lại phải sau thời gian gửi");
+      return;
+    }
+
+    try {
+      setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
+
+      const scheduleData: ScheduleNotificationRequest = {
+        title: scheduleTitle,
+        content: scheduleContent,
+        scheduledAt: scheduleDate.toISOString(),
+        recurringType: scheduleRecurring,
+        userIds: scheduleIsSystem ? [] : scheduleSelectedUsers,
+      };
+
+      if (scheduleRecurring !== "none" && scheduleEndDate) {
+        scheduleData.recurringEndDate = scheduleEndDate.toISOString();
+      }
+
+      await scheduledNotificationApi.schedule(scheduleData);
+
+      success(
+        `Đã đặt lịch gửi thông báo ${scheduleRecurring !== "none" ? `(${scheduleRecurring})` : ""}`
+      );
+
+      // Reset form
+      setScheduleTitle("");
+      setScheduleContent("");
+      setScheduleDate(null);
+      setScheduleRecurring("none");
+      setScheduleEndDate(null);
+      setScheduleIsSystem(true);
+      setScheduleSelectedUsers([]);
+      setShowScheduleForm(false);
+
+      // Refresh lists
+      fetchScheduledNotifications();
+      fetchScheduledStats();
+    } catch (err) {
+      error(getErrorMessage(err));
+    } finally {
+      setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+    }
+  };
+
+  const handleCancelScheduled = async (scheduled: ScheduledNotificationItem) => {
+    if (!confirm(`Bạn có chắc muốn hủy lịch gửi "${scheduled.title}"?`)) {
+      return;
+    }
+
+    try {
+      setLoading(prev => ({ ...prev, scheduled: LOADING_STATES.LOADING }));
+      await scheduledNotificationApi.cancel(scheduled._id);
+      success(`Đã hủy lịch gửi "${scheduled.title}"`);
+      
+      fetchScheduledNotifications();
+      fetchScheduledStats();
+    } catch (err) {
+      error(getErrorMessage(err));
+    } finally {
+      setLoading(prev => ({ ...prev, scheduled: LOADING_STATES.IDLE }));
     }
   };
 
@@ -776,7 +1088,18 @@ export default function AdminContentAndNotificationsPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="system-message" className="text-gray-900 font-medium">Nội dung</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="system-message" className="text-gray-900 font-medium">Nội dung</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowVariableHelper(!showVariableHelper)}
+                      className="text-xs"
+                    >
+                      {showVariableHelper ? "Ẩn" : "📝 Biến mẫu"}
+                    </Button>
+                  </div>
                   <Textarea
                     id="system-message"
                     placeholder="Nhập nội dung thông báo..."
@@ -784,6 +1107,64 @@ export default function AdminContentAndNotificationsPage() {
                     onChange={(e) => setNotificationMessage(e.target.value)}
                     rows={4}
                   />
+                  {showVariableHelper && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md text-xs">
+                      <p className="font-semibold text-blue-900 mb-2">💡 Biến có thể sử dụng:</p>
+                      <div className="grid grid-cols-2 gap-2 text-blue-800">
+                        <div>
+                          <p className="font-medium mb-1">👤 Người dùng:</p>
+                          <button
+                            type="button"
+                            onClick={() => setNotificationMessage(prev => prev + "{{username}}")}
+                            className="block w-full text-left px-2 py-1 hover:bg-blue-100 rounded"
+                          >
+                            <code className="bg-blue-100 px-1 rounded">{"{{username}}"}</code> - Tên đăng nhập
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNotificationMessage(prev => prev + "{{fullname}}")}
+                            className="block w-full text-left px-2 py-1 hover:bg-blue-100 rounded"
+                          >
+                            <code className="bg-blue-100 px-1 rounded">{"{{fullname}}"}</code> - Họ tên
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNotificationMessage(prev => prev + "{{email}}")}
+                            className="block w-full text-left px-2 py-1 hover:bg-blue-100 rounded"
+                          >
+                            <code className="bg-blue-100 px-1 rounded">{"{{email}}"}</code> - Email
+                          </button>
+                        </div>
+                        <div>
+                          <p className="font-medium mb-1">📅 Hệ thống:</p>
+                          <button
+                            type="button"
+                            onClick={() => setNotificationMessage(prev => prev + "{{date}}")}
+                            className="block w-full text-left px-2 py-1 hover:bg-blue-100 rounded"
+                          >
+                            <code className="bg-blue-100 px-1 rounded">{"{{date}}"}</code> - Ngày hiện tại
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNotificationMessage(prev => prev + "{{time}}")}
+                            className="block w-full text-left px-2 py-1 hover:bg-blue-100 rounded"
+                          >
+                            <code className="bg-blue-100 px-1 rounded">{"{{time}}"}</code> - Giờ hiện tại
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNotificationMessage(prev => prev + "{{datetime}}")}
+                            className="block w-full text-left px-2 py-1 hover:bg-blue-100 rounded"
+                          >
+                            <code className="bg-blue-100 px-1 rounded">{"{{datetime}}"}</code> - Ngày giờ
+                          </button>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-blue-700 italic">
+                        💡 Ví dụ: "Xin chào <code className="bg-blue-100 px-1 rounded">{"{{fullname}}"}</code>, hôm nay là <code className="bg-blue-100 px-1 rounded">{"{{date}}"}</code>"
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <Button 
                   onClick={() => handleSendNotification("all")}
@@ -952,6 +1333,232 @@ export default function AdminContentAndNotificationsPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Schedule Notification Section */}
+          <Card className="bg-white border border-gray-200 shadow-sm mt-6">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-gray-900 font-semibold">
+                    <Calendar className="w-5 h-5 text-purple-600" />
+                    Đặt Lịch Gửi Thông Báo
+                  </CardTitle>
+                  <CardDescription className="text-gray-700">
+                    Lên lịch gửi thông báo tự động, hỗ trợ lặp lại hàng ngày/tuần/tháng
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowScheduleForm(!showScheduleForm);
+                    if (!showScheduleForm) {
+                      fetchScheduledNotifications();
+                      fetchScheduledStats();
+                    }
+                  }}
+                >
+                  {showScheduleForm ? "Ẩn Form" : "Đặt Lịch Mới"}
+                </Button>
+              </div>
+            </CardHeader>
+            
+            {showScheduleForm && (
+              <CardContent className="space-y-4 border-t pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-gray-900 font-medium">Tiêu đề</Label>
+                    <Input
+                      placeholder="Nhập tiêu đề..."
+                      value={scheduleTitle}
+                      onChange={(e) => setScheduleTitle(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-900 font-medium">Loại thông báo</Label>
+                    <Select
+                      value={scheduleIsSystem ? "system" : "personal"}
+                      onValueChange={(val) => setScheduleIsSystem(val === "system")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="system">🌐 Hệ thống (tất cả)</SelectItem>
+                        <SelectItem value="personal">👤 Cá nhân (chọn người)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-gray-900 font-medium">Nội dung</Label>
+                  <Textarea
+                    placeholder="Nhập nội dung thông báo..."
+                    value={scheduleContent}
+                    onChange={(e) => setScheduleContent(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-gray-900 font-medium">📅 Thời gian gửi</Label>
+                    <DatePicker
+                      selected={scheduleDate}
+                      onChange={(date) => setScheduleDate(date)}
+                      showTimeSelect
+                      timeFormat="HH:mm"
+                      timeIntervals={15}
+                      dateFormat="dd/MM/yyyy HH:mm"
+                      minDate={new Date()}
+                      placeholderText="Chọn ngày và giờ..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-900 font-medium">🔄 Lặp lại</Label>
+                    <Select
+                      value={scheduleRecurring}
+                      onValueChange={(val: any) => setScheduleRecurring(val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Không lặp</SelectItem>
+                        <SelectItem value="daily">📆 Hàng ngày</SelectItem>
+                        <SelectItem value="weekly">📅 Hàng tuần</SelectItem>
+                        <SelectItem value="monthly">📊 Hàng tháng</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {scheduleRecurring !== "none" && (
+                  <div>
+                    <Label className="text-gray-900 font-medium">⏹️ Ngày kết thúc lặp lại (tùy chọn)</Label>
+                    <DatePicker
+                      selected={scheduleEndDate}
+                      onChange={(date) => setScheduleEndDate(date)}
+                      dateFormat="dd/MM/yyyy"
+                      minDate={scheduleDate || new Date()}
+                      placeholderText="Chọn ngày kết thúc hoặc để trống..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      isClearable
+                    />
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleScheduleNotification}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  disabled={loading.sending === LOADING_STATES.LOADING}
+                >
+                  {loading.sending === LOADING_STATES.LOADING ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  ) : (
+                    <Calendar className="w-4 h-4 mr-2" />
+                  )}
+                  Đặt lịch gửi
+                </Button>
+              </CardContent>
+            )}
+
+            {/* Scheduled Statistics */}
+            {scheduledStats && (
+              <CardContent className="border-t">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-gray-900">{scheduledStats.total}</p>
+                    <p className="text-xs text-gray-600">Tổng lịch</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-yellow-600">{scheduledStats.pending}</p>
+                    <p className="text-xs text-gray-600">Chờ gửi</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">{scheduledStats.sent}</p>
+                    <p className="text-xs text-gray-600">Đã gửi</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-gray-600">{scheduledStats.cancelled}</p>
+                    <p className="text-xs text-gray-600">Đã hủy</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-red-600">{scheduledStats.failed}</p>
+                    <p className="text-xs text-gray-600">Thất bại</p>
+                  </div>
+                </div>
+              </CardContent>
+            )}
+
+            {/* Scheduled List */}
+            <CardContent className="border-t">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Danh sách lịch gửi
+              </h3>
+              
+              {loading.scheduled === LOADING_STATES.LOADING ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">Đang tải...</p>
+                </div>
+              ) : scheduledNotifications.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Chưa có lịch gửi nào</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {scheduledNotifications.slice(0, 5).map((scheduled) => (
+                    <div
+                      key={scheduled._id}
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 text-sm">{scheduled.title}</h4>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
+                          <span>📅 {new Date(scheduled.scheduledAt).toLocaleString('vi-VN')}</span>
+                          {scheduled.recurringType !== "none" && (
+                            <Badge variant="outline" className="text-xs">
+                              🔄 {scheduled.recurringType}
+                            </Badge>
+                          )}
+                          <Badge className={
+                            scheduled.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                            scheduled.status === "sent" ? "bg-green-100 text-green-800" :
+                            scheduled.status === "cancelled" ? "bg-gray-100 text-gray-800" :
+                            "bg-red-100 text-red-800"
+                          }>
+                            {scheduled.status === "pending" ? "Chờ gửi" :
+                             scheduled.status === "sent" ? "Đã gửi" :
+                             scheduled.status === "cancelled" ? "Đã hủy" : "Thất bại"}
+                          </Badge>
+                        </div>
+                      </div>
+                      {scheduled.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 hover:bg-red-50"
+                          onClick={() => handleCancelScheduled(scheduled)}
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {scheduledNotifications.length > 5 && (
+                    <p className="text-xs text-center text-gray-500 mt-2">
+                      Và {scheduledNotifications.length - 5} lịch khác...
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* News Tab */}
@@ -1035,6 +1642,75 @@ export default function AdminContentAndNotificationsPage() {
                     className="mt-1"
                   />
                 </div>
+
+                {/* Image Upload */}
+                <div>
+                  <Label htmlFor="news-image" className="text-gray-900 font-medium">📸 Hình ảnh nổi bật (tùy chọn)</Label>
+                  <div className="mt-2">
+                    <input
+                      id="news-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleNewsImageUpload}
+                      className="hidden"
+                    />
+                    <div className="flex items-start gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById("news-image")?.click()}
+                        className="flex-shrink-0"
+                      >
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                        Chọn ảnh
+                      </Button>
+                      {newsImagePreview && (
+                        <div className="relative">
+                          <img
+                            src={newsImagePreview}
+                            alt="Preview"
+                            className="w-32 h-32 object-cover rounded-lg border-2 border-gray-300"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+                            onClick={() => {
+                              setNewsImage(null);
+                              setNewsImagePreview(null);
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Định dạng: JPG, PNG, GIF. Tối đa 5MB</p>
+                  </div>
+                </div>
+
+                {/* Publish Date Picker */}
+                <div>
+                  <Label className="text-gray-900 font-medium">📅 Ngày xuất bản (tùy chọn)</Label>
+                  <div className="mt-2">
+                    <DatePicker
+                      selected={newsPublishedAt}
+                      onChange={(date) => setNewsPublishedAt(date)}
+                      showTimeSelect
+                      timeFormat="HH:mm"
+                      timeIntervals={15}
+                      dateFormat="dd/MM/yyyy HH:mm"
+                      placeholderText="Chọn ngày xuất bản (mặc định: hiện tại)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      isClearable
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      Nếu không chọn, bài viết sẽ được xuất bản ngay lập tức
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
                   <Button 
                     onClick={handlePreviewNews}
@@ -1108,7 +1784,17 @@ export default function AdminContentAndNotificationsPage() {
                   ) : (
                     <>
                       {news.map((newsItem) => (
-                        <div key={newsItem._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                        <div key={newsItem._id} className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg">
+                          {/* News Thumbnail */}
+                          {newsItem.image && (
+                            <div className="flex-shrink-0">
+                              <img
+                                src={newsItem.image}
+                                alt={newsItem.title}
+                                className="w-24 h-24 object-cover rounded-lg border border-gray-300"
+                              />
+                            </div>
+                          )}
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-900">{newsItem.title}</h3>
                             <p className="text-sm text-gray-700 line-clamp-2 mt-1">{newsItem.content}</p>
@@ -1138,8 +1824,8 @@ export default function AdminContentAndNotificationsPage() {
                             </Badge>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="w-4 h-4" />
+                                <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-100">
+                                  <MoreHorizontal className="w-5 h-5 text-gray-700" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
@@ -1487,27 +2173,25 @@ export default function AdminContentAndNotificationsPage() {
             </CardHeader>
             <CardContent>
               {/* Search and Filter */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Tìm kiếm theo tiêu đề, nội dung, người gửi..."
-                    onChange={(e) => debouncedHistorySearch(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                <Select value={historyTypeFilter} onValueChange={setHistoryTypeFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Lọc theo loại" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả</SelectItem>
-                    <SelectItem value="system">Hệ thống</SelectItem>
-                    <SelectItem value="personal">Cá nhân</SelectItem>
-                    <SelectItem value="maintenance">Bảo trì</SelectItem>
-                    <SelectItem value="course">Khóa học</SelectItem>
-                    <SelectItem value="security">Bảo mật</SelectItem>
-                    <SelectItem value="contest">Cuộc thi</SelectItem>
-                  </SelectContent>
+              <div className="flex flex-col gap-4 mb-6">
+                {/* Row 1: Search + Type Filter + Export */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Tìm kiếm theo tiêu đề, nội dung, người gửi..."
+                      onChange={(e) => debouncedHistorySearch(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <Select value={historyTypeFilter} onValueChange={setHistoryTypeFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Lọc theo loại" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tất cả</SelectItem>
+                      <SelectItem value="system">Hệ thống</SelectItem>
+                      <SelectItem value="personal">Cá nhân</SelectItem>
+                    </SelectContent>
                   </Select>
                   <Button 
                     variant="outline" 
@@ -1519,7 +2203,65 @@ export default function AdminContentAndNotificationsPage() {
                   </Button>
                 </div>
 
-              <div className="space-y-4">
+                {/* Row 2: Date Range Filter */}
+                <div className="flex flex-col sm:flex-row gap-4 items-end">
+                  <div className="flex-1">
+                    <Label className="text-sm text-gray-700 mb-2 block">📅 Từ ngày</Label>
+                    <DatePicker
+                      selected={historyFromDate}
+                      onChange={(date) => setHistoryFromDate(date)}
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="Chọn ngày bắt đầu..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      isClearable
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-sm text-gray-700 mb-2 block">📅 Đến ngày</Label>
+                    <DatePicker
+                      selected={historyToDate}
+                      onChange={(date) => setHistoryToDate(date)}
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="Chọn ngày kết thúc..."
+                      minDate={historyFromDate || undefined}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      isClearable
+                    />
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryDateRange('today')}
+                    >
+                      Hôm nay
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryDateRange('week')}
+                    >
+                      7 ngày
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryDateRange('month')}
+                    >
+                      30 ngày
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryDateRange('all')}
+                    >
+                      Tất cả
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 !bg-white p-4 rounded-lg" style={{ backgroundColor: '#FFFFFF' }}>
                 {loading.notifications === LOADING_STATES.LOADING ? (
                   <div className="text-center py-12 text-gray-500">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -1527,30 +2269,75 @@ export default function AdminContentAndNotificationsPage() {
                   </div>
                 ) : (
                   <>
-                    {notifications.map((notification) => (
-                      <div key={notification._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                            <Bell className="w-5 h-5 text-blue-600" />
+                    {notifications.map((notification) => {
+                      const readPercentage = notification.totalReceivers > 0 
+                        ? Math.round((notification.readCount / notification.totalReceivers) * 100)
+                        : 0;
+                      
+                      return (
+                      <div key={notification._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg !bg-white hover:!bg-gray-50 transition-colors" style={{ backgroundColor: '#FFFFFF' }}>
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            notification.isSystem ? "bg-blue-100" : "bg-green-100"
+                          }`}>
+                            <Bell className={`w-5 h-5 ${
+                              notification.isSystem ? "text-blue-600" : "text-green-600"
+                            }`} />
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{notification.title}</h3>
-                            <p className="text-sm text-gray-700">{notification.message}</p>
-                            <div className="flex items-center gap-4 mt-1 text-xs text-gray-700">
-                              <span className="font-semibold text-gray-900">Loại: {notification.type}</span>
-                              <span className="font-semibold text-gray-900">
-                                Người nhận: {notification.recipients === "all" ? "Tất cả" : `${notification.recipientCount} người`}
+                          <div className="flex-1">
+                            <h3 className="font-bold !text-black" style={{ color: '#000000' }}>{notification.title}</h3>
+                            <p className="text-sm !text-gray-700 line-clamp-2" style={{ color: '#374151' }}>{notification.content}</p>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
+                              <Badge variant="outline" className="text-xs">
+                                {notification.isSystem ? "🌐 Hệ thống" : "👤 Cá nhân"}
+                              </Badge>
+                              <span className="flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3 text-green-600" />
+                                <span className="font-medium text-green-600">{notification.readCount} đã đọc</span>
                               </span>
-                              <span className="font-semibold text-gray-900">Gửi bởi: {notification.sentBy}</span>
-                              <span className="font-semibold text-gray-900">Thời gian: {formatTimeAgo(notification.sentAt)}</span>
+                              <span className="flex items-center gap-1">
+                                <XCircle className="w-3 h-3 text-gray-500" />
+                                <span className="font-medium text-gray-600">{notification.unreadCount} chưa đọc</span>
+                              </span>
+                              <span className="text-gray-500">
+                                ({readPercentage}% đã xem)
+                              </span>
+                              {notification.sender && (
+                                <span className="text-gray-500">
+                                  Gửi bởi: {notification.sender.fullname || notification.sender.username}
+                                </span>
+                              )}
+                              <span className="text-gray-500">
+                                {formatTimeAgo(notification.createdAt)}
+                              </span>
                             </div>
                           </div>
                         </div>
-                        <Badge className={notification.status === "sent" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                          {notification.status === "sent" ? "Đã gửi" : "Đang gửi"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-100">
+                                <MoreHorizontal className="w-5 h-5 text-gray-700" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditNotification(notification)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Chỉnh sửa
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onClick={() => handleDeleteNotification(notification)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Xóa
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                    ))}
+                      );
+                    })}
                     
                     {notifications.length === 0 && (
                       <div className="text-center py-12 text-gray-500">
@@ -1863,6 +2650,17 @@ export default function AdminContentAndNotificationsPage() {
                   <span className="font-semibold">Ngày: {new Date().toLocaleDateString('vi-VN')}</span>
                 </div>
               </div>
+
+              {/* Preview Featured Image */}
+              {previewData.image && (
+                <div className="my-6">
+                  <img
+                    src={previewData.image}
+                    alt={previewData.title}
+                    className="w-full max-h-96 object-contain rounded-lg border border-gray-300 shadow-md"
+                  />
+                </div>
+              )}
               
               {/* Preview Content */}
               <div className="prose prose-gray max-w-none">
@@ -1985,6 +2783,66 @@ export default function AdminContentAndNotificationsPage() {
                   className="mt-1"
                 />
               </div>
+
+              {/* Image Upload */}
+              <div>
+                <Label className="text-black font-semibold">📸 Hình ảnh nổi bật (tùy chọn)</Label>
+                <div className="mt-2">
+                  <input
+                    id="edit-news-image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (!file.type.startsWith("image/")) {
+                        error("Vui lòng chọn file hình ảnh");
+                        return;
+                      }
+                      if (file.size > 5 * 1024 * 1024) {
+                        error("Kích thước ảnh không được vượt quá 5MB");
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        const base64String = reader.result as string;
+                        setEditingNews({...editingNews, image: base64String});
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex items-start gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById("edit-news-image")?.click()}
+                      className="flex-shrink-0"
+                    >
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                      Chọn ảnh mới
+                    </Button>
+                    {editingNews.image && (
+                      <div className="relative">
+                        <img
+                          src={editingNews.image}
+                          alt="Preview"
+                          className="w-32 h-32 object-cover rounded-lg border-2 border-gray-300"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+                          onClick={() => setEditingNews({...editingNews, image: undefined})}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           
@@ -2038,6 +2896,17 @@ export default function AdminContentAndNotificationsPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Featured Image */}
+              {viewingNews.image && (
+                <div className="my-6">
+                  <img
+                    src={viewingNews.image}
+                    alt={viewingNews.title}
+                    className="w-full max-h-96 object-contain rounded-lg border border-gray-300 shadow-md"
+                  />
+                </div>
+              )}
               
               {/* News Content */}
               <div className="prose prose-gray max-w-none">
@@ -2167,6 +3036,101 @@ export default function AdminContentAndNotificationsPage() {
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
               ) : null}
               {reportAction === "approve" ? "Duyệt tố cáo" : "Từ chối tố cáo"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Notification Modal */}
+      <Dialog open={showEditNotificationModal} onOpenChange={setShowEditNotificationModal}>
+        <DialogContent className="max-w-2xl bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-black font-bold text-xl">Chỉnh sửa Thông báo</DialogTitle>
+            <DialogDescription className="text-gray-800 font-medium">
+              Lưu ý: Chỉnh sửa thông báo đã gửi có thể không được hỗ trợ
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingNotification && (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-notification-title" className="text-black font-semibold">Tiêu đề</Label>
+                <Input
+                  id="edit-notification-title"
+                  value={editingNotification.title}
+                  onChange={(e) => setEditingNotification({...editingNotification, title: e.target.value})}
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-notification-content" className="text-black font-semibold">Nội dung</Label>
+                <Textarea
+                  id="edit-notification-content"
+                  value={editingNotification.content}
+                  onChange={(e) => setEditingNotification({...editingNotification, content: e.target.value})}
+                  rows={6}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditNotificationModal(false)}>
+              Hủy
+            </Button>
+            <Button 
+              onClick={handleUpdateNotification}
+              disabled={loading.sending === LOADING_STATES.LOADING}
+            >
+              {loading.sending === LOADING_STATES.LOADING ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : null}
+              Cập nhật
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Notification Confirmation Modal */}
+      <Dialog open={showDeleteNotificationModal} onOpenChange={setShowDeleteNotificationModal}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-black font-bold text-xl">Xác nhận xóa thông báo</DialogTitle>
+            <DialogDescription className="text-gray-800 font-medium">
+              Bạn có chắc chắn muốn xóa thông báo này?
+            </DialogDescription>
+          </DialogHeader>
+          
+          {deletingNotification && (
+            <div className="space-y-3">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h4 className="font-semibold text-red-900 mb-1">{deletingNotification.title}</h4>
+                <p className="text-sm text-red-700">{deletingNotification.message}</p>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ Thông báo đã gửi không thể xóa khỏi hệ thống. Tính năng này hiện chưa được hỗ trợ.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteNotificationModal(false)}>
+              Hủy
+            </Button>
+            <Button 
+              onClick={handleConfirmDeleteNotification}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={loading.sending === LOADING_STATES.LOADING}
+            >
+              {loading.sending === LOADING_STATES.LOADING ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : null}
+              Xóa thông báo
             </Button>
           </DialogFooter>
         </DialogContent>

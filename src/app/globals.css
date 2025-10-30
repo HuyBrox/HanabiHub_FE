@@ -144,6 +144,23 @@
     @apply bg-background text-foreground;
   }
 
+  /* 🔧 FIX: Date/Time input visibility in dark theme */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    background-color: white !important;
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0);
+    opacity: 1;
+    cursor: pointer;
+  }
+
   /* Custom scrollbar styles */
   * {
     scrollbar-width: thin;

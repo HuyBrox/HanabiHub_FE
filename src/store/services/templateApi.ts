@@ -1,6 +1,8 @@
-import axiosClient from "@/api/axioxClient";
+// src/store/services/templateApi.ts
+// ✅ RTK Query API for Template Management
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-// Types
+// ==================== TYPES ====================
 export interface TemplateItem {
   _id: string;
   name: string;
@@ -25,63 +27,146 @@ export interface TemplateStats {
   totalUsage: number;
 }
 
-// API Functions using axiosClient (with cookie authentication)
-export const templateApi = {
-  // Get templates list
-  getTemplatesList: async (params: { search?: string; type?: string } = {}) => {
-    const queryParams = new URLSearchParams();
-    if (params.search) queryParams.append('search', params.search);
-    if (params.type) queryParams.append('type', params.type);
+export interface GetTemplatesParams {
+  search?: string;
+  type?: string;
+}
 
-    const response: any = await axiosClient.get(`/templates?${queryParams.toString()}`);
-    
-    // Transform backend response to frontend expected format
-    if (response.success && response.data) {
-      const { items, total, page, limit } = response.data;
-      return {
-        success: true,
-        data: items || [],
-        pagination: {
-          page: page || 1,
-          limit: limit || 20,
-          total: total || 0,
-          totalPages: Math.ceil((total || 0) / (limit || 20))
+export interface TemplateListResponse {
+  success: boolean;
+  data: TemplateItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface TemplateResponse {
+  success: boolean;
+  data: TemplateItem;
+  message?: string;
+}
+
+export interface TemplateStatsResponse {
+  success: boolean;
+  data: TemplateStats;
+}
+
+// ==================== BASE QUERY ====================
+const baseQuery = fetchBaseQuery({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
+  credentials: "include", // Cookie authentication
+  prepareHeaders: (headers) => {
+    headers.set("Content-Type", "application/json");
+    return headers;
+  },
+});
+
+// ==================== RTK QUERY API ====================
+export const templateApi = createApi({
+  reducerPath: "templateApi",
+  baseQuery,
+  tagTypes: ["Templates", "TemplateStats"],
+  endpoints: (builder) => ({
+    // ================== GET TEMPLATES LIST ==================
+    getTemplatesList: builder.query<TemplateListResponse, GetTemplatesParams>({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.search) queryParams.append("search", params.search);
+        if (params.type) queryParams.append("type", params.type);
+
+        return {
+          url: `/templates?${queryParams.toString()}`,
+          method: "GET",
+        };
+      },
+      transformResponse: (response: any) => {
+        // Transform backend response to expected format
+        if (response.success && response.data) {
+          const { items, total, page, limit } = response.data;
+          return {
+            success: true,
+            data: items || [],
+            pagination: {
+              page: page || 1,
+              limit: limit || 20,
+              total: total || 0,
+              totalPages: Math.ceil((total || 0) / (limit || 20)),
+            },
+          };
         }
-      };
-    }
-    
-    return response;
-  },
+        return response;
+      },
+      providesTags: ["Templates"],
+    }),
 
-  // Create template
-  createTemplate: async (data: CreateTemplateRequest) => {
-    return axiosClient.post('/templates', data);
-  },
+    // ================== CREATE TEMPLATE ==================
+    createTemplate: builder.mutation<TemplateResponse, CreateTemplateRequest>({
+      query: (data) => ({
+        url: "/templates",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Templates", "TemplateStats"],
+    }),
 
-  // Update template
-  updateTemplate: async (id: string, data: CreateTemplateRequest) => {
-    return axiosClient.put(`/templates/${id}`, data);
-  },
+    // ================== UPDATE TEMPLATE ==================
+    updateTemplate: builder.mutation<TemplateResponse, { id: string; data: CreateTemplateRequest }>({
+      query: ({ id, data }) => ({
+        url: `/templates/${id}`,
+        method: "PUT",
+        body: data,
+      }),
+      invalidatesTags: ["Templates", "TemplateStats"],
+    }),
 
-  // Delete template
-  deleteTemplate: async (id: string) => {
-    return axiosClient.delete(`/templates/${id}`);
-  },
+    // ================== DELETE TEMPLATE ==================
+    deleteTemplate: builder.mutation<{ success: boolean; message: string }, string>({
+      query: (id) => ({
+        url: `/templates/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Templates", "TemplateStats"],
+    }),
 
-  // Use template
-  useTemplate: async (id: string) => {
-    return axiosClient.post(`/templates/${id}/use`);
-  },
+    // ================== USE TEMPLATE ==================
+    useTemplate: builder.mutation<TemplateResponse, string>({
+      query: (id) => ({
+        url: `/templates/${id}/use`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Templates", "TemplateStats"],
+    }),
 
-  // Get template stats
-  getTemplateStats: async () => {
-    return axiosClient.get('/templates/stats');
-  },
+    // ================== GET TEMPLATE STATS ==================
+    getTemplateStats: builder.query<TemplateStatsResponse, void>({
+      query: () => ({
+        url: "/templates/stats",
+        method: "GET",
+      }),
+      providesTags: ["TemplateStats"],
+    }),
 
-  // Export templates
-  exportTemplates: async (format: 'excel' | 'csv' = 'excel') => {
-    return axiosClient.get(`/templates/export?format=${format}`, {
-      responseType: 'blob'
-    });
-  }
-};
+    // ================== EXPORT TEMPLATES ==================
+    exportTemplates: builder.query<Blob, "excel" | "csv">({
+      query: (format = "excel") => ({
+        url: `/templates/export?format=${format}`,
+        method: "GET",
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+  }),
+});
+
+// ==================== EXPORT HOOKS ====================
+export const {
+  useGetTemplatesListQuery,
+  useCreateTemplateMutation,
+  useUpdateTemplateMutation,
+  useDeleteTemplateMutation,
+  useUseTemplateMutation,
+  useGetTemplateStatsQuery,
+  useLazyExportTemplatesQuery,
+} = templateApi;
