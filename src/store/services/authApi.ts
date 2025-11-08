@@ -66,12 +66,12 @@ export const authApi = createApi({
     registerUser: builder.mutation<
       any,
       {
-        username: string
-        fullname: string
-        email: string
-        password: string
-        confirmPassword: string
-        otp: string
+        username: string;
+        fullname: string;
+        email: string;
+        password: string;
+        confirmPassword: string;
+        otp: string;
       }
     >({
       query: (body) => ({
@@ -79,6 +79,18 @@ export const authApi = createApi({
         method: "POST",
         body,
       }),
+    }),
+    // Google OAuth2 login
+    googleLogin: builder.mutation<
+      AuthResponse,
+      { idToken?: string; accessToken?: string }
+    >({
+      query: (body) => ({
+        url: "/google",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Auth"],
     }),
   }),
 });
@@ -90,4 +102,5 @@ export const {
   useGetCurrentUserQuery,
   useSendOtpRegisterMutation,
   useRegisterUserMutation,
+  useGoogleLoginMutation,
 } = authApi;

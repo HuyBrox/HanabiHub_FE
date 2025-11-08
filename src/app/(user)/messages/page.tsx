@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Search, Edit, Phone, Video, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +10,15 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/language-context";
 import { useAuth } from "@/hooks/useAuth";
 import { useGetConversationsQuery } from "@/store/services/messageApi";
+import {
+  useGetUserProfileByIdQuery,
+  useGetMyFriendsQuery,
+} from "@/store/services/userApi";
 import { withAuth } from "@/components/auth";
 import { ConversationUI } from "@/types/message";
 import { ChatArea } from "@/components/chat";
+import { useSocketContext } from "@/providers/SocketProvider";
+import { playNotificationSound } from "@/lib/notificationSound";
 
 // Utility function để format timestamp
 const formatTimestamp = (timestamp: string): string => {
@@ -64,12 +71,16 @@ const transformConversationToUI = (
 };
 
 function MessagesPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const userIdFromUrl = searchParams.get("userId");
   const [selectedConversation, setSelectedConversation] = useState<
     string | null
   >(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { socket, connected } = useSocketContext();
 
   // Fetch conversations từ API
   const {
@@ -86,14 +97,36 @@ function MessagesPage() {
     }
   );
 
+  // Fetch friends để lấy online status với polling
+  const { data: friendsData } = useGetMyFriendsQuery(undefined, {
+    pollingInterval: 30000, // Poll mỗi 30s để update online status
+    refetchOnMountOrArgChange: true,
+  });
+
+  // Fetch user profile nếu có userId trong URL nhưng chưa có conversation
+  const {
+    data: userProfileData,
+    isLoading: userProfileLoading,
+  } = useGetUserProfileByIdQuery(userIdFromUrl || "", {
+    skip: !userIdFromUrl || conversationsLoading,
+  });
+
   // Transform data và filter theo search
   const conversations = useMemo(() => {
     if (!conversationsData?.data?.items || !user?._id) return [];
 
-    return conversationsData.data.items.map((conv) =>
-      transformConversationToUI(conv, user._id)
-    );
-  }, [conversationsData, user?._id]);
+    const friends = friendsData?.data?.friends || [];
+
+    return conversationsData.data.items.map((conv) => {
+      const convUI = transformConversationToUI(conv, user._id);
+      // Update online status từ friends list
+      const friend = friends.find((f: any) => f._id === convUI.partnerId);
+      if (friend) {
+        convUI.online = friend.isOnline;
+      }
+      return convUI;
+    });
+  }, [conversationsData, user?._id, friendsData]);
 
   const filteredConversations = useMemo(() => {
     return conversations.filter((conv) =>
@@ -101,7 +134,97 @@ function MessagesPage() {
     );
   }, [conversations, searchQuery]);
 
+  // Tự động chọn conversation dựa trên userId từ URL
+  useEffect(() => {
+    if (userIdFromUrl && conversations.length > 0) {
+      // Tìm conversation có partnerId trùng với userId
+      const foundConversation = conversations.find(
+        (conv) => conv.partnerId === userIdFromUrl
+      );
+      if (foundConversation) {
+        setSelectedConversation(foundConversation.id);
+      }
+    } else if (!userIdFromUrl) {
+      // Nếu không có userId trong URL, clear selected conversation
+      setSelectedConversation(null);
+    }
+  }, [userIdFromUrl, conversations]);
+
+  // Handler để chọn conversation và cập nhật URL
+  const handleSelectConversation = (conversation: ConversationUI) => {
+    setSelectedConversation(conversation.id);
+    // Cập nhật URL với userId
+    router.push(`/messages?userId=${conversation.partnerId}`);
+  };
+
+  // Handler để đóng conversation và xóa query parameter
+  const handleCloseConversation = () => {
+    setSelectedConversation(null);
+    router.push("/messages");
+  };
+
   const selectedConv = conversations.find((c) => c.id === selectedConversation);
+
+  // Listen to socket for new messages and play sound if not in active conversation
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    const handleNewMessage = (payload: {
+      messageId: string;
+      senderId: string;
+      receiverId: string;
+      message: string;
+      timestamp: string | Date;
+    }) => {
+      console.log("[MessagesPage] newMessage:", payload);
+
+      // Lấy partnerId của conversation hiện tại
+      const currentPartnerId = selectedConv?.partnerId || userIdFromUrl;
+
+      // Nếu tin nhắn KHÔNG từ người đang chat → phát âm thanh
+      if (payload.senderId !== currentPartnerId) {
+        playNotificationSound();
+      }
+    };
+
+    socket.on("newMessage", handleNewMessage);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [socket, connected, selectedConv, userIdFromUrl]);
+
+  // Tạo conversation tạm từ user profile nếu có userId nhưng chưa có conversation
+  const tempConversation: ConversationUI | null = useMemo(() => {
+    if (
+      userIdFromUrl &&
+      !selectedConv &&
+      userProfileData?.data &&
+      !conversationsLoading
+    ) {
+      const userProfile = userProfileData.data;
+      // Chỉ tạo conversation tạm nếu có quyền nhắn tin
+      if (userProfile.canMessage) {
+        return {
+          id: `temp-${userIdFromUrl}`,
+          name: userProfile.fullname || userProfile.username || "Unknown",
+          avatar:
+            userProfile.avatar || "/images/placeholders/placeholder.svg",
+          lastMessage: "Chưa có tin nhắn",
+          timestamp: "",
+          unread: 0,
+          online: userProfile.isOnline || false,
+          partnerId: userIdFromUrl,
+        };
+      }
+    }
+    return null;
+  }, [
+    userIdFromUrl,
+    selectedConv,
+    userProfileData,
+    conversationsLoading,
+  ]);
 
   // Loading state
   if (conversationsLoading) {
@@ -194,7 +317,7 @@ function MessagesPage() {
               filteredConversations.map((conversation) => (
                 <div
                   key={conversation.id}
-                  onClick={() => setSelectedConversation(conversation.id)}
+                  onClick={() => handleSelectConversation(conversation)}
                   className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
                     selectedConversation === conversation.id ? "bg-muted" : ""
                   }`}
@@ -248,8 +371,36 @@ function MessagesPage() {
         {selectedConversation && selectedConv ? (
           <ChatArea
             conversation={selectedConv}
-            onClose={() => setSelectedConversation(null)}
+            onClose={handleCloseConversation}
           />
+        ) : tempConversation && !userProfileLoading ? (
+          <ChatArea
+            conversation={tempConversation}
+            onClose={handleCloseConversation}
+          />
+        ) : userIdFromUrl && userProfileData?.data && !userProfileData.data.canMessage ? (
+          /* No permission to message */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-24 h-24 mx-auto mb-4 rounded-full border-2 border-muted flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center">
+                  <MessageCircle className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Không thể nhắn tin</h2>
+              <p className="text-muted-foreground mb-4 max-w-sm">
+                {userProfileData.data.isPrivate
+                  ? "Profile này là riêng tư. Bạn cần follow để nhắn tin."
+                  : "Bạn cần follow người dùng này để nhắn tin."}
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/profile/${userIdFromUrl}`)}
+              >
+                Xem profile
+              </Button>
+            </div>
+          </div>
         ) : (
           /* Empty State */
           <div className="flex-1 flex items-center justify-center">

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,13 +18,18 @@ import { ChatDockProps } from "@/types/chat";
 import { ConversationUI, MessageUI } from "@/types/message";
 import { useAuth } from "@/hooks/useAuth";
 import { useSocketMessages } from "@/hooks/useSocketMessages";
+import { useSocketContext } from "@/providers/SocketProvider";
 import {
   useGetConversationsQuery,
   useGetMessagesQuery,
   useSendMessageMutation,
+  useMarkAsReadMutation,
 } from "@/store/services/messageApi";
+import { useGetMyFriendsQuery } from "@/store/services/userApi";
 import styles from "./ChatDock.module.css";
 import { useCall } from "@/hooks/useCall";
+import { Users } from "lucide-react";
+import { playNotificationSound } from "@/lib/notificationSound";
 
 const transformConversationToUI = (
   conversation: any,
@@ -59,17 +64,29 @@ const transformMessageToUI = (
   message: any,
   currentUserId: string
 ): MessageUI => {
+  const isMyMessage = message.senderId === currentUserId;
+  // Xác định status cho message của mình
+  let status: "sending" | "sent" | "delivered" | "read" | "failed" | undefined;
+  if (isMyMessage) {
+    if (message.isRead) {
+      status = "read";
+    } else {
+      // Mặc định là "sent", sẽ được cập nhật bởi socket events
+      status = "sent";
+    }
+  }
+
   return {
     id: message._id,
     text: message.message,
-    sender: message.senderId === currentUserId ? "me" : "other",
+    sender: isMyMessage ? "me" : "other",
     timestamp: new Date(message.createdAt).toLocaleTimeString("vi-VN", {
       hour: "2-digit",
       minute: "2-digit",
     }),
     read: message.isRead,
     createdAt: new Date(message.createdAt),
-    status: message.senderId === currentUserId ? ("sent" as const) : undefined,
+    status,
   };
 };
 
@@ -119,6 +136,26 @@ const formatTimeSeparator = (date: Date): string => {
     hour: "2-digit",
     minute: "2-digit",
   });
+};
+
+const formatLastActive = (lastActiveAt: string): string => {
+  const now = new Date();
+  const lastActive = new Date(lastActiveAt);
+  const diffInMinutes = Math.floor(
+    (now.getTime() - lastActive.getTime()) / (1000 * 60)
+  );
+
+  if (diffInMinutes < 1) return "Vừa xong";
+  if (diffInMinutes < 60) return `${diffInMinutes} phút`;
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} giờ`;
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays} ngày`;
+
+  const diffInWeeks = Math.floor(diffInDays / 7);
+  return `${diffInWeeks} tuần`;
 };
 
 interface IndividualChatWindowProps {
@@ -186,11 +223,6 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
 
           // Scroll to bottom for new message
           setTimeout(() => scrollToBottom(), 50);
-
-          // Auto mark as read if conversation is open
-          setTimeout(() => {
-            markMessageAsSeen(payload.messageId, payload.senderId);
-          }, 1000);
         }
       },
       onUserTyping: (payload) => {
@@ -213,6 +245,32 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
           }
         }
       },
+      onMessageDelivered: (payload) => {
+        // Cập nhật status của message khi được gửi thành công
+        // Chỉ cập nhật message của mình (sender === "me")
+        if (payload.messageId) {
+          setAllMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === payload.messageId && msg.sender === "me"
+                ? { ...msg, status: "delivered" as const }
+                : msg
+            )
+          );
+        }
+      },
+      onMessageSeen: (payload) => {
+        // Cập nhật status của message khi được đánh dấu đã đọc
+        // Chỉ cập nhật message của mình (sender === "me")
+        if (payload.messageId) {
+          setAllMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === payload.messageId && msg.sender === "me"
+                ? { ...msg, status: "read" as const, read: true }
+                : msg
+            )
+          );
+        }
+      },
     });
 
   // Fetch messages for this conversation
@@ -228,6 +286,9 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
 
   // Send message mutation
   const [sendMessage, { isLoading: sendingMessage }] = useSendMessageMutation();
+
+  // Mark messages as read mutation
+  const [markAsRead] = useMarkAsReadMutation();
 
   // Load more messages when scrolling to top
   const loadMoreMessages = async () => {
@@ -317,9 +378,17 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
     return [];
   }, [allMessages, messagesData, user?._id]);
 
+  // Reset messages when conversation changes
+  useEffect(() => {
+    setAllMessages([]);
+    setCurrentPage(1);
+    setHasMoreMessages(true);
+    setIsInitialLoad(true);
+  }, [conversation.partnerId]);
+
   // Update allMessages when initial data loads
   useEffect(() => {
-    if (messagesData?.data?.items && user?._id && allMessages.length === 0) {
+    if (messagesData?.data?.items && user?._id) {
       const initialMessages = messagesData.data.items
         .map((msg) => transformMessageToUI(msg, user._id))
         .reverse();
@@ -336,7 +405,7 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
         setHasMoreMessages(false);
       }
     }
-  }, [messagesData, user?._id, allMessages.length]);
+  }, [messagesData, user?._id, conversation.partnerId]);
 
   // Auto scroll to bottom when messages load or new message is sent
   useEffect(() => {
@@ -346,6 +415,18 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
       setIsInitialLoad(false);
     }
   }, [displayMessages, isInitialLoad]);
+
+  // Auto scroll to bottom when typing indicator appears
+  useEffect(() => {
+    if (isPartnerTyping && messagesContainerRef.current) {
+      // Scroll xuống để hiển thị typing indicator
+      const container = messagesContainerRef.current;
+      // Sử dụng setTimeout để đảm bảo DOM đã render typing indicator
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 50);
+    }
+  }, [isPartnerTyping]);
 
   // Handle send message
   const handleSendMessage = async () => {
@@ -393,17 +474,30 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
     setTimeout(() => scrollToBottom(), 50);
 
     try {
-      await sendMessage({
+      const response = await sendMessage({
         receiverId: conversation.partnerId,
         message: messageText,
       }).unwrap();
 
-      // Message sent successfully - update status to "sent"
-      setAllMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempMessage.id ? { ...msg, status: "sent" as const } : msg
-        )
-      );
+      // Replace temp message with real message from API
+      if (response.data?.message) {
+        const realMessage = transformMessageToUI(
+          response.data.message,
+          user?._id || ""
+        );
+        setAllMessages((prev) =>
+          prev.map((msg) => (msg.id === tempMessage.id ? realMessage : msg))
+        );
+      } else {
+        // Fallback: update status to "sent" if no response data
+        setAllMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === tempMessage.id
+              ? { ...msg, status: "sent" as const }
+              : msg
+          )
+        );
+      }
 
       // Focus input after sending
       setTimeout(() => {
@@ -662,21 +756,27 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
                       </div>
                       {/* Status indicator chỉ cho tin nhắn mới nhất của mình */}
                       {isMyLatestMessage && message.status && (
-                        <div className={cn(
-                          "text-xs mt-1.5",
-                          message.sender === "me" ? "text-right" : "text-left"
-                        )}>
+                        <div
+                          className={cn(
+                            "text-xs mt-1.5",
+                            message.sender === "me" ? "text-right" : "text-left"
+                          )}
+                        >
                           {message.status === "sending" && (
                             <span className="flex items-center gap-1.5 text-gray-400">
                               <div className="w-3 h-3 border border-gray-400 border-t-transparent rounded-full animate-spin"></div>
                               Đang gửi
                             </span>
                           )}
-                          {message.status === "sent" && <span className="text-gray-400">Đã gửi</span>}
+                          {message.status === "sent" && (
+                            <span className="text-gray-400">Đã gửi</span>
+                          )}
                           {message.status === "delivered" && (
                             <span className="text-gray-400">Đã nhận</span>
                           )}
-                          {message.status === "read" && <span className="text-blue-500">Đã xem</span>}
+                          {message.status === "read" && (
+                            <span className="text-blue-500">Đã xem</span>
+                          )}
                           {message.status === "failed" && (
                             <span className="flex items-center gap-1.5 text-red-500">
                               <svg
@@ -710,7 +810,7 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
           <div className="flex justify-start mb-2">
             <div className="bg-gray-200 text-gray-600 px-3 py-2 rounded-2xl rounded-bl-md text-xs">
               <div className="flex items-center gap-1">
-                <span>Đang soạn tin nhắn</span>
+                <span>Đang nhập</span>
                 <div className="flex gap-1">
                   <div className="w-1 h-1 bg-gray-500 rounded-full animate-pulse"></div>
                   <div
@@ -770,6 +870,10 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
               }
             }}
             onKeyDown={handleKeyPress}
+            onFocus={() => {
+              // Mark all messages as read when user focuses on input
+              markAsRead({ partnerId: conversation.partnerId });
+            }}
             placeholder="Nhập tin nhắn..."
             disabled={sendingMessage}
             className="flex-1 h-10 text-sm rounded-full border-gray-200 focus:border-orange-400 focus:ring-orange-400/20"
@@ -798,6 +902,11 @@ const IndividualChatWindow: React.FC<IndividualChatWindowProps> = ({
 export function ChatDock({}: ChatDockProps) {
   const { user } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"messages" | "friends">(
+    "messages"
+  );
+  const { socket, connected } = useSocketContext();
 
   // Detect mobile screen
   const [isMobile, setIsMobile] = useState(false);
@@ -817,16 +926,40 @@ export function ChatDock({}: ChatDockProps) {
     data: conversationsData,
     isLoading: conversationsLoading,
     error: conversationsError,
+    refetch: refetchConversations,
   } = useGetConversationsQuery({ page: 1, limit: 10 });
+
+  // Fetch friends từ API với polling để update online status
+  const {
+    data: friendsData,
+    isLoading: friendsLoading,
+    error: friendsError,
+    refetch: refetchFriends,
+  } = useGetMyFriendsQuery(undefined, {
+    pollingInterval: 30000, // Poll mỗi 30s để đảm bảo online status luôn đúng
+    refetchOnMountOrArgChange: true,
+  });
+
+  // Format friends data
+  const friends = useMemo(() => {
+    if (!friendsData?.data?.friends) return [];
+    return friendsData.data.friends;
+  }, [friendsData]);
 
   // Transform conversations data
   const conversations = useMemo(() => {
     if (!conversationsData?.data?.items || !user?._id) return [];
 
-    return conversationsData.data.items.map((conv) =>
-      transformConversationToUI(conv, user._id)
-    );
-  }, [conversationsData, user?._id]);
+    return conversationsData.data.items.map((conv) => {
+      const convUI = transformConversationToUI(conv, user._id);
+      // Update online status từ friends list
+      const friend = friends.find((f: any) => f._id === convUI.partnerId);
+      if (friend) {
+        convUI.online = friend.isOnline;
+      }
+      return convUI;
+    });
+  }, [conversationsData, user?._id, friends]);
 
   // Lưu state openChats vào localStorage để giữ trạng thái khi reload
   const [openChats, setOpenChats] = useState<string[]>(() => {
@@ -837,22 +970,57 @@ export function ChatDock({}: ChatDockProps) {
     return [];
   });
 
+  // Lưu temp conversations (conversation được tạo từ friends list)
+  const [tempConversations, setTempConversations] = useState<
+    Map<string, ConversationUI>
+  >(new Map());
+
   const [showChatList, setShowChatList] = useState(false);
 
   const totalUnreadMessages = conversations.reduce((total, chat) => {
     return total + (chat.unread || 0);
   }, 0);
 
-  const openChat = (chatId: string) => {
+  const openChat = (chatId: string, tempConv?: ConversationUI) => {
     if (openChats.includes(chatId)) return;
 
     const newOpenChats = [...openChats, chatId].slice(-3); // Giới hạn tối đa 3 chat
     setOpenChats(newOpenChats);
 
+    // Nếu có temp conversation, lưu vào state
+    if (tempConv) {
+      setTempConversations((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(chatId, tempConv);
+        return newMap;
+      });
+    }
+
     if (typeof window !== "undefined") {
       localStorage.setItem("openChats", JSON.stringify(newOpenChats));
     }
     setShowChatList(false);
+  };
+
+  const openFriendChat = (friend: any) => {
+    // Tìm existing conversation với friend này
+    const existingConv = conversations.find((c) => c.partnerId === friend._id);
+    if (existingConv) {
+      openChat(existingConv.id);
+    } else {
+      // Tạo conversation tạm
+      const tempConv: ConversationUI = {
+        id: `temp-${friend._id}`,
+        name: friend.fullname || friend.username,
+        avatar: friend.avatar || "/images/placeholders/placeholder.svg",
+        lastMessage: "",
+        timestamp: "",
+        unread: 0,
+        online: friend.isOnline,
+        partnerId: friend._id,
+      };
+      openChat(tempConv.id, tempConv);
+    }
   };
 
   const closeChat = (chatId: string) => {
@@ -867,7 +1035,9 @@ export function ChatDock({}: ChatDockProps) {
   const { initiateCall } = useCall();
 
   const makeVoiceCall = (chatId: string) => {
-    const chat = conversations.find((c) => c.id === chatId);
+    const chat =
+      conversations.find((c) => c.id === chatId) ||
+      tempConversations.get(chatId);
     const partnerId = chat?.partnerId;
     console.log("[ChatDock] makeVoiceCall:", { chatId, chat, partnerId });
     if (!partnerId) {
@@ -880,7 +1050,9 @@ export function ChatDock({}: ChatDockProps) {
   };
 
   const makeVideoCall = (chatId: string) => {
-    const chat = conversations.find((c) => c.id === chatId);
+    const chat =
+      conversations.find((c) => c.id === chatId) ||
+      tempConversations.get(chatId);
     const partnerId = chat?.partnerId;
     console.log("[ChatDock] makeVideoCall:", { chatId, chat, partnerId });
     if (!partnerId) {
@@ -891,6 +1063,91 @@ export function ChatDock({}: ChatDockProps) {
     console.log("[ChatDock] Initiating video call to partnerId:", partnerId);
     initiateCall(partnerId, "video");
   };
+
+  // Listen to socket events for online status updates and new messages
+  useEffect(() => {
+    if (!socket || !connected) return;
+
+    // Lắng nghe user status changed
+    const handleUserStatusChanged = (data: {
+      userId: string;
+      status: "online" | "offline";
+      lastActiveAt: Date;
+    }) => {
+      console.log("[ChatDock] userStatusChanged:", data);
+      // Refetch friends để cập nhật online status
+      refetchFriends();
+    };
+
+    // Lắng nghe danh sách user online
+    const handleGetOnlineUsers = (onlineUserIds: string[]) => {
+      console.log("[ChatDock] getOnlineUsers:", onlineUserIds);
+      // Refetch friends để cập nhật online status
+      refetchFriends();
+    };
+
+    // Lắng nghe tin nhắn mới và phát âm thanh nếu không đang chat với người đó
+    const handleNewMessage = (payload: {
+      messageId: string;
+      senderId: string;
+      receiverId: string;
+      message: string;
+      timestamp: string | Date;
+    }) => {
+      console.log("[ChatDock] newMessage:", payload);
+
+      // Check xem có đang ở trang messages và đang chat với người này không
+      const isOnMessagesPage = pathname === "/messages";
+      const activeUserIdFromMessages = isOnMessagesPage
+        ? searchParams.get("userId")
+        : null;
+
+      // Lấy danh sách partnerId của các chat window đang mở
+      const openChatPartnerIds = openChats
+        .map((chatId) => {
+          const conv =
+            conversations.find((c) => c.id === chatId) ||
+            tempConversations.get(chatId);
+          return conv?.partnerId;
+        })
+        .filter(Boolean);
+
+      // Nếu đang ở trang messages và đang chat với người này → KHÔNG phát âm thanh
+      if (isOnMessagesPage && activeUserIdFromMessages === payload.senderId) {
+        // Đang chat với người này trong messages page → không phát âm thanh
+        refetchConversations();
+        return;
+      }
+
+      // Nếu tin nhắn KHÔNG từ người đang chat trong ChatDock → phát âm thanh
+      if (!openChatPartnerIds.includes(payload.senderId)) {
+        playNotificationSound();
+      }
+
+      // Refetch conversations để cập nhật lastMessage
+      refetchConversations();
+    };
+
+    socket.on("userStatusChanged", handleUserStatusChanged);
+    socket.on("getOnlineUsers", handleGetOnlineUsers);
+    socket.on("newMessage", handleNewMessage);
+
+    return () => {
+      socket.off("userStatusChanged", handleUserStatusChanged);
+      socket.off("getOnlineUsers", handleGetOnlineUsers);
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [
+    socket,
+    connected,
+    refetchFriends,
+    refetchConversations,
+    openChats,
+    conversations,
+    tempConversations,
+    pathname,
+    searchParams,
+  ]);
 
   // Hide ChatDock on messages page or mobile
   const shouldHideChatDock = pathname === "/messages" || isMobile;
@@ -903,7 +1160,9 @@ export function ChatDock({}: ChatDockProps) {
     <div className="fixed bottom-0 right-2 md:right-4 z-50 flex items-end gap-1">
       {/* Individual Chat Windows */}
       {openChats.map((chatId) => {
-        const chat = conversations.find((c) => c.id === chatId);
+        const chat =
+          conversations.find((c) => c.id === chatId) ||
+          tempConversations.get(chatId);
         if (!chat) return null;
 
         return (
@@ -922,70 +1181,163 @@ export function ChatDock({}: ChatDockProps) {
       {showChatList && (
         <div
           className="absolute bottom-16 sm:bottom-20 right-0
-                      w-72 sm:w-80 bg-white rounded-xl shadow-2xl
-                      h-[27rem] sm:h-[27rem] overflow-y-auto"
+                      w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl
+                      h-[32rem] sm:h-[34rem] flex flex-col"
         >
-          {/* Header */}
-          <div className="p-3 sm:p-4 bg-gradient-to-r from-orange-400 to-orange-500 rounded-t-xl shadow-sm flex items-center gap-2">
-            <h3 className="font-semibold text-sm sm:text-base text-white whitespace-nowrap">
-              Tin nhắn
-            </h3>
+          {/* Header with Tabs */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-4 mb-3">
+              <button
+                onClick={() => setActiveTab("messages")}
+                className={cn(
+                  "flex-1 py-2 px-3 text-sm font-semibold rounded-lg transition-colors",
+                  activeTab === "messages"
+                    ? "bg-orange-500 text-white"
+                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                )}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  <span>Tin nhắn</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab("friends")}
+                className={cn(
+                  "flex-1 py-2 px-3 text-sm font-semibold rounded-lg transition-colors",
+                  activeTab === "friends"
+                    ? "bg-orange-500 text-white"
+                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                )}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span>Bạn bè</span>
+                  {friends.filter((f: any) => f.isOnline).length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-green-500 text-white text-xs rounded-full">
+                      {friends.filter((f: any) => f.isOnline).length}
+                    </span>
+                  )}
+                </div>
+              </button>
+            </div>
             <Input
-              placeholder="Tìm kiếm..."
-              className="flex-1 h-8 sm:h-9 text-xs sm:text-sm bg-white/90 focus:bg-white border-none shadow-sm placeholder-gray-400"
-              onFocus={() => setShowChatList(true)}
+              placeholder={
+                activeTab === "messages" ? "Tìm tin nhắn..." : "Tìm bạn bè..."
+              }
+              className="h-9 text-sm bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
             />
           </div>
 
           {/* Body */}
-          <div className="p-1 sm:p-2">
-            {conversationsLoading ? (
-              <div className="flex flex-col items-center justify-center py-6">
-                <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-orange-500 mb-2"></div>
-                <p className="text-xs text-gray-500">Đang tải...</p>
+          <div className="flex-1 overflow-y-auto p-2">
+            {activeTab === "messages" ? (
+              conversationsLoading ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mb-2"></div>
+                  <p className="text-sm text-gray-500">Đang tải...</p>
+                </div>
+              ) : conversationsError ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-red-500">Lỗi tải cuộc hội thoại</p>
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="text-center py-8">
+                  <MessageCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm text-gray-400">
+                    Chưa có cuộc hội thoại
+                  </p>
+                </div>
+              ) : (
+                conversations.map((chat) => (
+                  <div
+                    key={chat.id}
+                    className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors"
+                    onClick={() => openChat(chat.id)}
+                  >
+                    {/* Avatar */}
+                    <div className="relative">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={chat.avatar} />
+                        <AvatarFallback>{chat.name?.[0] ?? "?"}</AvatarFallback>
+                      </Avatar>
+                      {chat.online && (
+                        <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white dark:border-gray-800" />
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                        {chat.name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {chat.lastMessage || "Không có tin nhắn"}
+                      </p>
+                    </div>
+
+                    {/* Badge unread */}
+                    {chat.unread > 0 && (
+                      <div className="bg-orange-500 text-white text-xs rounded-full min-w-[22px] h-5 flex items-center justify-center px-1.5 font-semibold shadow">
+                        {chat.unread > 99 ? "99+" : chat.unread}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )
+            ) : friendsLoading ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mb-2"></div>
+                <p className="text-sm text-gray-500">Đang tải...</p>
               </div>
-            ) : conversationsError ? (
-              <div className="text-center py-6">
-                <p className="text-xs text-red-500">Lỗi tải cuộc hội thoại</p>
+            ) : friendsError ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-red-500">Lỗi tải danh sách bạn bè</p>
               </div>
-            ) : conversations.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-xs text-gray-400">Chưa có cuộc hội thoại</p>
+            ) : friends.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm text-gray-400">Chưa có bạn bè</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Follow lẫn nhau để trở thành bạn bè
+                </p>
               </div>
             ) : (
-              conversations.map((chat) => (
+              friends.map((friend: any) => (
                 <div
-                  key={chat.id}
-                  className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 hover:bg-orange-50 rounded-lg cursor-pointer transition"
-                  onClick={() => openChat(chat.id)}
+                  key={friend._id}
+                  className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors"
+                  onClick={() => openFriendChat(friend)}
                 >
-                  {/* Avatar */}
+                  {/* Avatar with online status */}
                   <div className="relative">
-                    <Avatar className="w-8 h-8 sm:w-10 sm:h-10 ring-2 ring-orange-100">
-                      <AvatarImage src={chat.avatar} />
-                      <AvatarFallback>{chat.name?.[0] ?? "?"}</AvatarFallback>
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={friend.avatar} />
+                      <AvatarFallback>
+                        {friend.fullname?.charAt(0) || "?"}
+                      </AvatarFallback>
                     </Avatar>
-                    {chat.online && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full border-2 border-white" />
-                    )}
+                    <div
+                      className={cn(
+                        "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800",
+                        friend.isOnline ? "bg-green-500" : "bg-gray-400"
+                      )}
+                    />
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-xs sm:text-sm text-gray-900 truncate">
-                      {chat.name}
+                    <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                      {friend.fullname || friend.username}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {chat.lastMessage || "Không có tin nhắn"}
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {friend.isOnline
+                        ? "Đang hoạt động"
+                        : friend.lastActiveAt
+                        ? `${formatLastActive(friend.lastActiveAt)}`
+                        : "Không hoạt động"}
                     </p>
                   </div>
-
-                  {/* Badge unread */}
-                  {chat.unread > 0 && (
-                    <div className="bg-orange-500 text-white text-[11px] sm:text-xs rounded-full min-w-[20px] h-5 sm:h-6 flex items-center justify-center px-1 font-medium shadow">
-                      {chat.unread > 99 ? "99+" : chat.unread}
-                    </div>
-                  )}
                 </div>
               ))
             )}
@@ -1003,10 +1355,14 @@ export function ChatDock({}: ChatDockProps) {
           <MessageCircle className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
         </Button>
         {totalUnreadMessages > 0 && (
-          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 sm:min-w-[24px] sm:h-6 flex items-center justify-center px-1 font-medium shadow-lg">
+          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 sm:min-w-[24px] sm:h-6 flex items-center justify-center px-1 font-semibold shadow-lg">
             {totalUnreadMessages > 99 ? "99+" : totalUnreadMessages}
           </div>
         )}
+        {totalUnreadMessages === 0 &&
+          friends.filter((f: any) => f.isOnline).length > 0 && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-lg" />
+          )}
       </div>
     </div>
   );

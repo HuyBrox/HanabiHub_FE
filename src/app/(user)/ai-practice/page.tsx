@@ -140,6 +140,16 @@ export default function AIPracticePage() {
   // Get weak areas - MUST be before early returns
   const weakAreas = useMemo(() => weakAreasData?.data, [weakAreasData]);
 
+  // Calculate average daily study time from last 7 days
+  const averageDailyStudyTime = useMemo(() => {
+    if (!dailyStatsData?.data || dailyStatsData.data.length === 0) {
+      return 0;
+    }
+    
+    const totalStudyTime = dailyStatsData.data.reduce((sum, stat) => sum + stat.studyTime, 0);
+    return Math.round(totalStudyTime / dailyStatsData.data.length);
+  }, [dailyStatsData]);
+
   const handleSendMessage = useCallback(async () => {
     if (!inputRef.current || !user?._id) {
       return;
@@ -704,7 +714,7 @@ export default function AIPracticePage() {
               Tiến độ khóa học
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {analysis.courseProgress.coursesInProgress} khóa đang học
+              {analysis.courseProgress.coursesInProgress || 0} khóa đang học
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -712,13 +722,16 @@ export default function AIPracticePage() {
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-muted-foreground">Đang học</p>
                 <p className="text-2xl font-bold text-primary">
-                  {analysis.courseProgress.coursesInProgress}
+                  {analysis.courseProgress.coursesInProgress || 0}
                 </p>
               </div>
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-muted-foreground">Thời gian TB</p>
                 <p className="text-2xl font-bold text-primary">
-                  {analysis.courseProgress.averageCompletionTime} ngày
+                  {averageDailyStudyTime > 0
+                    ? `${averageDailyStudyTime} phút/ngày`
+                    : "0 phút/ngày"
+                  }
                 </p>
               </div>
             </div>
@@ -777,7 +790,7 @@ export default function AIPracticePage() {
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
-                      {analysis.lessonMastery.videoLessons.completionRate}%
+                      {analysis.lessonMastery.videoLessons.completionRate || 0}%
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Tỷ lệ xem hết
@@ -785,7 +798,10 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
-                      {analysis.lessonMastery.videoLessons.averageWatchTime} phút
+                      {analysis.lessonMastery.videoLessons.averageWatchTime
+                        ? `${Math.round(analysis.lessonMastery.videoLessons.averageWatchTime)} phút`
+                        : "0 phút"
+                      }
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Thời lượng TB
@@ -793,7 +809,10 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
-                      {analysis.lessonMastery.videoLessons.rewatch} lần
+                      {analysis.lessonMastery.videoLessons.rewatch
+                        ? `${analysis.lessonMastery.videoLessons.rewatch.toFixed(1)} lần`
+                        : "0 lần"
+                      }
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Số lần xem lại
@@ -806,7 +825,7 @@ export default function AIPracticePage() {
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-green-600">
-                      {analysis.lessonMastery.taskLessons.averageScore}%
+                      {analysis.lessonMastery.taskLessons.averageScore || 0}%
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Điểm TB
@@ -814,7 +833,10 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                      {analysis.lessonMastery.taskLessons.averageAttempts} lần
+                      {analysis.lessonMastery.taskLessons.averageAttempts
+                        ? `${analysis.lessonMastery.taskLessons.averageAttempts.toFixed(1)} lần`
+                        : "0 lần"
+                      }
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Làm lại
@@ -822,7 +844,7 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-base sm:text-lg font-bold text-orange-600">
-                      {analysis.lessonMastery.taskLessons.commonMistakes.length}
+                      {analysis.lessonMastery.taskLessons.commonMistakes?.length || 0}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Lỗi thường
