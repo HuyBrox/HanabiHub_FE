@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, Edit, Phone, Video, Info } from "lucide-react";
+import { Search, Edit, Phone, Video, Info, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -256,29 +256,31 @@ function MessagesPage() {
     );
   }
 
+  const hasSelectedConversation = selectedConversation || tempConversation;
+
   return (
     <div className="flex h-full bg-background">
       {/* Left Sidebar - Conversations List */}
-      <div className="w-80 border-r border-border flex flex-col bg-card">
+      <div className={`${hasSelectedConversation ? 'hidden lg:flex' : 'flex'} w-full lg:w-80 border-r border-border flex-col bg-card`}>
         {/* Header */}
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-semibold">
+        <div className="p-3 md:p-4 border-b border-border">
+          <div className="flex items-center justify-between mb-3 md:mb-4">
+            <h1 className="text-lg md:text-xl font-semibold">
               {user?.username || "Messages"}
             </h1>
-            <Button variant="ghost" size="icon">
-              <Edit className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10">
+              <Edit className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
           </div>
 
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2 md:left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
             <Input
               placeholder="Tìm kiếm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-muted/50"
+              className="pl-8 md:pl-10 bg-muted/50 text-sm h-9 md:h-10"
             />
           </div>
         </div>
@@ -286,9 +288,9 @@ function MessagesPage() {
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-2">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-sm font-medium">Tin nhắn</span>
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 mb-3 md:mb-4 px-1">
+              <span className="text-xs md:text-sm font-medium">Tin nhắn</span>
+              <span className="text-xs md:text-sm text-muted-foreground">
                 {filteredConversations.length > 0
                   ? `${filteredConversations.length} cuộc hội thoại`
                   : "Không có cuộc hội thoại"}
@@ -296,8 +298,8 @@ function MessagesPage() {
             </div>
 
             {filteredConversations.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground text-sm">
+              <div className="text-center py-6 md:py-8">
+                <p className="text-muted-foreground text-xs md:text-sm">
                   {searchQuery
                     ? "Không tìm thấy cuộc hội thoại nào"
                     : "Chưa có cuộc hội thoại nào"}
@@ -306,7 +308,7 @@ function MessagesPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-2"
+                    className="mt-2 text-xs md:text-sm h-8 md:h-9"
                     onClick={() => refetchConversations()}
                   >
                     Làm mới
@@ -318,35 +320,35 @@ function MessagesPage() {
                 <div
                   key={conversation.id}
                   onClick={() => handleSelectConversation(conversation)}
-                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
+                  className={`flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors ${
                     selectedConversation === conversation.id ? "bg-muted" : ""
                   }`}
                 >
                   <div className="relative">
-                    <Avatar className="h-12 w-12">
+                    <Avatar className="h-10 w-10 md:h-12 md:w-12">
                       <AvatarImage
                         src={conversation.avatar}
                         alt={conversation.name}
                       />
-                      <AvatarFallback>
+                      <AvatarFallback className="text-xs md:text-sm">
                         {conversation.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     {conversation.online && (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-background rounded-full"></div>
+                      <div className="absolute -bottom-0.5 -right-0.5 md:-bottom-1 md:-right-1 w-3 h-3 md:w-4 md:h-4 bg-green-500 border-2 border-background rounded-full"></div>
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-sm truncate">
+                      <h3 className="font-medium text-xs md:text-sm truncate">
                         {conversation.name}
                       </h3>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground ml-2">
                         {conversation.timestamp}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate mt-1">
+                    <p className="text-xs md:text-sm text-muted-foreground truncate mt-0.5 md:mt-1">
                       {conversation.lastMessage}
                     </p>
                   </div>
@@ -354,7 +356,7 @@ function MessagesPage() {
                   {conversation.unread > 0 && (
                     <Badge
                       variant="destructive"
-                      className="h-5 w-5 p-0 flex items-center justify-center text-xs"
+                      className="h-4 w-4 md:h-5 md:w-5 p-0 flex items-center justify-center text-xs"
                     >
                       {conversation.unread}
                     </Badge>
@@ -367,35 +369,69 @@ function MessagesPage() {
       </div>
 
       {/* Right Side - Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className={`${hasSelectedConversation ? 'flex' : 'hidden lg:flex'} flex-1 flex-col`}>
         {selectedConversation && selectedConv ? (
-          <ChatArea
-            conversation={selectedConv}
-            onClose={handleCloseConversation}
-          />
+          <div className="flex flex-col h-full">
+            {/* Mobile back button */}
+            <div className="lg:hidden p-2 border-b border-border bg-card">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCloseConversation}
+                className="h-8"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Quay lại
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ChatArea
+                conversation={selectedConv}
+                onClose={handleCloseConversation}
+              />
+            </div>
+          </div>
         ) : tempConversation && !userProfileLoading ? (
-          <ChatArea
-            conversation={tempConversation}
-            onClose={handleCloseConversation}
-          />
+          <div className="flex flex-col h-full">
+            {/* Mobile back button */}
+            <div className="lg:hidden p-2 border-b border-border bg-card">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCloseConversation}
+                className="h-8"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Quay lại
+              </Button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ChatArea
+                conversation={tempConversation}
+                onClose={handleCloseConversation}
+              />
+            </div>
+          </div>
         ) : userIdFromUrl && userProfileData?.data && !userProfileData.data.canMessage ? (
           /* No permission to message */
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-24 h-24 mx-auto mb-4 rounded-full border-2 border-muted flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center">
-                  <MessageCircle className="h-6 w-6 text-white" />
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center max-w-sm">
+              <div className="w-16 h-16 md:w-24 md:h-24 mx-auto mb-3 md:mb-4 rounded-full border-2 border-muted flex items-center justify-center">
+                <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-yellow-500 flex items-center justify-center">
+                  <Info className="h-4 w-4 md:h-6 md:w-6 text-white" />
                 </div>
               </div>
-              <h2 className="text-xl font-semibold mb-2">Không thể nhắn tin</h2>
-              <p className="text-muted-foreground mb-4 max-w-sm">
+              <h2 className="text-lg md:text-xl font-semibold mb-2">Không thể nhắn tin</h2>
+              <p className="text-sm md:text-base text-muted-foreground mb-4">
                 {userProfileData.data.isPrivate
                   ? "Profile này là riêng tư. Bạn cần follow để nhắn tin."
                   : "Bạn cần follow người dùng này để nhắn tin."}
               </p>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => router.push(`/profile/${userIdFromUrl}`)}
+                className="text-xs md:text-sm"
               >
                 Xem profile
               </Button>
@@ -403,18 +439,18 @@ function MessagesPage() {
           </div>
         ) : (
           /* Empty State */
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-24 h-24 mx-auto mb-4 rounded-full border-2 border-muted flex items-center justify-center">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                  <Edit className="h-6 w-6 text-primary-foreground" />
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center max-w-sm">
+              <div className="w-16 h-16 md:w-24 md:h-24 mx-auto mb-3 md:mb-4 rounded-full border-2 border-muted flex items-center justify-center">
+                <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-primary flex items-center justify-center">
+                  <Edit className="h-4 w-4 md:h-6 md:w-6 text-primary-foreground" />
                 </div>
               </div>
-              <h2 className="text-xl font-semibold mb-2">Tin nhắn của bạn</h2>
-              <p className="text-muted-foreground mb-4 max-w-sm">
+              <h2 className="text-lg md:text-xl font-semibold mb-2">Tin nhắn của bạn</h2>
+              <p className="text-sm md:text-base text-muted-foreground mb-4">
                 Gửi ảnh và tin nhắn riêng tư cho bạn bè hoặc nhóm
               </p>
-              <Button className="bg-primary hover:bg-primary/90">
+              <Button className="bg-primary hover:bg-primary/90 text-xs md:text-sm h-9 md:h-10">
                 Gửi tin nhắn
               </Button>
             </div>

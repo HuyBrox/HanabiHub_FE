@@ -106,9 +106,9 @@ export function AppSidebar({}: AppSidebarProps) {
           className="text-sidebar-foreground hover:bg-sidebar-accent"
         >
           {isCollapsed || isSearchOpen ? (
-            <Menu className="h-4 w-4" />
+            <Menu className="h-5 w-5" />
           ) : (
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           )}
         </Button>
       </div>
@@ -130,14 +130,14 @@ export function AppSidebar({}: AppSidebarProps) {
               <Button
                 variant={isActive ? "default" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                   isActive &&
                     "bg-primary text-primary-foreground hover:bg-primary/90",
-                  (isCollapsed || isSearchOpen) && "px-2"
+                  (isCollapsed || isSearchOpen) && "px-2 justify-center"
                 )}
               >
-                <item.icon className="h-4 w-4 flex-shrink-0" />
-                {!isCollapsed && !isSearchOpen && <span>{t(item.key)}</span>}
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && !isSearchOpen && <span className="font-medium">{t(item.key)}</span>}
               </Button>
             </Link>
           );
@@ -154,15 +154,15 @@ export function AppSidebar({}: AppSidebarProps) {
             }
           }}
           className={cn(
-            "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+            "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
             isSearchOpen &&
               "bg-primary text-primary-foreground hover:bg-primary/90",
-            (isCollapsed || isSearchOpen) && "px-2"
+            (isCollapsed || isSearchOpen) && "px-2 justify-center"
           )}
         >
-          <Search className="h-4 w-4 flex-shrink-0" />
+          <Search className="h-5 w-5 flex-shrink-0" />
           {!isCollapsed && !isSearchOpen && (
-            <span>{t("nav.search") || "Tìm kiếm"}</span>
+            <span className="font-medium">{t("nav.search") || "Tìm kiếm"}</span>
           )}
         </Button>
 
@@ -172,14 +172,14 @@ export function AppSidebar({}: AppSidebarProps) {
             <Button
               variant={pathname === "/profile" ? "default" : "ghost"}
               className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                 pathname === "/profile" &&
                   "bg-primary text-primary-foreground hover:bg-primary/90",
-                (isCollapsed || isSearchOpen) && "px-2"
+                (isCollapsed || isSearchOpen) && "px-2 justify-center"
               )}
             >
               {(isCollapsed || isSearchOpen) ? (
-                <Avatar className="h-4 w-4">
+                <Avatar className="h-6 w-6">
                   <AvatarImage
                     src={user?.avatar || "/placeholder.svg"}
                     alt={user?.fullname || user?.username || "User"}
@@ -192,7 +192,7 @@ export function AppSidebar({}: AppSidebarProps) {
                 </Avatar>
               ) : (
                 <>
-                  <Avatar className="h-4 w-4">
+                  <Avatar className="h-6 w-6">
                     <AvatarImage
                       src={user?.avatar || "/placeholder.svg"}
                       alt={user?.fullname || user?.username || "User"}
@@ -203,7 +203,7 @@ export function AppSidebar({}: AppSidebarProps) {
                         "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="truncate">
+                  <span className="truncate font-medium">
                     {user?.fullname || user?.username || "User"}
                   </span>
                 </>
@@ -215,13 +215,13 @@ export function AppSidebar({}: AppSidebarProps) {
             <Button
               variant="ghost"
               className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
-                (isCollapsed || isSearchOpen) && "px-2"
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                (isCollapsed || isSearchOpen) && "px-2 justify-center"
               )}
             >
-              <User className="h-4 w-4 flex-shrink-0" />
+              <User className="h-5 w-5 flex-shrink-0" />
               {!isCollapsed && !isSearchOpen && (
-                <span>{t("nav.login")}</span>
+                <span className="font-medium">{t("nav.login")}</span>
               )}
             </Button>
           </Link>
@@ -247,7 +247,7 @@ export function AppSidebar({}: AppSidebarProps) {
           >
             <ModeToggle />
             {!isCollapsed && (
-              <span className="ml-3 text-sm text-sidebar-foreground self-center">
+              <span className="ml-3 text-sm text-sidebar-foreground self-center font-medium">
                 {t("nav.theme")}
               </span>
             )}
@@ -259,24 +259,24 @@ export function AppSidebar({}: AppSidebarProps) {
               variant="ghost"
               onClick={logout}
               className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
-                isCollapsed && "px-2"
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                isCollapsed && "px-2 justify-center"
               )}
             >
-              <LogOut className="h-4 w-4 flex-shrink-0" />
-              {!isCollapsed && <span>{t("nav.logout")}</span>}
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              {!isCollapsed && <span className="font-medium">{t("nav.logout")}</span>}
             </Button>
           ) : (
             <Link href="/login">
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
-                  isCollapsed && "px-2"
+                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                  isCollapsed && "px-2 justify-center"
                 )}
               >
-                <User className="h-4 w-4 flex-shrink-0" />
-                {!isCollapsed && <span>{t("nav.login")}</span>}
+                <User className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && <span className="font-medium">{t("nav.login")}</span>}
               </Button>
             </Link>
           )}

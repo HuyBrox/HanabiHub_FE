@@ -427,37 +427,37 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 shadow-sm">
-        <div className="container mx-auto px-4 py-3">
+        <div className="container mx-auto px-3 md:px-4 py-2.5 md:py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.back()}
-                className="gap-2 hover:bg-primary/10"
+                className="gap-1 md:gap-2 hover:bg-primary/10 h-8 md:h-9"
               >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Quay lại</span>
+                <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="hidden sm:inline text-xs md:text-sm">Quay lại</span>
               </Button>
-              <div className="h-8 w-px bg-border hidden sm:block" />
+              <div className="h-6 md:h-8 w-px bg-border hidden sm:block" />
               <div className="hidden md:block">
-                <h1 className="font-semibold text-base lg:text-lg line-clamp-1">
+                <h1 className="font-semibold text-sm lg:text-base xl:text-lg line-clamp-1">
                   {course.title}
                 </h1>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] lg:text-xs text-muted-foreground line-clamp-1">
                   Bài {currentLessonIndex + 1}/{lessons.length}:{" "}
                   {currentLesson?.title}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2">
               <Badge
                 variant="secondary"
-                className="hidden sm:flex gap-1.5 px-3"
+                className="hidden sm:flex gap-1 md:gap-1.5 px-2 md:px-3 text-xs"
               >
-                <Award className="h-3.5 w-3.5" />
-                <span className="text-xs font-medium">
+                <Award className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                <span className="font-medium">
                   {completedLessons}/{lessons.length}
                 </span>
               </Badge>
@@ -465,7 +465,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
               <Button
                 variant="outline"
                 size="sm"
-                className="lg:hidden"
+                className="lg:hidden h-8 w-8 md:h-9 md:w-9 p-0"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               >
                 {isSidebarOpen ? (
@@ -477,27 +477,27 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
             </div>
           </div>
 
-          <div className="mt-3 lg:hidden">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+          <div className="mt-2 md:mt-3 lg:hidden">
+            <div className="flex items-center justify-between text-[10px] md:text-xs text-muted-foreground mb-1 md:mb-1.5">
               <span>Tiến độ</span>
               <span className="font-medium">
                 {Math.round(progressPercentage)}%
               </span>
             </div>
-            <Progress value={progressPercentage} className="h-1.5" />
+            <Progress value={progressPercentage} className="h-1 md:h-1.5" />
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-4 lg:py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+      <div className="container mx-auto px-3 md:px-4 py-3 md:py-4 lg:py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-4 lg:gap-6">
           {/* Sidebar */}
           <aside
             className={cn(
               "lg:col-span-4 xl:col-span-3",
-              "fixed lg:sticky top-[73px] lg:top-[85px] left-0",
-              "h-[calc(100vh-73px)] lg:h-[calc(100vh-109px)]",
-              "w-80 sm:w-96 lg:w-full z-40",
+              "fixed lg:sticky top-[65px] md:top-[73px] lg:top-[85px] left-0",
+              "h-[calc(100vh-65px)] md:h-[calc(100vh-73px)] lg:h-[calc(100vh-109px)]",
+              "w-72 sm:w-80 md:w-96 lg:w-full z-40",
               "bg-white dark:bg-gray-900 lg:bg-transparent",
               "border-r lg:border-0 border-gray-200 dark:border-gray-800",
               "transition-transform duration-300 ease-in-out",
@@ -509,29 +509,29 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
             )}
           >
             <Card className="h-full flex flex-col border-0 lg:border rounded-none lg:rounded-lg shadow-none lg:shadow">
-              <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5">
+              <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/5 p-3 md:p-4 lg:p-6">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold">
+                  <CardTitle className="text-sm md:text-base font-semibold">
                     Nội dung khóa học
                   </CardTitle>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="lg:hidden h-8 w-8 p-0"
+                    className="lg:hidden h-7 w-7 md:h-8 md:w-8 p-0"
                     onClick={() => setIsSidebarOpen(false)}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </Button>
                 </div>
-                <div className="mt-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="mt-2 md:mt-3 space-y-1.5 md:space-y-2">
+                  <div className="flex items-center justify-between text-[10px] md:text-xs text-muted-foreground">
                     <span className="font-medium">Tiến độ học tập</span>
                     <span className="font-semibold text-primary">
                       {Math.round(progressPercentage)}%
                     </span>
                   </div>
-                  <Progress value={progressPercentage} className="h-2" />
-                  <div className="flex items-center justify-between text-xs">
+                  <Progress value={progressPercentage} className="h-1.5 md:h-2" />
+                  <div className="flex items-center justify-between text-[10px] md:text-xs">
                     <span className="text-muted-foreground">
                       {completedLessons} / {lessons.length} bài học
                     </span>
@@ -539,8 +539,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 </div>
               </CardHeader>
 
-              <CardContent className="flex-1 overflow-y-auto p-2 sm:p-3">
-                <div className="space-y-1.5">
+              <CardContent className="flex-1 overflow-y-auto p-2 md:p-3">
+                <div className="space-y-1 md:space-y-1.5">
                   {lessons.map((lesson, index) => {
                     const isCompleted = isLessonCompleted(lesson);
                     const isCurrent = currentLessonIndex === index;
@@ -555,7 +555,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                           setIsSidebarOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-start gap-3 p-3 rounded-lg text-left transition-all group",
+                          "w-full flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-lg text-left transition-all group",
                           "hover:bg-muted/70 hover:shadow-sm",
                           isCurrent
                             ? "bg-gradient-to-r from-primary/15 to-primary/5 border-2 border-primary/40 shadow-md"
@@ -564,13 +564,13 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       >
                         <div className="flex-shrink-0 mt-0.5">
                           {isCompleted ? (
-                            <div className="h-7 w-7 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-sm">
-                              <CheckCircle className="h-4 w-4 text-white" />
+                            <div className="h-6 w-6 md:h-7 md:w-7 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-sm">
+                              <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-white" />
                             </div>
                           ) : (
                             <div
                               className={cn(
-                                "h-7 w-7 rounded-full border-2 flex items-center justify-center text-xs font-semibold transition-all",
+                                "h-6 w-6 md:h-7 md:w-7 rounded-full border-2 flex items-center justify-center text-[10px] md:text-xs font-semibold transition-all",
                                 isCurrent
                                   ? "border-primary bg-primary text-primary-foreground shadow-sm"
                                   : "border-muted-foreground/30 text-muted-foreground group-hover:border-primary/50"
@@ -584,7 +584,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                         <div className="flex-1 min-w-0">
                           <p
                             className={cn(
-                              "font-medium text-sm mb-1.5 line-clamp-2 leading-snug",
+                              "font-medium text-xs md:text-sm mb-1 md:mb-1.5 line-clamp-2 leading-snug",
                               isCurrent
                                 ? "text-primary"
                                 : "text-foreground group-hover:text-primary"
@@ -592,26 +592,26 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                           >
                             {lesson.title}
                           </p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs text-muted-foreground">
                             {lesson.type === "video" ? (
-                              <div className="flex items-center gap-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded">
-                                <Play className="h-3 w-3" />
+                              <div className="flex items-center gap-0.5 md:gap-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 md:px-2 py-0.5 rounded">
+                                <Play className="h-2.5 w-2.5 md:h-3 md:w-3" />
                                 <span className="font-medium">Video</span>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded">
-                                <ListChecks className="h-3 w-3" />
+                              <div className="flex items-center gap-0.5 md:gap-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 px-1.5 md:px-2 py-0.5 rounded">
+                                <ListChecks className="h-2.5 w-2.5 md:h-3 md:w-3" />
                                 <span className="font-medium">Bài tập</span>
                               </div>
                             )}
                             <span>•</span>
-                            <Clock className="h-3 w-3" />
+                            <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
                             <span>{formatDuration(lesson.duration || 0)}</span>
                           </div>
                         </div>
 
                         {isCurrent && (
-                          <ChevronRight className="h-4 w-4 text-primary flex-shrink-0 mt-1" />
+                          <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary flex-shrink-0 mt-1" />
                         )}
                       </button>
                     );
@@ -630,7 +630,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
           )}
 
           {/* Main Content */}
-          <main className="lg:col-span-8 xl:col-span-9 space-y-4 lg:space-y-6">
+          <main className="lg:col-span-8 xl:col-span-9 space-y-3 md:space-y-4 lg:space-y-6">
             {/* Score Display - Show after submit */}
             {showResults &&
               score !== null &&
@@ -638,7 +638,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 <Card className="overflow-hidden border-0 lg:border shadow-2xl animate-in fade-in slide-in-from-top-4 duration-500">
                   <div
                     className={cn(
-                      "p-6 lg:p-8 text-center",
+                      "p-4 md:p-5 lg:p-6 xl:p-8 text-center",
                       score >= 80
                         ? "bg-gradient-to-br from-green-500 to-emerald-600"
                         : score >= 60
@@ -648,19 +648,19 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                         : "bg-gradient-to-br from-red-500 to-pink-600"
                     )}
                   >
-                    <div className="flex flex-col items-center gap-4 text-white">
+                    <div className="flex flex-col items-center gap-3 md:gap-4 text-white">
                       {score >= 80 ? (
-                        <Trophy className="h-16 w-16 lg:h-20 lg:w-20 animate-bounce" />
+                        <Trophy className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 animate-bounce" />
                       ) : score >= 60 ? (
-                        <Sparkles className="h-16 w-16 lg:h-20 lg:w-20 animate-pulse" />
+                        <Sparkles className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 animate-pulse" />
                       ) : (
-                        <XCircle className="h-16 w-16 lg:h-20 lg:w-20 animate-pulse" />
+                        <XCircle className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 animate-pulse" />
                       )}
                       <div>
-                        <h2 className="text-3xl lg:text-4xl font-bold mb-2">
+                        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-1 md:mb-2">
                           {score}%
                         </h2>
-                        <p className="text-lg lg:text-xl font-medium opacity-90">
+                        <p className="text-base md:text-lg lg:text-xl font-medium opacity-90">
                           {score >= 80
                             ? "🎉 Xuất sắc!"
                             : score >= 60
@@ -670,12 +670,12 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                             : "📚 Hãy thử lại!"}
                         </p>
                       </div>
-                      <div className="flex gap-3 mt-2">
+                      <div className="flex flex-col sm:flex-row gap-2 md:gap-3 mt-2 w-full sm:w-auto">
                         <Button
                           onClick={handleRetry}
                           variant="secondary"
                           size="lg"
-                          className="gap-2 bg-white/20 hover:bg-white/30 text-white border-white/30"
+                          className="gap-2 bg-white/20 hover:bg-white/30 text-white border-white/30 text-sm md:text-base h-9 md:h-10 lg:h-11"
                         >
                           <RotateCcw className="h-4 w-4" />
                           Làm lại
@@ -684,7 +684,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                           <Button
                             onClick={handleNextLesson}
                             size="lg"
-                            className="gap-2 bg-white text-gray-900 hover:bg-white/90"
+                            className="gap-2 bg-white text-gray-900 hover:bg-white/90 text-sm md:text-base h-9 md:h-10 lg:h-11"
                           >
                             Bài tiếp theo
                             <ChevronRight className="h-4 w-4" />
@@ -724,7 +724,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                   </div>
                   {/* Watch time indicator */}
                   {videoWatchedTime > 0 && (
-                    <div className="absolute bottom-4 right-4 bg-black/75 text-white px-3 py-1.5 rounded-lg text-sm font-medium backdrop-blur-sm">
+                    <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 bg-black/75 text-white px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-medium backdrop-blur-sm">
                       ⏱️ Đã xem: {Math.floor(videoWatchedTime / 60)}:{String(videoWatchedTime % 60).padStart(2, '0')}
                     </div>
                   )}
@@ -732,44 +732,45 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
               )}
 
               {/* Lesson Info */}
-              <CardHeader className="bg-gradient-to-r from-background to-muted/20">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <Badge variant="outline" className="font-medium">
+              <CardHeader className="bg-gradient-to-r from-background to-muted/20 p-4 md:p-5 lg:p-6">
+                <div className="flex items-start justify-between gap-3 md:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 md:gap-2 mb-2 flex-wrap">
+                      <Badge variant="outline" className="font-medium text-xs md:text-sm">
                         Bài {currentLessonIndex + 1}/{lessons.length}
                       </Badge>
                       {currentLesson?.type === "video" ? (
-                        <Badge className="bg-blue-500 hover:bg-blue-600">
-                          <Play className="h-3 w-3 mr-1" />
+                        <Badge className="bg-blue-500 hover:bg-blue-600 text-xs md:text-sm">
+                          <Play className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
                           Video
                         </Badge>
                       ) : (
-                        <Badge className="bg-orange-500 hover:bg-orange-600">
-                          <ListChecks className="h-3 w-3 mr-1" />
+                        <Badge className="bg-orange-500 hover:bg-orange-600 text-xs md:text-sm">
+                          <ListChecks className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
                           Bài tập
                         </Badge>
                       )}
                       {/* Task Timer */}
                       {currentLesson?.type === "task" && !showResults && taskElapsedTime > 0 && (
-                        <Badge variant="secondary" className="gap-1">
-                          <Clock className="h-3 w-3" />
+                        <Badge variant="secondary" className="gap-1 text-xs md:text-sm">
+                          <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
                           {Math.floor(taskElapsedTime / 60)}:{String(taskElapsedTime % 60).padStart(2, '0')}
                         </Badge>
                       )}
                       {/* Show final time after submit */}
                       {currentLesson?.type === "task" && showResults && (
-                        <Badge variant="secondary" className="gap-1">
-                          <Clock className="h-3 w-3" />
-                          Hoàn thành trong {Math.floor(taskElapsedTime / 60)}:{String(taskElapsedTime % 60).padStart(2, '0')}
+                        <Badge variant="secondary" className="gap-1 text-xs md:text-sm">
+                          <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                          <span className="hidden sm:inline">Hoàn thành trong </span>
+                          {Math.floor(taskElapsedTime / 60)}:{String(taskElapsedTime % 60).padStart(2, '0')}
                         </Badge>
                       )}
                     </div>
-                    <CardTitle className="text-xl lg:text-2xl">
+                    <CardTitle className="text-lg md:text-xl lg:text-2xl leading-tight">
                       {currentLesson?.title}
                     </CardTitle>
                     {currentLesson?.content && (
-                      <p className="mt-2 text-sm text-muted-foreground">
+                      <p className="mt-1.5 md:mt-2 text-xs md:text-sm text-muted-foreground line-clamp-2 md:line-clamp-none">
                         {currentLesson.content}
                       </p>
                     )}
@@ -777,15 +778,15 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 </div>
               </CardHeader>
 
-              <CardContent className="p-4 lg:p-6">
+              <CardContent className="p-4 md:p-5 lg:p-6">
                 {/* Video Description */}
                 {currentLesson?.type === "video" && (
                   <div className="prose dark:prose-invert max-w-none">
-                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                      <BookOpen className="h-5 w-5" />
+                    <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-3 flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 md:h-5 md:w-5" />
                       Mô tả bài học
                     </h3>
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
                       {currentLesson.content ||
                         "Không có mô tả cho bài học này."}
                     </p>
@@ -794,17 +795,17 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
                 {/* Task Content */}
                 {currentLesson?.type === "task" && currentLesson.jsonTask && (
-                  <div className="space-y-6">
+                  <div className="space-y-4 md:space-y-5 lg:space-y-6">
                     {/* Task Instructions */}
                     {currentLesson.jsonTask.instructions && (
-                      <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-lg">
-                        <div className="flex items-start gap-3">
-                          <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                      <div className="p-3 md:p-4 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-lg">
+                        <div className="flex items-start gap-2 md:gap-3">
+                          <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                           <div>
-                            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm md:text-base">
                               Hướng dẫn
                             </h4>
-                            <p className="text-sm text-blue-800 dark:text-blue-200">
+                            <p className="text-xs md:text-sm text-blue-800 dark:text-blue-200">
                               {currentLesson.jsonTask.instructions}
                             </p>
                           </div>
@@ -818,16 +819,16 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                         (item: any, index: number) => (
                           <div
                             key={item.id || index}
-                            className="p-5 lg:p-6 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border-2 border-muted space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                            className="p-4 md:p-5 lg:p-6 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border-2 border-muted space-y-3 md:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
                             style={{ animationDelay: `${index * 100}ms` }}
                           >
-                            <h3 className="font-semibold text-base lg:text-lg flex items-start gap-2">
-                              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                            <h3 className="font-semibold text-sm md:text-base lg:text-lg flex items-start gap-2">
+                              <span className="flex-shrink-0 w-6 h-6 md:w-7 md:h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs md:text-sm font-bold">
                                 {index + 1}
                               </span>
-                              <span className="flex-1">{item.question}</span>
+                              <span className="flex-1 leading-snug">{item.question}</span>
                             </h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
                               {item.options?.map((option: any) => {
                                 const isSelected =
                                   selectedAnswers[item.id] === option.key;
@@ -844,8 +845,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                     }
                                     disabled={showResults}
                                     className={cn(
-                                      "p-4 text-left border-2 rounded-lg transition-all font-medium group",
-                                      "hover:shadow-md disabled:cursor-not-allowed relative overflow-hidden",
+                                      "p-3 md:p-4 text-left border-2 rounded-lg transition-all font-medium group",
+                                      "hover:shadow-md disabled:cursor-not-allowed relative overflow-hidden text-sm md:text-base",
                                       !showResults &&
                                         isSelected &&
                                         "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20",
@@ -858,10 +859,10 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                         "border-red-500 bg-red-50 dark:bg-red-950/30 ring-2 ring-red-500/20"
                                     )}
                                   >
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2 md:gap-3">
                                       <span
                                         className={cn(
-                                          "flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all",
+                                          "flex-shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-xs md:text-sm font-bold transition-all",
                                           isSelected &&
                                             !showResults &&
                                             "border-primary bg-primary text-primary-foreground",
@@ -880,7 +881,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                           ? "✗"
                                           : option.key}
                                       </span>
-                                      <span className="flex-1">
+                                      <span className="flex-1 text-xs md:text-sm">
                                         {option.text}
                                       </span>
                                     </div>
@@ -889,9 +890,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                               })}
                             </div>
                             {showResults && item.explanation && (
-                              <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-lg animate-in fade-in slide-in-from-top-2 duration-300">
-                                <p className="text-sm font-medium text-blue-900 dark:text-blue-100 flex items-start gap-2">
-                                  <Sparkles className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                              <div className="mt-3 md:mt-4 p-3 md:p-4 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                                <p className="text-xs md:text-sm font-medium text-blue-900 dark:text-blue-100 flex items-start gap-2">
+                                  <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0 mt-0.5" />
                                   <span>{item.explanation}</span>
                                 </p>
                               </div>
@@ -913,14 +914,14 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                           return (
                             <div
                               key={item.id || index}
-                              className="p-5 lg:p-6 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border-2 border-muted space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                              className="p-4 md:p-5 lg:p-6 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border-2 border-muted space-y-3 md:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
                               style={{ animationDelay: `${index * 100}ms` }}
                             >
-                              <h3 className="font-semibold text-base lg:text-lg flex items-start gap-2">
-                                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                              <h3 className="font-semibold text-sm md:text-base lg:text-lg flex items-start gap-2">
+                                <span className="flex-shrink-0 w-6 h-6 md:w-7 md:h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs md:text-sm font-bold">
                                   {index + 1}
                                 </span>
-                                <span className="flex-1">{item.sentence}</span>
+                                <span className="flex-1 leading-snug">{item.sentence}</span>
                               </h3>
                               <div className="relative">
                                 <Input
@@ -935,7 +936,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                   disabled={showResults}
                                   placeholder="Nhập câu trả lời..."
                                   className={cn(
-                                    "w-full p-4 border-2 rounded-lg font-medium transition-all text-base",
+                                    "w-full p-3 md:p-4 border-2 rounded-lg font-medium transition-all text-sm md:text-base",
                                     "focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed",
                                     showCorrect &&
                                       "border-green-500 bg-green-50 dark:bg-green-950/30 ring-2 ring-green-500/20",
@@ -946,11 +947,11 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                   )}
                                 />
                                 {showResults && (
-                                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                  <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2">
                                     {isCorrect ? (
-                                      <CheckCircle className="h-6 w-6 text-green-500" />
+                                      <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-green-500" />
                                     ) : (
-                                      <XCircle className="h-6 w-6 text-red-500" />
+                                      <XCircle className="h-5 w-5 md:h-6 md:w-6 text-red-500" />
                                     )}
                                   </div>
                                 )}
@@ -958,8 +959,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                               {!showResults &&
                                 item.hints &&
                                 item.hints.length > 0 && (
-                                  <div className="flex flex-wrap gap-2">
-                                    <span className="text-xs font-medium text-muted-foreground">
+                                  <div className="flex flex-wrap gap-1.5 md:gap-2">
+                                    <span className="text-[10px] md:text-xs font-medium text-muted-foreground">
                                       Gợi ý:
                                     </span>
                                     {item.hints.map(
@@ -996,13 +997,13 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       <>
                         {/* Audio Player */}
                         {currentLesson.jsonTask.audioUrl && (
-                          <div className="p-5 lg:p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 rounded-xl border-2 border-purple-200 dark:border-purple-800">
-                            <div className="flex items-center gap-4">
-                              <div className="flex-shrink-0 w-12 h-12 rounded-full bg-purple-500 flex items-center justify-center">
-                                <Volume2 className="h-6 w-6 text-white" />
+                          <div className="p-4 md:p-5 lg:p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 rounded-xl border-2 border-purple-200 dark:border-purple-800">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-4">
+                              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full bg-purple-500 flex items-center justify-center">
+                                <Volume2 className="h-5 w-5 md:h-6 md:w-6 text-white" />
                               </div>
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-2">
+                              <div className="flex-1 w-full">
+                                <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-2 text-sm md:text-base">
                                   Nghe audio và trả lời câu hỏi
                                 </h4>
                                 <audio
@@ -1022,16 +1023,16 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                           (item: any, index: number) => (
                             <div
                               key={item.id || index}
-                              className="p-5 lg:p-6 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border-2 border-muted space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
+                              className="p-4 md:p-5 lg:p-6 bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl border-2 border-muted space-y-3 md:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500"
                               style={{ animationDelay: `${index * 100}ms` }}
                             >
-                              <h3 className="font-semibold text-base lg:text-lg flex items-start gap-2">
-                                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                              <h3 className="font-semibold text-sm md:text-base lg:text-lg flex items-start gap-2">
+                                <span className="flex-shrink-0 w-6 h-6 md:w-7 md:h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs md:text-sm font-bold">
                                   {index + 1}
                                 </span>
-                                <span className="flex-1">{item.question}</span>
+                                <span className="flex-1 leading-snug">{item.question}</span>
                               </h3>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
                                 {item.options?.map((option: any) => {
                                   const isSelected =
                                     selectedAnswers[item.id] === option.key;
@@ -1048,8 +1049,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                       }
                                       disabled={showResults}
                                       className={cn(
-                                        "p-4 text-left border-2 rounded-lg transition-all font-medium group",
-                                        "hover:shadow-md disabled:cursor-not-allowed",
+                                        "p-3 md:p-4 text-left border-2 rounded-lg transition-all font-medium group",
+                                        "hover:shadow-md disabled:cursor-not-allowed text-sm md:text-base",
                                         !showResults &&
                                           isSelected &&
                                           "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20",
@@ -1062,10 +1063,10 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                           "border-red-500 bg-red-50 dark:bg-red-950/30 ring-2 ring-red-500/20"
                                       )}
                                     >
-                                      <div className="flex items-center gap-3">
+                                      <div className="flex items-center gap-2 md:gap-3">
                                         <span
                                           className={cn(
-                                            "flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all",
+                                            "flex-shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full border-2 flex items-center justify-center text-xs md:text-sm font-bold transition-all",
                                             isSelected &&
                                               !showResults &&
                                               "border-primary bg-primary text-primary-foreground",
@@ -1084,7 +1085,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                             ? "✗"
                                             : option.key}
                                         </span>
-                                        <span className="flex-1">
+                                        <span className="flex-1 text-xs md:text-sm">
                                           {option.text}
                                         </span>
                                       </div>
@@ -1227,12 +1228,12 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
                     {/* Speaking Task - Coming Soon */}
                     {currentLesson.taskType === "speaking" && (
-                      <div className="p-8 lg:p-12 text-center bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/30 dark:to-rose-950/30 rounded-xl border-2 border-dashed border-pink-300 dark:border-pink-700">
-                        <Mic className="h-16 w-16 mx-auto mb-4 text-pink-500 animate-pulse" />
-                        <h3 className="text-xl font-semibold mb-2 text-pink-900 dark:text-pink-100">
+                      <div className="p-6 md:p-8 lg:p-12 text-center bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-950/30 dark:to-rose-950/30 rounded-xl border-2 border-dashed border-pink-300 dark:border-pink-700">
+                        <Mic className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-3 md:mb-4 text-pink-500 animate-pulse" />
+                        <h3 className="text-lg md:text-xl font-semibold mb-2 text-pink-900 dark:text-pink-100">
                           Bài tập phát âm
                         </h3>
-                        <p className="text-muted-foreground">
+                        <p className="text-sm md:text-base text-muted-foreground">
                           Tính năng này đang được phát triển. Vui lòng quay lại
                           sau! 🎤
                         </p>
@@ -1244,13 +1245,13 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       currentLesson.taskType !== "matching" &&
                       currentLesson.taskType !== "speaking" &&
                       !showResults && (
-                        <div className="flex justify-center pt-4">
+                        <div className="flex justify-center pt-3 md:pt-4">
                           <Button
                             onClick={handleSubmitQuiz}
                             size="lg"
-                            className="gap-2 px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+                            className="gap-2 px-6 md:px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg text-sm md:text-base h-10 md:h-11"
                           >
-                            <CheckCircle className="h-5 w-5" />
+                            <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
                             Nộp bài
                           </Button>
                         </div>
@@ -1262,35 +1263,37 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
             {/* Navigation Buttons */}
             <Card className="border-0 lg:border shadow-lg">
-              <CardContent className="p-4 lg:p-6">
-                <div className="flex items-center justify-between gap-4">
+              <CardContent className="p-3 md:p-4 lg:p-6">
+                <div className="flex items-center justify-between gap-2 md:gap-4">
                   <Button
                     variant="outline"
                     onClick={handlePrevLesson}
                     disabled={currentLessonIndex === 0}
-                    className="gap-2"
+                    className="gap-1 md:gap-2 text-xs md:text-sm h-9 md:h-10"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
                     <span className="hidden sm:inline">Bài trước</span>
+                    <span className="sm:hidden">Trước</span>
                   </Button>
 
-                  <div className="text-center flex-1">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="text-center flex-1 min-w-0 px-2">
+                    <p className="text-xs md:text-sm text-muted-foreground">
                       Bài học {currentLessonIndex + 1} / {lessons.length}
                     </p>
                     <Progress
                       value={((currentLessonIndex + 1) / lessons.length) * 100}
-                      className="h-2 mt-2 max-w-xs mx-auto"
+                      className="h-1.5 md:h-2 mt-1.5 md:mt-2 max-w-xs mx-auto"
                     />
                   </div>
 
                   <Button
                     onClick={handleNextLesson}
                     disabled={currentLessonIndex === lessons.length - 1}
-                    className="gap-2 bg-primary hover:bg-primary/90"
+                    className="gap-1 md:gap-2 bg-primary hover:bg-primary/90 text-xs md:text-sm h-9 md:h-10"
                   >
                     <span className="hidden sm:inline">Bài tiếp theo</span>
-                    <ChevronRight className="h-4 w-4" />
+                    <span className="sm:hidden">Tiếp</span>
+                    <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </Button>
                 </div>
               </CardContent>

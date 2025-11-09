@@ -145,7 +145,7 @@ export default function AIPracticePage() {
     if (!dailyStatsData?.data || dailyStatsData.data.length === 0) {
       return 0;
     }
-    
+
     const totalStudyTime = dailyStatsData.data.reduce((sum, stat) => sum + stat.studyTime, 0);
     return Math.round(totalStudyTime / dailyStatsData.data.length);
   }, [dailyStatsData]);
@@ -288,18 +288,18 @@ export default function AIPracticePage() {
   const detailedPerf = detailedPerfData?.data;
 
   return (
-    <div className="h-full flex flex-col lg:flex-row gap-4 p-2 sm:p-4 bg-background overflow-hidden">
+    <div className="h-full flex flex-col lg:flex-row gap-2 md:gap-4 p-2 md:p-3 lg:p-4 bg-background overflow-hidden">
       {/* Left Column - Analytics Dashboard */}
       <div
-        className={`flex-1 overflow-auto space-y-4 pr-0 lg:pr-2 transition-all duration-300 ${
+        className={`flex-1 overflow-auto space-y-3 md:space-y-4 pr-0 lg:pr-2 transition-all duration-300 ${
           isChatbotOpen ? "lg:flex-[3]" : "lg:flex-1"
         }`}
       >
         {/* Header with Refresh Button */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
-            <h2 className="text-2xl font-bold">Phân tích học tập</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-lg md:text-xl lg:text-2xl font-bold">Phân tích học tập</h2>
+            <p className="text-xs md:text-sm text-muted-foreground">
               Cập nhật lần cuối: {new Date(insights.lastUpdated).toLocaleString("vi-VN")}
             </p>
           </div>
@@ -308,79 +308,85 @@ export default function AIPracticePage() {
             size="sm"
             onClick={handleForceUpdate}
             disabled={isUpdating}
+            className="text-xs md:text-sm h-8 md:h-9"
           >
             <RefreshCw
-              className={`h-4 w-4 mr-2 ${isUpdating ? "animate-spin" : ""}`}
+              className={`h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2 ${isUpdating ? "animate-spin" : ""}`}
             />
-            {isUpdating ? "Đang cập nhật..." : "Cập nhật"}
+            <span className="hidden sm:inline">{isUpdating ? "Đang cập nhật..." : "Cập nhật"}</span>
+            <span className="sm:hidden">{isUpdating ? "..." : "Cập nhật"}</span>
           </Button>
         </div>
 
         {/* Overview Cards with real data */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-          <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                <Award className="h-4 w-4 text-primary" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
+          <Card className="border-primary/20 shadow-sm md:hover:shadow-lg md:hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+            <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                <Award className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                 <span className="hidden sm:inline">Trình độ</span>
+                <span className="sm:hidden">Level</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="text-lg md:text-xl lg:text-2xl font-bold text-primary">
                 {getLevelDisplay(performance.overallLevel)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">
                 {performance.overallLevel}
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-75">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
+          <Card className="border-primary/20 shadow-sm md:hover:shadow-lg md:hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-75">
+            <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-500" />
                 <span className="hidden sm:inline">Tiến bộ</span>
+                <span className="sm:hidden">Prog</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="text-lg md:text-xl lg:text-2xl font-bold">
                 {performance.weeklyProgress >= 0 ? "+" : ""}
                 {Math.round(performance.weeklyProgress)}%
               </div>
               <Progress
                 value={Math.min(Math.abs(performance.weeklyProgress), 100)}
-                className="mt-2 h-2"
+                className="mt-1.5 md:mt-2 h-1.5 md:h-2"
               />
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-150">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                <Target className="h-4 w-4 text-blue-500" />
+          <Card className="border-primary/20 shadow-sm md:hover:shadow-lg md:hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-150">
+            <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-500" />
                 <span className="hidden sm:inline">Duy trì</span>
+                <span className="sm:hidden">Cons</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="text-lg md:text-xl lg:text-2xl font-bold">
                 {Math.round(performance.consistency)}%
               </div>
-              <Progress value={performance.consistency} className="mt-2 h-2" />
+              <Progress value={performance.consistency} className="mt-1.5 md:mt-2 h-1.5 md:h-2" />
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                <Brain className="h-4 w-4 text-purple-500" />
+          <Card className="border-primary/20 shadow-sm md:hover:shadow-lg md:hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-200">
+            <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                <Brain className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-500" />
                 <span className="hidden sm:inline">Ghi nhớ</span>
+                <span className="sm:hidden">Ret</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="text-lg md:text-xl lg:text-2xl font-bold">
                 {Math.round(performance.retention)}%
               </div>
-              <Progress value={performance.retention} className="mt-2 h-2" />
+              <Progress value={performance.retention} className="mt-1.5 md:mt-2 h-1.5 md:h-2" />
             </CardContent>
           </Card>
         </div>
@@ -388,16 +394,16 @@ export default function AIPracticePage() {
         {/* Weak Areas Alert */}
         {weakAreas?.hasWeakAreas && (
           <Alert variant="destructive" className="border-orange-500 bg-orange-50 dark:bg-orange-950/30 animate-in fade-in slide-in-from-bottom-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Cần cải thiện</AlertTitle>
-            <AlertDescription className="mt-2 space-y-2">
+            <AlertCircle className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <AlertTitle className="text-sm md:text-base">Cần cải thiện</AlertTitle>
+            <AlertDescription className="mt-2 space-y-1.5 md:space-y-2">
               {weakAreas.weakSkills.map((skill, idx) => (
-                <div key={idx} className="text-sm">
+                <div key={idx} className="text-xs md:text-sm">
                   • Kỹ năng <strong>{skill.skill}</strong>: {skill.level}/100 - {skill.suggestion}
                 </div>
               ))}
               {weakAreas.difficultCards.count > 0 && (
-                <div className="text-sm">
+                <div className="text-xs md:text-sm">
                   • <strong>{weakAreas.difficultCards.count}</strong> thẻ flashcard khó - {weakAreas.difficultCards.suggestion}
                 </div>
               )}
@@ -407,22 +413,24 @@ export default function AIPracticePage() {
 
         {/* Daily Learning Activity Chart */}
         <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4">
-          <CardHeader>
-            <div className="flex justify-between items-center">
+          <CardHeader className="p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 md:gap-4">
               <div>
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <Activity className="h-5 w-5 text-primary" />
-                  Hoạt động học tập hàng ngày
+                <CardTitle className="flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
+                  <Activity className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                  <span className="hidden sm:inline">Hoạt động học tập hàng ngày</span>
+                  <span className="sm:hidden">Hoạt động</span>
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
+                <CardDescription className="text-xs md:text-sm mt-0.5">
                   Thống kê {timeRange} ngày gần nhất
                 </CardDescription>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 md:gap-2">
                 <Button
                   variant={timeRange === 7 ? "default" : "outline"}
                   size="sm"
                   onClick={() => setTimeRange(7)}
+                  className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3"
                 >
                   7 ngày
                 </Button>
@@ -430,15 +438,16 @@ export default function AIPracticePage() {
                   variant={timeRange === 30 ? "default" : "outline"}
                   size="sm"
                   onClick={() => setTimeRange(30)}
+                  className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3"
                 >
                   30 ngày
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6 pt-0">
             {dailyChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250} className="md:h-[300px]">
                 <ComposedChart data={dailyChartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="date" className="text-xs" />
@@ -473,7 +482,7 @@ export default function AIPracticePage() {
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              <div className="h-[250px] md:h-[300px] flex items-center justify-center text-muted-foreground text-xs md:text-sm px-4 text-center">
                 Chưa có dữ liệu học tập trong khoảng thời gian này
               </div>
             )}
@@ -481,7 +490,7 @@ export default function AIPracticePage() {
         </Card>
 
         {/* Time Distribution */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           {/* Time by Content Type */}
           <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4">
             <CardHeader>

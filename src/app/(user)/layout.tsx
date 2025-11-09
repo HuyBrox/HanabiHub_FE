@@ -23,7 +23,7 @@ function LayoutContent({
     <div className="flex flex-col lg:flex-row h-screen bg-background">
       <MobileHeader />
       <AppSidebar />
-      {/* Search Component - hiển thị bên cạnh sidebar */}
+      {/* Search Component - hiển thị bên cạnh sidebar trên desktop */}
       <div
         className={cn(
           "hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out overflow-hidden",
@@ -35,6 +35,12 @@ function LayoutContent({
       >
         {isSearchOpen && <SearchComponent />}
       </div>
+      {/* Search Component - hiển thị full screen overlay trên mobile */}
+      {isSearchOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-background">
+          <SearchComponent />
+        </div>
+      )}
       <main className="flex-1 overflow-auto">{children}</main>
       {/* Chỉ hiển thị ChatDock khi đã đăng nhập */}
       {isAuthenticated && <ChatDock />}
