@@ -7,6 +7,8 @@ import { ChatDock } from "@/components/chat";
 import { MobileHeader } from "@/components/layout";
 import { useAuth } from "@/hooks/useAuth";
 import { SearchProvider, useSearch } from "@/contexts/SearchContext";
+import { JapaneseInputModeProvider } from "@/contexts/JapaneseInputModeContext";
+import { useGlobalJapaneseInput } from "@/hooks/useGlobalJapaneseInput";
 import { SearchComponent } from "@/components/search/SearchComponent";
 
 function LayoutContent({
@@ -18,6 +20,9 @@ function LayoutContent({
 }>) {
   const { isAuthenticated } = useAuth();
   const { isSearchOpen } = useSearch();
+
+  // Apply Japanese input mode globally to all inputs
+  useGlobalJapaneseInput();
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-background">
@@ -58,7 +63,9 @@ export default function UserLayout({
 }>) {
   return (
     <SearchProvider>
-      <LayoutContent auth={auth}>{children}</LayoutContent>
+      <JapaneseInputModeProvider>
+        <LayoutContent auth={auth}>{children}</LayoutContent>
+      </JapaneseInputModeProvider>
     </SearchProvider>
   );
 }

@@ -21,7 +21,7 @@ import {
   Video,
   Search,
 } from "lucide-react";
-import { ModeToggle, LanguageToggle } from "@/components/common";
+import { ModeToggle, LanguageToggle, JapaneseInputModeToggle } from "@/components/common";
 import { useLanguage } from "@/lib/language-context";
 import { useAuth } from "@/hooks/useAuth";
 import { MobileHeaderProps, NavigationItem, LayoutUser } from "@/types/layout";
@@ -231,6 +231,7 @@ export function MobileHeader({}: MobileHeaderProps) {
                 <ModeToggle />
                 <span className="ml-3 text-sm text-foreground">Theme</span>
               </div>
+              <JapaneseInputModeToggle collapsed={false} />
               {isAuthenticated ? (
                 <Button
                   variant="ghost"

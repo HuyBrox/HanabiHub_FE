@@ -21,7 +21,7 @@ import {
   Video,
   Search,
 } from "lucide-react";
-import { ModeToggle, LanguageToggle } from "@/components/common";
+import { ModeToggle, LanguageToggle, JapaneseInputModeToggle } from "@/components/common";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/lib/language-context";
 import { AppSidebarProps, NavigationItem } from "@/types/layout";
@@ -228,7 +228,7 @@ export function AppSidebar({}: AppSidebarProps) {
         )}
       </nav>
 
-      {/* Language Toggle, Theme Toggle and Auth Button */}
+      {/* Language Toggle, Theme Toggle, Japanese Input Mode Toggle and Auth Button */}
       {!isSearchOpen && (
         <div className="p-4 border-t border-sidebar-border space-y-2">
           <div
@@ -252,6 +252,9 @@ export function AppSidebar({}: AppSidebarProps) {
               </span>
             )}
           </div>
+
+          {/* Japanese Input Mode Toggle */}
+          <JapaneseInputModeToggle collapsed={isCollapsed} />
 
           {/* Auth Button - Login/Logout */}
           {isAuthenticated ? (

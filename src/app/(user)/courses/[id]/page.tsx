@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, use, useEffect, useRef } from "react";
+import { useState, useMemo, use, useEffect, useRef, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 // 🗑️ REMOVED: Page visibility and localStorage (not needed for simple tracking)
@@ -58,6 +58,360 @@ const getYouTubeVideoId = (url: string): string | null => {
   return match && match[2].length === 11 ? match[2] : null;
 };
 
+// Matching Task Component
+interface MatchingTaskProps {
+  items: any[];
+  selectedLeftId: string | null;
+  matchedPairs: { [leftId: string]: string };
+  showResults: boolean;
+  onLeftClick: (leftId: string) => void;
+  onRightClick: (rightId: string) => void;
+  instructions?: string;
+}
+
+const MatchingTaskComponent = ({
+  items,
+  selectedLeftId,
+  matchedPairs,
+  showResults,
+  onLeftClick,
+  onRightClick,
+  instructions,
+}: MatchingTaskProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const leftItemsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const rightItemsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // Track reset to force re-shuffle when user retries
+  const prevShowResultsRef = useRef(showResults);
+  const [shuffleKey, setShuffleKey] = useState(0);
+
+  // Re-shuffle when showResults changes from true to false (user resets)
+  useEffect(() => {
+    if (prevShowResultsRef.current === true && showResults === false) {
+      // User just reset, force new shuffle
+      setShuffleKey((prev) => prev + 1);
+    }
+    prevShowResultsRef.current = showResults;
+  }, [showResults]);
+
+  // Fisher-Yates shuffle algorithm for proper randomization
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    // Use proper Fisher-Yates shuffle for true randomization
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Prepare left and right items - shuffle every time items change or shuffleKey changes
+  // This ensures different order each time user enters the lesson or resets
+  const { leftItems, rightItems, correctMatches } = useMemo(() => {
+    const lefts: Array<{ id: string; text: string; originalIndex: number }> = [];
+    const rights: Array<{ id: string; text: string; originalIndex: number }> = [];
+    const correctMap: { [leftText: string]: string } = {};
+
+    items.forEach((item, index) => {
+      const leftText = item.left || item.question || "";
+      const rightText = item.right || item.answer || "";
+
+      // Use text as ID for consistent matching (text is unique and stable)
+      const leftId = leftText; // Use text directly as ID
+      const rightId = rightText; // Use text directly as ID
+
+      lefts.push({
+        id: leftId,
+        text: leftText,
+        originalIndex: index,
+      });
+
+      rights.push({
+        id: rightId,
+        text: rightText,
+        originalIndex: index,
+      });
+
+      // Map correct answer: leftText -> rightText
+      correctMap[leftText] = rightText;
+    });
+
+    // Shuffle right items using Fisher-Yates algorithm for proper randomization
+    // shuffleKey dependency ensures new shuffle when user resets
+    const shuffledRights = shuffleArray(rights);
+
+    return {
+      leftItems: lefts,
+      rightItems: shuffledRights,
+      correctMatches: correctMap,
+    };
+  }, [items, shuffleKey]); // Add shuffleKey to force re-shuffle when reset
+
+  // State for connection points
+  const [connections, setConnections] = useState<
+    Array<{
+      leftId: string;
+      rightId: string;
+      leftRect: DOMRect;
+      rightRect: DOMRect;
+      isCorrect: boolean;
+    }>
+  >([]);
+
+  // Update connections when matches change
+  useEffect(() => {
+    const updateConnections = () => {
+      if (!containerRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newConnections: typeof connections = [];
+
+      Object.entries(matchedPairs).forEach(([leftId, rightId]) => {
+        const leftEl = leftItemsRef.current[leftId];
+        const rightEl = rightItemsRef.current[rightId];
+
+        if (leftEl && rightEl) {
+          const leftRect = leftEl.getBoundingClientRect();
+          const rightRect = rightEl.getBoundingClientRect();
+
+          // Find if this is a correct match
+          const leftItem = leftItems.find((item) => item.id === leftId);
+          const rightItem = rightItems.find((item) => item.id === rightId);
+          const isCorrect =
+            leftItem && rightItem && correctMatches[leftItem.text] === rightItem.text;
+
+          newConnections.push({
+            leftId,
+            rightId,
+            leftRect: new DOMRect(
+              leftRect.left - containerRect.left,
+              leftRect.top - containerRect.top,
+              leftRect.width,
+              leftRect.height
+            ),
+            rightRect: new DOMRect(
+              rightRect.left - containerRect.left,
+              rightRect.top - containerRect.top,
+              rightRect.width,
+              rightRect.height
+            ),
+            isCorrect,
+          });
+        }
+      });
+
+      setConnections(newConnections);
+    };
+
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(updateConnections, 100);
+    window.addEventListener("resize", updateConnections);
+    window.addEventListener("scroll", updateConnections, true);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateConnections);
+      window.removeEventListener("scroll", updateConnections, true);
+    };
+  }, [matchedPairs, leftItems, rightItems, correctMatches]);
+
+  // Check if a match is correct
+  const isCorrectMatch = (leftId: string, rightId: string) => {
+    if (!showResults) return false;
+    const leftItem = leftItems.find((item) => item.id === leftId);
+    const rightItem = rightItems.find((item) => item.id === rightId);
+    return leftItem && rightItem && correctMatches[leftItem.text] === rightItem.text;
+  };
+
+  return (
+    <div className="space-y-4 md:space-y-5 lg:space-y-6">
+      {/* Instructions */}
+      {instructions && (
+        <div className="p-3 md:p-4 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-lg">
+          <div className="flex items-start gap-2 md:gap-3">
+            <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm md:text-base">
+                Hướng dẫn
+              </h4>
+              <p className="text-xs md:text-sm text-blue-800 dark:text-blue-200">
+                {instructions}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Matching Area */}
+      <div
+        ref={containerRef}
+        className="relative min-h-[300px] md:min-h-[400px] lg:min-h-[500px]"
+      >
+        {/* SVG Connection Lines */}
+        {connections.length > 0 && (
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible"
+            style={{ position: "absolute", top: 0, left: 0 }}
+          >
+            {connections.map((conn, index) => {
+              const leftX = conn.leftRect.left + conn.leftRect.width;
+              const leftY = conn.leftRect.top + conn.leftRect.height / 2;
+              const rightX = conn.rightRect.left;
+              const rightY = conn.rightRect.top + conn.rightRect.height / 2;
+
+              // Curved path for smooth connection
+              const midX = (leftX + rightX) / 2;
+              const controlX1 = leftX + (rightX - leftX) * 0.3;
+              const controlX2 = leftX + (rightX - leftX) * 0.7;
+              const path = `M ${leftX} ${leftY} C ${controlX1} ${leftY}, ${controlX2} ${rightY}, ${rightX} ${rightY}`;
+
+              const strokeColor = showResults
+                ? conn.isCorrect
+                  ? "rgb(34, 197, 94)" // green-500
+                  : "rgb(239, 68, 68)" // red-500
+                : "rgb(251, 146, 60)"; // orange-500
+
+              const strokeWidth = showResults ? 3 : 2.5;
+
+              return (
+                <path
+                  key={`${conn.leftId}-${conn.rightId}-${index}`}
+                  d={path}
+                  stroke={strokeColor}
+                  strokeWidth={strokeWidth}
+                  fill="none"
+                  strokeDasharray={showResults && !conn.isCorrect ? "5,5" : "0"}
+                  className="transition-all duration-300"
+                  style={{
+                    filter: showResults
+                      ? conn.isCorrect
+                        ? "drop-shadow(0 0 3px rgba(34, 197, 94, 0.5))"
+                        : "drop-shadow(0 0 3px rgba(239, 68, 68, 0.5))"
+                      : "drop-shadow(0 0 2px rgba(251, 146, 60, 0.3))",
+                  }}
+                />
+              );
+            })}
+          </svg>
+        )}
+
+        {/* Two Columns Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 lg:gap-8 relative z-20">
+          {/* Left Column - Questions */}
+          <div className="space-y-2 md:space-y-3">
+            <h3 className="text-sm md:text-base font-semibold text-center mb-3 md:mb-4 text-indigo-700 dark:text-indigo-300">
+              Câu hỏi
+            </h3>
+            {leftItems.map((item, index) => {
+              const isSelected = selectedLeftId === item.id;
+              const isMatched = !!matchedPairs[item.id];
+              const matchedRightId = matchedPairs[item.id];
+
+              return (
+                <div
+                  key={item.id}
+                  ref={(el) => {
+                    leftItemsRef.current[item.id] = el;
+                  }}
+                  onClick={() => onLeftClick(item.id)}
+                  className={cn(
+                    "p-3 md:p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 text-sm md:text-base font-medium relative",
+                    "hover:shadow-md hover:scale-[1.02]",
+                    !showResults && "active:scale-95",
+                    isSelected
+                      ? "bg-orange-100 dark:bg-orange-900/30 border-orange-400 dark:border-orange-500 shadow-md ring-2 ring-orange-200 dark:ring-orange-800"
+                      : isMatched
+                      ? "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700"
+                      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-600",
+                    showResults &&
+                      matchedRightId &&
+                      (isCorrectMatch(item.id, matchedRightId)
+                        ? "bg-green-50 dark:bg-green-900/20 border-green-400 dark:border-green-500"
+                        : "bg-red-50 dark:bg-red-900/20 border-red-400 dark:border-red-500")
+                  )}
+                >
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 md:w-7 md:h-7 rounded-full bg-indigo-500 text-white flex items-center justify-center text-xs md:text-sm font-bold">
+                      {index + 1}
+                    </span>
+                    <span className="flex-1">{item.text}</span>
+                    {showResults && matchedRightId && (
+                      <span className="flex-shrink-0">
+                        {isCorrectMatch(item.id, matchedRightId) ? (
+                          <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-green-500" />
+                        ) : (
+                          <XCircle className="h-5 w-5 md:h-6 md:w-6 text-red-500" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right Column - Answers */}
+          <div className="space-y-2 md:space-y-3">
+            <h3 className="text-sm md:text-base font-semibold text-center mb-3 md:mb-4 text-purple-700 dark:text-purple-300">
+              Đáp án
+            </h3>
+            {rightItems.map((item, index) => {
+              const isMatched = Object.values(matchedPairs).includes(item.id);
+              const matchedLeftId = Object.keys(matchedPairs).find(
+                (leftId) => matchedPairs[leftId] === item.id
+              );
+              const isSelectedRight =
+                selectedLeftId && matchedPairs[selectedLeftId] === item.id;
+
+              return (
+                <div
+                  key={item.id}
+                  ref={(el) => {
+                    rightItemsRef.current[item.id] = el;
+                  }}
+                  onClick={() => onRightClick(item.id)}
+                  className={cn(
+                    "p-3 md:p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 text-sm md:text-base font-medium relative",
+                    "hover:shadow-md hover:scale-[1.02]",
+                    !showResults && "active:scale-95",
+                    isSelectedRight
+                      ? "bg-orange-100 dark:bg-orange-900/30 border-orange-400 dark:border-orange-500 shadow-md ring-2 ring-orange-200 dark:ring-orange-800"
+                      : isMatched
+                      ? "bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700"
+                      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600",
+                    showResults &&
+                      matchedLeftId &&
+                      (isCorrectMatch(matchedLeftId, item.id)
+                        ? "bg-green-50 dark:bg-green-900/20 border-green-400 dark:border-green-500"
+                        : "bg-red-50 dark:bg-red-900/20 border-red-400 dark:border-red-500")
+                  )}
+                >
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 md:w-7 md:h-7 rounded-full bg-purple-500 text-white flex items-center justify-center text-xs md:text-sm font-bold">
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    <span className="flex-1">{item.text}</span>
+                    {showResults && matchedLeftId && (
+                      <span className="flex-shrink-0">
+                        {isCorrectMatch(matchedLeftId, item.id) ? (
+                          <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-green-500" />
+                        ) : (
+                          <XCircle className="h-5 w-5 md:h-6 md:w-6 text-red-500" />
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const currentUser = useSelector((state: RootState) => state.auth.user);
@@ -67,6 +421,11 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   }>({});
   const [fillBlankAnswers, setFillBlankAnswers] = useState<{
     [key: string]: string;
+  }>({});
+  // Matching task state
+  const [selectedLeftId, setSelectedLeftId] = useState<string | null>(null);
+  const [matchedPairs, setMatchedPairs] = useState<{
+    [leftId: string]: string; // leftId -> rightId
   }>({});
   const [showResults, setShowResults] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -248,6 +607,70 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     setFillBlankAnswers((prev) => ({ ...prev, [itemId]: value }));
   };
 
+  // Matching task handlers
+  const handleLeftClick = (leftId: string) => {
+    if (showResults) return;
+
+    // If clicking the same item, deselect it
+    if (selectedLeftId === leftId) {
+      setSelectedLeftId(null);
+      return;
+    }
+
+    // If this left item is already matched, remove the match first
+    if (matchedPairs[leftId]) {
+      setMatchedPairs((prev) => {
+        const newPairs = { ...prev };
+        delete newPairs[leftId];
+        return newPairs;
+      });
+    }
+
+    setSelectedLeftId(leftId);
+  };
+
+  const handleRightClick = (rightId: string) => {
+    if (showResults) return;
+
+    if (!selectedLeftId) {
+      // No left item selected, do nothing
+      return;
+    }
+
+    // Check if this right item is already matched to another left item
+    const existingLeftId = Object.keys(matchedPairs).find(
+      (leftId) => matchedPairs[leftId] === rightId
+    );
+
+    if (existingLeftId) {
+      // If clicking the same right item that's matched to current left, remove match
+      if (existingLeftId === selectedLeftId) {
+        setMatchedPairs((prev) => {
+          const newPairs = { ...prev };
+          delete newPairs[selectedLeftId];
+          return newPairs;
+        });
+        setSelectedLeftId(null);
+        return;
+      } else {
+        // Remove the old match
+        setMatchedPairs((prev) => {
+          const newPairs = { ...prev };
+          delete newPairs[existingLeftId];
+          return newPairs;
+        });
+      }
+    }
+
+    // Create new match
+    setMatchedPairs((prev) => ({
+      ...prev,
+      [selectedLeftId]: rightId,
+    }));
+
+    setSelectedLeftId(null);
+  };
+
   const calculateScore = () => {
     if (!currentLesson?.jsonTask?.items) return 0;
     const items = currentLesson.jsonTask.items;
@@ -257,7 +680,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     items.forEach((item: any) => {
       if (
         currentLesson.taskType === "multiple_choice" ||
-        currentLesson.taskType === "listening"
+        currentLesson.taskType === "listening" ||
+        currentLesson.taskType === "reading"
       ) {
         if (selectedAnswers[item.id] === item.answer) correct++;
       } else if (currentLesson.taskType === "fill_blank") {
@@ -266,6 +690,17 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
           item.answer?.trim().toLowerCase()
         )
           correct++;
+      } else if (currentLesson.taskType === "matching") {
+        // For matching: check if left text is matched to correct right text
+        // In MatchingTaskComponent, we use text directly as ID
+        const leftText = item.left || item.question || "";
+        const correctRightText = item.right || item.answer || "";
+
+        // Check if this left text is matched to the correct right text
+        const matchedRightText = matchedPairs[leftText];
+        if (matchedRightText === correctRightText) {
+          correct++;
+        }
       }
     });
 
@@ -307,6 +742,16 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
               item.answer?.trim().toLowerCase()
             )
               correctAnswers++;
+          } else if (currentLesson.taskType === "matching") {
+            // In MatchingTaskComponent, we use text directly as ID
+            const leftText = item.left || item.question || "";
+            const correctRightText = item.right || item.answer || "";
+
+            // Check if this left text is matched to the correct right text
+            const matchedRightText = matchedPairs[leftText];
+            if (matchedRightText === correctRightText) {
+              correctAnswers++;
+            }
           }
         });
 
@@ -390,6 +835,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resetAnswers = () => {
     setSelectedAnswers({});
     setFillBlankAnswers({});
+    setSelectedLeftId(null);
+    setMatchedPairs({});
     setShowResults(false);
     setScore(null);
   };
@@ -769,8 +1216,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                     <CardTitle className="text-lg md:text-xl lg:text-2xl leading-tight">
                       {currentLesson?.title}
                     </CardTitle>
-                    {currentLesson?.content && (
-                      <p className="mt-1.5 md:mt-2 text-xs md:text-sm text-muted-foreground line-clamp-2 md:line-clamp-none">
+                    {/* Only show content preview for task lessons, not video (video will show full description below) */}
+                    {currentLesson?.type === "task" && currentLesson?.content && (
+                      <p className="mt-1.5 md:mt-2 text-xs md:text-sm text-muted-foreground line-clamp-2">
                         {currentLesson.content}
                       </p>
                     )}
@@ -779,16 +1227,15 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
               </CardHeader>
 
               <CardContent className="p-4 md:p-5 lg:p-6">
-                {/* Video Description */}
-                {currentLesson?.type === "video" && (
-                  <div className="prose dark:prose-invert max-w-none">
+                {/* Video Description - Only for video lessons */}
+                {currentLesson?.type === "video" && currentLesson?.content && (
+                  <div className="prose dark:prose-invert max-w-none mb-4 md:mb-6">
                     <h3 className="text-base md:text-lg font-semibold mb-2 md:mb-3 flex items-center gap-2">
                       <BookOpen className="h-4 w-4 md:h-5 md:w-5" />
                       Mô tả bài học
                     </h3>
                     <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
-                      {currentLesson.content ||
-                        "Không có mô tả cho bài học này."}
+                      {currentLesson.content}
                     </p>
                   </div>
                 )}
@@ -796,8 +1243,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 {/* Task Content */}
                 {currentLesson?.type === "task" && currentLesson.jsonTask && (
                   <div className="space-y-4 md:space-y-5 lg:space-y-6">
-                    {/* Task Instructions */}
-                    {currentLesson.jsonTask.instructions && (
+                    {/* Task Instructions - Only show for non-matching tasks (matching has its own instructions) */}
+                    {currentLesson.taskType !== "matching" && currentLesson.jsonTask.instructions && (
                       <div className="p-3 md:p-4 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-lg">
                         <div className="flex items-start gap-2 md:gap-3">
                           <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
@@ -1099,31 +1546,18 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       </>
                     )}
 
-                    {/* Matching Task */}
+                    {/* Matching Task - Redesigned */}
                     {currentLesson.taskType === "matching" && (
-                      <div className="space-y-3">
-                        {currentLesson.jsonTask.items?.map(
-                          (item: any, index: number) => (
-                            <div
-                              key={item.id || index}
-                              className="p-5 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 animate-in fade-in slide-in-from-left-4 duration-500"
-                              style={{ animationDelay: `${index * 100}ms` }}
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className="flex-1 font-medium text-indigo-900 dark:text-indigo-100">
-                                  {item.left}
-                                </div>
-                                <div className="flex-shrink-0">
-                                  <ChevronRight className="h-5 w-5 text-indigo-500" />
-                                </div>
-                                <div className="flex-1 font-medium text-purple-900 dark:text-purple-100">
-                                  {item.right}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
+                      <MatchingTaskComponent
+                        key={currentLesson._id} // Force re-mount when lesson changes to ensure new shuffle
+                        items={currentLesson.jsonTask.items || []}
+                        selectedLeftId={selectedLeftId}
+                        matchedPairs={matchedPairs}
+                        showResults={showResults}
+                        onLeftClick={handleLeftClick}
+                        onRightClick={handleRightClick}
+                        instructions={currentLesson.jsonTask.instructions}
+                      />
                     )}
 
                     {/* Reading Task */}
@@ -1242,7 +1676,6 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
                     {/* Submit Button for Tasks */}
                     {currentLesson?.type === "task" &&
-                      currentLesson.taskType !== "matching" &&
                       currentLesson.taskType !== "speaking" &&
                       !showResults && (
                         <div className="flex justify-center pt-3 md:pt-4">
@@ -1252,7 +1685,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                             className="gap-2 px-6 md:px-8 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg text-sm md:text-base h-10 md:h-11"
                           >
                             <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
-                            Nộp bài
+                            Kiểm tra kết quả
                           </Button>
                         </div>
                       )}
