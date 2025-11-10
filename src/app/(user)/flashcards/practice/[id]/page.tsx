@@ -6,6 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
@@ -14,6 +22,8 @@ import {
   ArrowLeft,
   Loader2,
   CheckCircle,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -25,6 +35,7 @@ import {
   useTrackCardLearningMutation,
 } from "@/store/services/flashcardApi";
 import { IFlashCardItem, DifficultyLevel } from "@/types/flashcard";
+import { useJapaneseTTS } from "@/hooks/useJapaneseTTS";
 
 // Extended type for practice with id
 interface PracticeCard extends IFlashCardItem {
@@ -50,9 +61,14 @@ export default function FlashcardPracticePage() {
   const [trackSession] = useTrackFlashcardSessionMutation();
   const [trackCard] = useTrackCardLearningMutation(); // Re-enabled with proper _id support
 
+  // TTS hook
+  const { speak, isSpeaking, currentVoiceId, setVoiceId, voices } =
+    useJapaneseTTS();
+
   const [flashcards, setFlashcards] = useState<PracticeCard[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [autoRead, setAutoRead] = useState<"off" | "front" | "back">("off");
   const [studiedCards, setStudiedCards] = useState<Set<number>>(new Set());
   const [correctCards, setCorrectCards] = useState<Set<number>>(new Set());
 
@@ -63,6 +79,11 @@ export default function FlashcardPracticePage() {
     new Map()
   );
   const hasTrackedSession = useRef(false);
+  const lastReadRef = useRef<{
+    cardIndex: number;
+    isFlipped: boolean;
+    autoReadMode: "off" | "front" | "back";
+  } | null>(null);
 
   // Initialize flashcards when data loads
   useEffect(() => {
@@ -75,8 +96,78 @@ export default function FlashcardPracticePage() {
       setFlashcards(cardsWithId);
       setSessionStartTime(Date.now());
       setCardStartTime(Date.now());
+      lastReadRef.current = null; // Reset when new data loads
     }
   }, [data, cardId]);
+
+  // Auto read when card index, flip state, or autoRead mode changes
+  useEffect(() => {
+    // Skip if no cards loaded yet
+    if (flashcards.length === 0) {
+      return;
+    }
+
+    // Skip if autoRead is off
+    if (autoRead === "off") {
+      lastReadRef.current = null; // Reset when turned off
+      return;
+    }
+
+    // Skip if card doesn't exist
+    if (!flashcards[currentIndex]) {
+      return;
+    }
+
+    const card = flashcards[currentIndex];
+    const currentState = {
+      cardIndex: currentIndex,
+      isFlipped: isFlipped,
+      autoReadMode: autoRead
+    };
+
+    // Check if we already read for this exact state combination
+    // Also check if autoRead mode changed (to allow re-reading when mode changes)
+    const wasAlreadyRead =
+      lastReadRef.current &&
+      lastReadRef.current.cardIndex === currentState.cardIndex &&
+      lastReadRef.current.isFlipped === currentState.isFlipped &&
+      lastReadRef.current.autoReadMode === currentState.autoReadMode;
+
+    if (wasAlreadyRead) {
+      return; // Already read this exact state, skip to prevent duplicate reads
+    }
+
+    // Determine what to read based on autoRead mode and current flip state
+    let shouldRead = false;
+    let textToSpeak: string | null = null;
+
+    if (autoRead === "front" && !isFlipped) {
+      // Read front side: only when card is on front (not flipped)
+      shouldRead = true;
+      textToSpeak = card.vocabulary;
+    } else if (autoRead === "back" && isFlipped) {
+      // Read back side: only when card is on back (flipped)
+      shouldRead = true;
+      textToSpeak = card.meaning;
+    }
+
+    // Update ref to mark this state as processed (even if not reading)
+    lastReadRef.current = currentState;
+
+    // Only read if we should read and have text
+    if (shouldRead && textToSpeak) {
+      // Use a delay to ensure state is stable and prevent rapid re-reads
+      const timer = setTimeout(() => {
+        speak(textToSpeak!);
+      }, 300);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+    // Only depend on the actual state values that should trigger a read
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRead, currentIndex, isFlipped]);
 
   // Track session when component unmounts or user leaves
   useEffect(() => {
@@ -288,6 +379,16 @@ export default function FlashcardPracticePage() {
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
     // Don't add to studiedCards here - will be added when user answers
+    // Auto read is handled by useEffect when isFlipped changes
+  };
+
+  const handleSpeak = (card: PracticeCard) => async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card flip when clicking speaker button
+    // Read vocabulary if front side, meaning if back side
+    const textToSpeak = isFlipped ? card.meaning : card.vocabulary;
+    if (textToSpeak) {
+      await speak(textToSpeak);
+    }
   };
 
   const handleCorrect = async () => {
@@ -363,6 +464,41 @@ export default function FlashcardPracticePage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-muted-foreground">Voice:</label>
+              <Select value={currentVoiceId} onValueChange={setVoiceId}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {voices.map((voice) => (
+                    <SelectItem key={voice.id} value={voice.id}>
+                      {voice.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              {autoRead !== "off" ? (
+                <Volume2 className="h-4 w-4 text-primary" />
+              ) : (
+                <VolumeX className="h-4 w-4 text-muted-foreground" />
+              )}
+              <Label className="text-sm text-muted-foreground">
+                Auto Read:
+              </Label>
+              <Select value={autoRead} onValueChange={(value: "off" | "front" | "back") => setAutoRead(value)}>
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="off">Tắt</SelectItem>
+                  <SelectItem value="front">Mặt trước</SelectItem>
+                  <SelectItem value="back">Mặt sau</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Badge variant="outline">{flashcard.level}</Badge>
             <span className="text-sm text-muted-foreground">
               {currentIndex + 1} of {flashcards.length}
@@ -414,7 +550,22 @@ export default function FlashcardPracticePage() {
                               <p className="text-muted-foreground">Click to reveal</p>
                             </div>
                           </CardContent>
-                          <div className="absolute top-4 right-4">
+                          <div className="absolute top-4 right-4 flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={handleSpeak(card)}
+                              disabled={isSpeaking}
+                              title="Pronounce vocabulary"
+                            >
+                              <Volume2
+                                className={cn(
+                                  "h-5 w-5",
+                                  isSpeaking && "animate-pulse text-primary"
+                                )}
+                              />
+                            </Button>
                             <RotateCcw className="h-5 w-5 text-muted-foreground" />
                           </div>
                         </Card>
@@ -422,19 +573,31 @@ export default function FlashcardPracticePage() {
                         {/* Back of card */}
                         <Card className={cn("w-full h-full", styles.flipCardBack)}>
                           <CardContent className="flex items-center justify-center h-full p-8 relative">
-                            <div className="text-center space-y-4">
-                              <div className="text-4xl font-bold text-foreground">
-                                {card.vocabulary}
-                              </div>
-                              <div className="text-2xl text-muted-foreground">
+                            <div className="text-center">
+                              <div className="text-6xl font-bold text-foreground mb-4">
                                 {card.meaning}
                               </div>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="text-muted-foreground">
                                 Did you get it right?
                               </p>
                             </div>
                           </CardContent>
-                          <div className="absolute top-4 right-4">
+                          <div className="absolute top-4 right-4 flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={handleSpeak(card)}
+                              disabled={isSpeaking}
+                              title="Pronounce meaning"
+                            >
+                              <Volume2
+                                className={cn(
+                                  "h-5 w-5",
+                                  isSpeaking && "animate-pulse text-primary"
+                                )}
+                              />
+                            </Button>
                             <RotateCcw className="h-5 w-5 text-muted-foreground" />
                           </div>
                         </Card>

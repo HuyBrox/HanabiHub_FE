@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Shimmer } from "@/components/ui/shimmer";
 import { User, Mic, MicOff, VideoOff } from "lucide-react";
 import { RefObject } from "react";
+import { cn } from "@/lib/utils";
 
 interface VideoFrameProps {
   type: "local" | "remote";
@@ -15,6 +16,7 @@ interface VideoFrameProps {
   userName?: string;
   level?: string;
   videoRef?: React.RefObject<HTMLVideoElement | null>;
+  flipped?: boolean; // CSS flip for mirror effect
 }
 
 export function VideoFrame({
@@ -26,11 +28,12 @@ export function VideoFrame({
   userName = "User",
   level,
   videoRef,
+  flipped = false,
 }: VideoFrameProps) {
   const isLocal = type === "local";
 
   return (
-    <Card className="relative aspect-video bg-gray-900 overflow-hidden group">
+    <Card className="relative w-full h-full bg-gray-900 overflow-hidden group">
       {/* Video Content */}
       {isLoading ? (
         <Shimmer className="w-full h-full" />
@@ -41,7 +44,10 @@ export function VideoFrame({
             autoPlay
             playsInline
             muted={isLocal}
-            className="w-full h-full object-cover"
+            className={cn(
+              "w-full h-full object-cover",
+              flipped && "scale-x-[-1]"
+            )}
           />
         </div>
       ) : (

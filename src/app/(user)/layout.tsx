@@ -10,6 +10,7 @@ import { SearchProvider, useSearch } from "@/contexts/SearchContext";
 import { JapaneseInputModeProvider } from "@/contexts/JapaneseInputModeContext";
 import { useGlobalJapaneseInput } from "@/hooks/useGlobalJapaneseInput";
 import { SearchComponent } from "@/components/search/SearchComponent";
+import { usePathname } from "next/navigation";
 
 function LayoutContent({
   children,
@@ -20,35 +21,43 @@ function LayoutContent({
 }>) {
   const { isAuthenticated } = useAuth();
   const { isSearchOpen } = useSearch();
+  const pathname = usePathname();
+
+  // Check if we're on a caller or receiver call page (not random call)
+  const isCallPage = pathname?.startsWith("/call/caller") || pathname?.startsWith("/call/receiver");
 
   // Apply Japanese input mode globally to all inputs
   useGlobalJapaneseInput();
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-background">
-      <MobileHeader />
-      <AppSidebar />
+      {!isCallPage && <MobileHeader />}
+      {!isCallPage && <AppSidebar />}
       {/* Search Component - hiển thị bên cạnh sidebar trên desktop */}
-      <div
-        className={cn(
-          "hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out overflow-hidden",
-          isSearchOpen ? "w-80 opacity-100" : "w-0 opacity-0"
-        )}
-        style={{
-          transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out",
-        }}
-      >
-        {isSearchOpen && <SearchComponent />}
-      </div>
+      {!isCallPage && (
+        <div
+          className={cn(
+            "hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out overflow-hidden",
+            isSearchOpen ? "w-80 opacity-100" : "w-0 opacity-0"
+          )}
+          style={{
+            transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out",
+          }}
+        >
+          {isSearchOpen && <SearchComponent />}
+        </div>
+      )}
       {/* Search Component - hiển thị full screen overlay trên mobile */}
-      {isSearchOpen && (
+      {!isCallPage && isSearchOpen && (
         <div className="lg:hidden fixed inset-0 z-50 bg-background">
           <SearchComponent />
         </div>
       )}
-      <main className="flex-1 overflow-auto">{children}</main>
-      {/* Chỉ hiển thị ChatDock khi đã đăng nhập */}
-      {isAuthenticated && <ChatDock />}
+      <main className={cn("flex-1 overflow-auto", isCallPage && "overflow-hidden")}>
+        {children}
+      </main>
+      {/* Chỉ hiển thị ChatDock khi đã đăng nhập và không phải call page */}
+      {isAuthenticated && !isCallPage && <ChatDock />}
       {auth}
     </div>
   );

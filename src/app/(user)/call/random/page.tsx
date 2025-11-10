@@ -191,14 +191,79 @@ function RandomCallPage() {
   // Get user media
   const getUserMedia = useCallback(async (): Promise<MediaStream> => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-      console.log("[RandomCall] Got user media");
-      localStreamRef.current = stream;
-      setLocalStream(stream);
-      return stream;
+      // Tạo constraints cơ bản
+      const baseAudioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 48000, // Tăng sample rate để chất lượng tốt hơn
+        channelCount: 1, // Mono để giảm bandwidth
+        latency: 0.01, // Giảm độ trễ
+      };
+
+      // Thêm các constraints nâng cao của Chrome/Chromium nếu có
+      const advancedAudioConstraints: any = {
+        ...baseAudioConstraints,
+      };
+
+      // Chỉ thêm Google-specific constraints nếu trình duyệt hỗ trợ (Chrome/Edge)
+      if (navigator.userAgent.includes("Chrome") || navigator.userAgent.includes("Edge")) {
+        advancedAudioConstraints.googEchoCancellation = true;
+        advancedAudioConstraints.googNoiseSuppression = true;
+        advancedAudioConstraints.googAutoGainControl = true;
+        advancedAudioConstraints.googHighpassFilter = true;
+        advancedAudioConstraints.googTypingNoiseDetection = true;
+        advancedAudioConstraints.googNoiseReduction = true;
+      }
+
+      const constraints: MediaStreamConstraints = {
+        audio: advancedAudioConstraints,
+        video: {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30 },
+          facingMode: "user",
+        },
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // Xử lý audio với noise reduction nếu có audio track
+      if (stream.getAudioTracks().length > 0) {
+        try {
+          const { processAudioWithNoiseReduction } = await import(
+            "@/lib/audio-processor"
+          );
+          const processedStream = await processAudioWithNoiseReduction(
+            stream,
+            {
+              noiseGateThreshold: 0.015, // Ngưỡng nhạy hơn
+              highPassFrequency: 100, // Loại bỏ tiếng ồn tần số thấp hơn
+            }
+          );
+
+          // Dừng tracks từ stream cũ
+          stream.getAudioTracks().forEach((track) => track.stop());
+
+          console.log("[RandomCall] Audio processed with noise reduction");
+          localStreamRef.current = processedStream;
+          setLocalStream(processedStream);
+          return processedStream;
+        } catch (processingError) {
+          console.warn(
+            "[RandomCall] Audio processing failed, using original stream:",
+            processingError
+          );
+          // Nếu xử lý audio thất bại, sử dụng stream gốc
+          localStreamRef.current = stream;
+          setLocalStream(stream);
+          return stream;
+        }
+      } else {
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        return stream;
+      }
     } catch (error) {
       console.error("[RandomCall] Failed to get user media:", error);
       toast.error("Could not access camera/microphone");
@@ -840,6 +905,7 @@ function RandomCallPage() {
               userName="You"
               level={selectedLevel}
               videoRef={localVideoRef}
+              flipped={true}
             />
 
             {/* Remote Video */}
@@ -850,6 +916,7 @@ function RandomCallPage() {
               userName={isInCall && partnerInfo ? partnerInfo.partnerLevel : "Waiting..."}
               level={partnerInfo?.partnerLevel}
               videoRef={remoteVideoRef}
+              flipped={true}
             />
           </div>
 
