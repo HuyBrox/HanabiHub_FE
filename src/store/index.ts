@@ -1,4 +1,3 @@
-// Cấu hình Redux store chính của app
 import { configureStore } from "@reduxjs/toolkit";
 import { userApi } from "./services/userApi";
 import { authApi } from "./services/authApi";
@@ -9,10 +8,12 @@ import { activityApi } from "./services/activityApi";
 import { learningInsightsApi } from "./services/learningInsightsApi";
 import { aiChatApi } from "./services/aiChatApi";
 import { dashboardApi } from "./services/admin/dashboardApi";
+import { postApi } from "./services/postApi";
+import { commentApi } from "./services/commentApi";
 import authReducer from "./slices/authSlice";
 import {
-  authMiddleware, // để tự động refresh token
-  authListenerMiddleware, // để lắng nghe các sự kiện auth(login, logout)
+  authMiddleware,
+  authListenerMiddleware,
 } from "./middleware/authMiddleware";
 
 export const store = configureStore({
@@ -27,6 +28,8 @@ export const store = configureStore({
     [learningInsightsApi.reducerPath]: learningInsightsApi.reducer,
     [aiChatApi.reducerPath]: aiChatApi.reducer,
     [dashboardApi.reducerPath]: dashboardApi.reducer,
+    [postApi.reducerPath]: postApi.reducer,
+    [commentApi.reducerPath]: commentApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -39,6 +42,8 @@ export const store = configureStore({
       .concat(learningInsightsApi.middleware)
       .concat(aiChatApi.middleware)
       .concat(dashboardApi.middleware)
+      .concat(postApi.middleware)
+      .concat(commentApi.middleware)
       .concat(authMiddleware)
       .prepend(authListenerMiddleware.middleware),
 });

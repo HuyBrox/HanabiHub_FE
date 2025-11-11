@@ -2,98 +2,34 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { withAuth } from "@/components/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Heart,
-  MessageCircle,
-  Share,
-  TrendingUp,
-  UserPlus,
-  ImageIcon,
-} from "lucide-react";
+import { Heart, MessageCircle, Share, TrendingUp, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const posts = [
-  {
-    id: 1,
-    user: {
-      name: "SakuraKid",
-      avatar: "/anime-style-avatar-girl.png",
-      level: "N4",
-    },
-    content:
-      "Just passed my first JLPT practice test! The kanji flashcards really helped. 頑張って！ Anyone else preparing for December?",
-    image: null,
-    likes: 24,
-    comments: 8,
-    timeAgo: "2 hours ago",
-    liked: false,
-  },
-  {
-    id: 2,
-    user: {
-      name: "TokyoMaster",
-      avatar: "/anime-style-avatar-boy.png",
-      level: "N2",
-    },
-    content:
-      "Pro tip: When learning new vocabulary, try to use it in sentences immediately. Context makes everything stick better! Here's my study setup:",
-    image: "/japanese-study-setup-desk.png",
-    likes: 42,
-    comments: 15,
-    timeAgo: "4 hours ago",
-    liked: true,
-  },
-  {
-    id: 3,
-    user: {
-      name: "YukiLearner",
-      avatar: "/anime-style-avatar-woman.png",
-      level: "N5",
-    },
-    content:
-      "Finally memorized all hiragana! The spaced repetition system here is amazing. Moving on to katakana next week. ありがとうございます！",
-    image: null,
-    likes: 18,
-    comments: 6,
-    timeAgo: "6 hours ago",
-    liked: false,
-  },
-  {
-    id: 4,
-    user: {
-      name: "KanjiNinja",
-      avatar: "/anime-style-avatar-man.png",
-      level: "N1",
-    },
-    content:
-      "Today I learned that 雨 (rain) + 雲 (cloud) doesn't make a compound word, but 雨雲 (rain cloud) does exist! Japanese is fascinating. What's your favorite kanji discovery?",
-    image: null,
-    likes: 31,
-    comments: 12,
-    timeAgo: "8 hours ago",
-    liked: false,
-  },
-  {
-    id: 5,
-    user: {
-      name: "OsakaBenLover",
-      avatar: "/anime-style-avatar-girl-2.png",
-      level: "N3",
-    },
-    content:
-      "Started learning Kansai dialect and it's so different from standard Japanese! だんだん instead of ありがとう is my new favorite. Anyone else studying dialects?",
-    image: "/osaka-street-scene.png",
-    likes: 27,
-    comments: 9,
-    timeAgo: "12 hours ago",
-    liked: true,
-  },
-];
+import { useGetAllPostsQuery, useToggleLikePostMutation, useDeletePostMutation } from "@/store/services/postApi";
+import { Post, User } from "@/types/post";
+import { formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale/vi";
+import PostForm from "@/components/community/PostForm";
+import PostModal from "@/components/community/PostModal";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGetCurrentUserQuery } from "@/store/services/authApi";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
+import { useSocketLikes } from "@/hooks/useSocketLikes";
+import { useSocketPostDelete } from "@/hooks/useSocketPostDelete";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const trendingTopics = [
   { tag: "#JLPT2024", posts: 234 },
@@ -125,261 +61,286 @@ const friendSuggestions = [
 ];
 
 function CommunityPage() {
-  const [postLikes, setPostLikes] = useState<
-    Record<number, { liked: boolean; count: number }>
-  >(
-    posts.reduce(
-      (acc, post) => ({
-        ...acc,
-        [post.id]: { liked: post.liked, count: post.likes },
-      }),
-      {}
-    )
-  );
-  const [newPost, setNewPost] = useState("");
+  const { data: posts = [], isLoading, refetch } = useGetAllPostsQuery();
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [toggleLike] = useToggleLikePostMutation();
+  const [deletePost] = useDeletePostMutation();
+  const { data: currentUser } = useGetCurrentUserQuery();
+  const currentUserId = (currentUser?.data as any)?._id;
+  const router = useRouter();
 
-  const handleLike = (postId: number) => {
-    setPostLikes((prev) => ({
-      ...prev,
-      [postId]: {
-        liked: !prev[postId].liked,
-        count: prev[postId].liked
-          ? prev[postId].count - 1
-          : prev[postId].count + 1,
-      },
-    }));
+  useSocketLikes();
+  useSocketPostDelete();
+
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
+    setModalOpen(true);
+  };
+
+  const handleLike = async (e: React.MouseEvent, postId: string) => {
+    e.stopPropagation();
+    
+    if (!currentUser?.data) {
+      toast.error("Vui lòng đăng nhập để thích bài viết");
+      router.push("/login");
+      return;
+    }
+
+    try {
+      await toggleLike(postId).unwrap();
+    } catch (error: any) {
+      if (error?.status === 401) {
+        toast.error("Vui lòng đăng nhập để thích bài viết");
+        router.push("/login");
+      } else {
+        console.error("Error toggling like:", error);
+      }
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, postId: string) => {
+    e.stopPropagation();
+    if (!confirm("Bạn có chắc muốn xóa bài viết này?")) return;
+
+    try {
+      await deletePost(postId).unwrap();
+      toast.success("Đã xóa bài viết");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Có lỗi xảy ra");
+    }
   };
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Main Feed */}
       <div className="flex-1 max-w-2xl mx-auto p-6">
-        {/* Create Post */}
-        <Card className="mb-6">
-          <CardContent className="p-4">
-            <div className="flex gap-3">
-              <Avatar>
-                <AvatarImage src="/anime-style-avatar-user.png" />
-                <AvatarFallback>You</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 ">
-                <Textarea
-                  placeholder="Share your Japanese learning journey..."
-                  value={newPost}
-                  onChange={(e) => setNewPost(e.target.value)}
-                  className="min-h-[80px] resize-none border-0 p-3 focus-visible:ring-0 "
-                />
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                  <Button variant="ghost" size="sm">
-                    <ImageIcon className="h-4 w-4 mr-2" />
-                    Photo
-                  </Button>
-                  <Button
-                    className="bg-primary hover:bg-primary/90"
-                    disabled={!newPost.trim()}
-                  >
-                    Post
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {currentUser?.data && <PostForm />}
 
-        {/* Posts Feed */}
-        <div className="space-y-6">
-          {posts.map((post) => (
-            <Card key={post.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-3">
-                  <Avatar>
-                    <AvatarImage src={post.user.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>
-                      {post.user.name?.[0] ?? "?"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-semibold">{post.user.name}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {post.user.level} Level
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground">
-                        {post.timeAgo}
-                      </span>
-                    </div>
-                    <p className="text-foreground mb-3 leading-relaxed">
-                      {post.content}
-                    </p>
-                    {post.image && (
-                      <div className="mb-3">
-                        <img
-                          src={post.image || "/placeholder.svg"}
-                          alt="Post image"
-                          className="rounded-lg max-w-full h-auto"
-                        />
-                      </div>
-                    )}
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          "p-0 h-auto hover:text-primary",
-                          postLikes[post.id]?.liked && "text-primary"
-                        )}
-                        onClick={() => handleLike(post.id)}
-                      >
-                        <Heart
-                          className={cn(
-                            "h-4 w-4 mr-1",
-                            postLikes[post.id]?.liked && "fill-current"
-                          )}
-                        />
-                        {postLikes[post.id]?.count || post.likes}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-0 h-auto hover:text-primary"
-                      >
-                        <MessageCircle className="h-4 w-4 mr-1" />
-                        {post.comments}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-0 h-auto hover:text-primary"
-                      >
-                        <Share className="h-4 w-4 mr-1" />
-                        Share
-                      </Button>
+        {isLoading ? (
+          <div className="space-y-6">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardContent className="p-6">
+                  <div className="flex gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-48 w-full" />
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : posts.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center text-muted-foreground">
+              Chưa có bài viết nào. Hãy là người đầu tiên đăng bài!
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {posts.map((post: Post) => {
+              const author = typeof post.author === "string" ? null : post.author;
+              const isLiked = Array.isArray(post.likes)
+                ? post.likes.includes(currentUserId)
+                : false;
+              const likesCount = Array.isArray(post.likes) ? post.likes.length : 0;
+              const commentCount = post.commentCount || 0;
+
+              return (
+                <Card
+                  key={post._id}
+                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => handlePostClick(post)}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-3">
+                      <Avatar>
+                        <AvatarImage src={author?.avatar} />
+                        <AvatarFallback>
+                          {author?.fullname?.[0] || author?.username?.[0] || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold">
+                            {author?.fullname || author?.username || "Unknown"}
+                          </span>
+                          {post.createdAt && (
+                            <>
+                              <span className="text-sm text-muted-foreground">•</span>
+                              <span className="text-sm text-muted-foreground">
+                                {formatDistanceToNow(new Date(post.createdAt), {
+                                  addSuffix: true,
+                                  locale: vi,
+                                })}
+                              </span>
+                            </>
+                          )}
+                          {author?._id === currentUserId && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-auto">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem onClick={(e) => handleDelete(e, post._id)} className="text-destructive">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Xóa bài viết
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                        {(post.caption || post.desc) && (
+                          <p className="text-foreground mb-3 leading-relaxed">
+                            {post.caption || post.desc}
+                          </p>
+                        )}
+                        {post.images && post.images.length > 0 && (
+                          <div className="mb-3">
+                            {post.images.length === 1 ? (
+                              <img
+                                src={post.images[0]}
+                                alt="Post"
+                                className="rounded-lg max-w-full h-auto max-h-96 object-cover"
+                              />
+                            ) : (
+                              <Carousel className="w-full">
+                                <CarouselContent>
+                                  {post.images.map((image, index) => (
+                                    <CarouselItem key={index}>
+                                      <img
+                                        src={image}
+                                        alt={`Post ${index + 1}`}
+                                        className="rounded-lg w-full h-auto max-h-96 object-cover"
+                                      />
+                                    </CarouselItem>
+                                  ))}
+                                </CarouselContent>
+                              </Carousel>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                              "p-0 h-auto hover:text-primary",
+                              isLiked && "text-primary"
+                            )}
+                            onClick={(e) => handleLike(e, post._id)}
+                          >
+                            <Heart
+                              className={cn(
+                                "h-4 w-4 mr-1",
+                                isLiked && "fill-current"
+                              )}
+                            />
+                            {likesCount}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="p-0 h-auto hover:text-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePostClick(post);
+                            }}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-1" />
+                            {commentCount}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="p-0 h-auto hover:text-primary"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Share className="h-4 w-4 mr-1" />
+                            Chia sẻ
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Right Sidebar */}
-      <div className="w-80 p-6 space-y-6">
-        {/* Trending Topics */}
+      <div className="w-80 p-6 space-y-6 hidden lg:block">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-lg font-semibold mb-4">
               <TrendingUp className="h-5 w-5 text-primary" />
               Trending Topics
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {trendingTopics.map((topic, index) => (
-              <div
-                key={topic.tag}
-                className="flex items-center justify-between"
-              >
-                <div>
-                  <p className="font-medium text-primary hover:underline cursor-pointer">
-                    {topic.tag}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {topic.posts} posts
-                  </p>
+            </div>
+            <div className="space-y-3">
+              {trendingTopics.map((topic, index) => (
+                <div
+                  key={topic.tag}
+                  className="flex items-center justify-between"
+                >
+                  <div>
+                    <p className="font-medium text-primary hover:underline cursor-pointer">
+                      {topic.tag}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {topic.posts} posts
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    #{index + 1}
+                  </span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  #{index + 1}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Friend Suggestions */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-lg font-semibold mb-4">
               <UserPlus className="h-5 w-5 text-primary" />
               People to Follow
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {friendSuggestions.map((friend) => (
-              <div key={friend.name} className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={friend.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>{friend.name?.[0] ?? "?"}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{friend.name}</p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {friend.level}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
+            </div>
+            <div className="space-y-4">
+              {friendSuggestions.map((friend) => (
+                <div key={friend.name} className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={friend.avatar} />
+                    <AvatarFallback>{friend.name?.[0] ?? "?"}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{friend.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {friend.mutualFriends} mutual friends
-                    </span>
+                    </p>
                   </div>
+                  <Button size="sm" className="bg-primary hover:bg-primary/90">
+                    Follow
+                  </Button>
                 </div>
-                <Button size="sm" className="bg-primary hover:bg-primary/90">
-                  Follow
-                </Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Study Groups */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Study Groups</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="p-3 border border-border rounded-lg">
-              <p className="font-medium text-sm">JLPT N3 Study Group</p>
-              <p className="text-xs text-muted-foreground">
-                124 members • Daily practice
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2 w-full bg-transparent"
-              >
-                Join Group
-              </Button>
-            </div>
-            <div className="p-3 border border-border rounded-lg">
-              <p className="font-medium text-sm">Kanji Masters</p>
-              <p className="text-xs text-muted-foreground">
-                89 members • Advanced learners
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2 w-full bg-transparent"
-              >
-                Join Group
-              </Button>
-            </div>
-            <div className="p-3 border border-border rounded-lg">
-              <p className="font-medium text-sm">Anime Japanese Club</p>
-              <p className="text-xs text-muted-foreground">
-                256 members • Learn through anime
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2 w-full bg-transparent"
-              >
-                Join Group
-              </Button>
+              ))}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <PostModal
+        post={selectedPost}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
     </div>
   );
 }
 
-export default withAuth(CommunityPage);
+export default CommunityPage;
