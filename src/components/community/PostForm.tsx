@@ -116,7 +116,7 @@ export default function PostForm() {
               disabled={images.length >= 10}
             >
               <ImageIcon className="h-4 w-4 mr-2" />
-              Hình ảnh ({images.length}/10)
+              Hình ảnh 
             </Button>
             <input
               ref={fileInputRef}

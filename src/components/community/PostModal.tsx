@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Share } from "lucide-react";
+import { Heart, MessageCircle, Share, Trash2, MoreVertical } from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -17,28 +17,23 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Post, User } from "@/types/post";
+import { Post, Comment } from "@/types/post";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale/vi";
 import { useGetCommentsByPostQuery } from "@/store/services/commentApi";
-import { useToggleLikePostMutation, useGetPostByIdQuery } from "@/store/services/postApi";
+import {
+  useToggleLikePostMutation,
+  useGetPostByIdQuery,
+  useDeletePostMutation,
+} from "@/store/services/postApi";
 import CommentItem from "./CommentItem";
 import CommentForm from "./CommentForm";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetCurrentUserQuery } from "@/store/services/authApi";
 import { toast } from "sonner";
 import { useSocketComments } from "@/hooks/useSocketComments";
 import { useSocketLikes } from "@/hooks/useSocketLikes";
 import { useSocketCommentDelete } from "@/hooks/useSocketCommentDelete";
-import { useDeletePostMutation } from "@/store/services/postApi";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreVertical, Trash2 } from "lucide-react";
 
 interface PostModalProps {
   post: Post | null;
@@ -46,23 +41,17 @@ interface PostModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export default function PostModal({
-  post,
-  open,
-  onOpenChange,
-}: PostModalProps) {
+export default function PostModal({ post, open, onOpenChange }: PostModalProps) {
   const { data: commentsData, isLoading: commentsLoading } =
-    useGetCommentsByPostQuery(post?._id || "", {
-      skip: !post?._id,
-    });
-  const { data: updatedPost } = useGetPostByIdQuery(post?._id || "", {
-    skip: !post?._id,
-  });
+    useGetCommentsByPostQuery(post?._id || "", { skip: !post?._id });
+
+  const { data: updatedPost } = useGetPostByIdQuery(post?._id || "", { skip: !post?._id });
   const [toggleLike] = useToggleLikePostMutation();
   const [deletePost] = useDeletePostMutation();
   const { data: currentUser } = useGetCurrentUserQuery();
   const currentUserId = (currentUser?.data as any)?._id;
 
+  // Socket
   useSocketComments(post?._id);
   useSocketLikes(post?._id);
   useSocketCommentDelete(post?._id);
@@ -76,17 +65,7 @@ export default function PostModal({
     ? displayPost.likes.includes(currentUserId)
     : false;
   const likesCount = Array.isArray(displayPost.likes) ? displayPost.likes.length : 0;
-  const comments = commentsData || [];
-  const getTotalCommentCount = (comments: Comment[]): number => {
-    let count = comments.length;
-    comments.forEach((comment) => {
-      if (comment.replies && comment.replies.length > 0) {
-        count += getTotalCommentCount(comment.replies);
-      }
-    });
-    return count;
-  };
-  const commentCount = getTotalCommentCount(comments) || displayPost.commentCount || 0;
+  const comments = (commentsData as Comment[]) || [];
 
   const handleLike = async () => {
     try {
@@ -96,9 +75,8 @@ export default function PostModal({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeletePost = async () => {
     if (!confirm("Bạn có chắc muốn xóa bài viết này?")) return;
-
     try {
       await deletePost(displayPost._id).unwrap();
       toast.success("Đã xóa bài viết");
@@ -110,18 +88,53 @@ export default function PostModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex flex-col">
-        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
+      <DialogContent style={{ maxWidth: '900px', width: '100%' }} className="max-h-[90vh] p-0 flex flex-col bg-[#18191a] text-white">
+        {/* Header cố định chỉ để avatar */}
+        <DialogHeader className="p-4 border-b border-[#3a3b3c] flex items-left gap-1">
+          <Avatar>
+            <AvatarImage src={author?.avatar} />
+            <AvatarFallback>{author?.fullname?.[0] || author?.username?.[0] || "?"}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <DialogTitle className="text-base font-semibold leading-tight text-white">
+              {author?.fullname || author?.username || "Unknown"}
+            </DialogTitle>
+            {displayPost.createdAt && (
+              <p className="text-xs text-gray-400">
+                {formatDistanceToNow(new Date(displayPost.createdAt), { addSuffix: true, locale: vi })}
+              </p>
+            )}
+          </div>
+        </DialogHeader>
+
+        {/* Container cuộn chính */}
+        <div className="flex-1 overflow-y-auto px-4 pt-4 space-y-4">
+          {/* Caption + nút xóa sát phải */}
+          <div className="flex justify-between items-start">
+            <p className="text-sm leading-relaxed text-gray-200 whitespace-pre-wrap flex-1">
+              {displayPost.caption || displayPost.desc}
+            </p>
+            {isAuthor && (
+              <button
+                onClick={handleDeletePost}
+                className="ml-2 text-gray-400 hover:text-red-500 flex-shrink-0"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Images */}
           {displayPost.images && displayPost.images.length > 0 && (
-            <div className="md:w-1/2 bg-black flex items-center justify-center min-h-0">
-              <Carousel className="w-full h-full">
-                <CarouselContent className="h-full">
+            <div className="rounded-lg overflow-hidden bg-black">
+              <Carousel className="w-full">
+                <CarouselContent>
                   {displayPost.images.map((image, index) => (
-                    <CarouselItem key={index} className="h-full">
+                    <CarouselItem key={index} className="flex justify-center">
                       <img
                         src={image}
                         alt={`Post image ${index + 1}`}
-                        className="w-full h-full object-contain max-h-[90vh]"
+                        className="max-h-[60vh] w-full object-contain"
                       />
                     </CarouselItem>
                   ))}
@@ -135,125 +148,66 @@ export default function PostModal({
               </Carousel>
             </div>
           )}
-          <div
-            className={`flex flex-col flex-1 min-h-0 ${
-              displayPost.images && displayPost.images.length > 0 ? "md:w-1/2" : "w-full"
-            }`}
-          >
-            <DialogHeader className="p-4 border-b flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={author?.avatar} />
-                  <AvatarFallback>
-                    {author?.fullname?.[0] || author?.username?.[0] || "?"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <DialogTitle className="text-base font-semibold">
-                    {author?.fullname || author?.username || "Unknown"}
-                  </DialogTitle>
-                  {displayPost.createdAt && (
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(displayPost.createdAt), {
-                        addSuffix: true,
-                        locale: vi,
-                      })}
-                    </p>
-                  )}
-                </div>
-                {isAuthor && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Xóa bài viết
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            </DialogHeader>
 
-            <ScrollArea className="flex-1 min-h-0">
-              <div className="p-4">
-                <div className="mb-4">
-                  {(displayPost.caption || displayPost.desc) && (
-                    <p className="text-sm mb-4 whitespace-pre-wrap">
-                      {displayPost.caption || displayPost.desc}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-6 text-sm text-muted-foreground border-t border-b py-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`p-0 h-auto ${
-                        isLiked ? "text-primary" : ""
-                      }`}
-                      onClick={handleLike}
-                    >
-                      <Heart
-                        className={`h-4 w-4 mr-1 ${
-                          isLiked ? "fill-current" : ""
-                        }`}
-                      />
-                      {likesCount}
-                    </Button>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle className="h-4 w-4" />
-                      {commentCount}
-                    </div>
-                    <Button variant="ghost" size="sm" className="p-0 h-auto">
-                      <Share className="h-4 w-4 mr-1" />
-                      Chia sẻ
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-sm">
-                    Bình luận ({commentCount})
-                  </h3>
-                  {commentsLoading ? (
-                    <div className="space-y-3">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex gap-3">
-                          <Skeleton className="h-8 w-8 rounded-full" />
-                          <div className="flex-1 space-y-2">
-                            <Skeleton className="h-4 w-32" />
-                            <Skeleton className="h-4 w-full" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : comments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Chưa có bình luận nào
-                    </p>
-                  ) : (
-                    comments.map((comment) => (
-                      <CommentItem
-                        key={comment._id}
-                        comment={comment}
-                        postId={displayPost._id}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            </ScrollArea>
-
-            <div className="p-4 border-t flex-shrink-0">
-              <CommentForm postId={displayPost._id} />
+          {/* Likes + comment count */}
+          <div className="flex items-center justify-between text-xs text-gray-400">
+            <div className="flex items-center gap-2">
+              <Heart className="h-4 w-4 text-blue-500 fill-blue-500" />
+              <span>{likesCount}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>{comments.length} bình luận</span>
             </div>
           </div>
+
+          {/* Action buttons nằm trong scroll */}
+          <div className="flex gap-2 border-y border-[#3a3b3c] py-2 text-sm font-medium text-gray-300">
+            <button
+              onClick={handleLike}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 hover:bg-[#3a3b3c] ${isLiked ? "text-blue-500" : ""}`}
+            >
+              <Heart className={`h-5 w-5 ${isLiked ? "fill-blue-500" : ""}`} />
+              Thích
+            </button>
+            <div className="flex flex-1 items-center justify-center gap-2 rounded-md py-2 hover:bg-[#3a3b3c]">
+              <MessageCircle className="h-5 w-5" />
+              Bình luận
+            </div>
+            <button className="flex flex-1 items-center justify-center gap-2 rounded-md py-2 hover:bg-[#3a3b3c]">
+              <Share className="h-5 w-5" />
+              Chia sẻ
+            </button>
+          </div>
+
+          {/* Comment list */}
+          <div className="space-y-3">
+            {commentsData === undefined || commentsLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full bg-[#3a3b3c]" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-28 bg-[#3a3b3c]" />
+                      <Skeleton className="h-4 w-full bg-[#3a3b3c]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : comments.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-500">Chưa có bình luận nào</p>
+            ) : (
+              comments.map((comment) => (
+                <CommentItem key={comment._id} comment={comment} postId={displayPost._id} />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Input comment cố định dưới cùng */}
+        <div className="border-t border-[#3a3b3c] bg-[#242526] p-3">
+          <CommentForm postId={displayPost._id} />
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-

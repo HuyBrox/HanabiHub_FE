@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Share, TrendingUp, UserPlus } from "lucide-react";
+import { Heart, MessageCircle, Share } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetAllPostsQuery, useToggleLikePostMutation, useDeletePostMutation } from "@/store/services/postApi";
 import { Post, User } from "@/types/post";
@@ -30,35 +30,6 @@ import {
 import { MoreVertical, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-
-const trendingTopics = [
-  { tag: "#JLPT2024", posts: 234 },
-  { tag: "#KanjiOfTheDay", posts: 189 },
-  { tag: "#StudyTips", posts: 156 },
-  { tag: "#JapaneseGrammar", posts: 143 },
-  { tag: "#AnimeJapanese", posts: 98 },
-];
-
-const friendSuggestions = [
-  {
-    name: "HiroshiSensei",
-    avatar: "/anime-style-avatar-teacher.png",
-    level: "Native",
-    mutualFriends: 12,
-  },
-  {
-    name: "MangaReader99",
-    avatar: "/anime-style-avatar-boy-2.png",
-    level: "N3",
-    mutualFriends: 8,
-  },
-  {
-    name: "TokyoLife",
-    avatar: "/anime-style-avatar-woman-2.png",
-    level: "N2",
-    mutualFriends: 5,
-  },
-];
 
 function CommunityPage() {
   const { data: posts = [], isLoading, refetch } = useGetAllPostsQuery();
@@ -113,7 +84,7 @@ function CommunityPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <div className="flex-1 max-w-2xl mx-auto p-6">
+      <div className="flex-1 max-w-3xl mx-auto p-6">
         {currentUser?.data && <PostForm />}
 
         {isLoading ? (
@@ -273,65 +244,6 @@ function CommunityPage() {
             })}
           </div>
         )}
-      </div>
-
-      <div className="w-80 p-6 space-y-6 hidden lg:block">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-lg font-semibold mb-4">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Trending Topics
-            </div>
-            <div className="space-y-3">
-              {trendingTopics.map((topic, index) => (
-                <div
-                  key={topic.tag}
-                  className="flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium text-primary hover:underline cursor-pointer">
-                      {topic.tag}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {topic.posts} posts
-                    </p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    #{index + 1}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-lg font-semibold mb-4">
-              <UserPlus className="h-5 w-5 text-primary" />
-              People to Follow
-            </div>
-            <div className="space-y-4">
-              {friendSuggestions.map((friend) => (
-                <div key={friend.name} className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={friend.avatar} />
-                    <AvatarFallback>{friend.name?.[0] ?? "?"}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{friend.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {friend.mutualFriends} mutual friends
-                    </p>
-                  </div>
-                  <Button size="sm" className="bg-primary hover:bg-primary/90">
-                    Follow
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <PostModal
