@@ -1,0 +1,35 @@
+/* src/components/admin/user/UserFilters.module.css */
+.wrap {
+  display: grid;
+  grid-template-columns: 1fr 200px 200px 100px;
+  gap: 12px;
+  align-items: center;
+}
+
+.input {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  outline: none;
+  background: #fff;
+}
+
+.select {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.button {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

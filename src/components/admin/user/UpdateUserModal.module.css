@@ -1,0 +1,175 @@
+/* ===== OVERLAY ===== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35); /* slate-900/35 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+
+/* ===== MODAL ===== */
+.modal {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(148, 163, 184, 0.15);
+  padding: 24px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+}
+
+/* ===== TITLE ===== */
+.modal h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  color: #1e293b; /* slate-800 */
+}
+
+/* ===== ERROR / LOADING ===== */
+.error {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.loading {
+  font-size: 14px;
+  color: #64748b;
+  padding: 12px 0 4px;
+}
+
+/* ===== FORM ELEMENTS ===== */
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.input,
+.select {
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+  background-color: #ffffff;
+  transition:
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    background-color 0.12s ease;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #4f46e5; /* indigo-600 */
+  box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.15);
+}
+
+.input:disabled,
+.select:disabled {
+  background-color: #f8fafc;
+  color: #94a3b8;
+}
+
+/* Email readonly nhìn khác 1 xíu */
+.input:disabled {
+  cursor: default;
+}
+
+/* ===== ROW (role + status) ===== */
+.row {
+  display: flex;
+  gap: 12px;
+}
+
+.row .label {
+  flex: 1 1 0;
+}
+
+@media (max-width: 640px) {
+  .modal {
+    max-width: 100%;
+    padding: 20px 16px 16px;
+  }
+  .row {
+    flex-direction: column;
+  }
+}
+
+/* ===== ACTIONS ===== */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.cancel,
+.primary {
+  min-width: 90px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.05s ease;
+}
+
+/* nút Hủy */
+.cancel {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+
+.cancel:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+/* nút Lưu */
+.primary {
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+}
+
+.primary:hover:not(:disabled) {
+  background: #020617;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.3);
+}
+
+.cancel:disabled,
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+  box-shadow: none;
+}
+
+/* Giữa các field và nút dưới cùng */
+.modal > *:last-child {
+  margin-top: 4px;
+}

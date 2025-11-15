@@ -1,0 +1,11 @@
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
+.card{position:relative;border-radius:14px;padding:16px;color:#fff;min-height:92px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.title{opacity:.9;font-size:13px;margin-bottom:8px}
+.value{font-size:26px;font-weight:800;letter-spacing:.2px}
+.note{opacity:.9;font-size:12px;margin-top:8px}
+.purple{background:linear-gradient(135deg,#7c3aed,#db2777)}
+.pink{background:linear-gradient(135deg,#e11d48,#c026d3)}
+.green{background:linear-gradient(135deg,#16a34a,#22c55e)}
+.orange{background:linear-gradient(135deg,#a16207,#f59e0b)}
+@media (max-width:1024px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}}

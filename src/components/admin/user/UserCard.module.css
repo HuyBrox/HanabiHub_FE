@@ -1,0 +1,26 @@
+/* ===== CARD PASTEL LIKE CHART BACKGROUND ===== */
+.card {
+  background: linear-gradient(
+    140deg,
+    #8caccb 0%,   /* trắng xanh rất nhẹ */
+    #a2c2e2 40%,  /* xám xanh cực nhẹ */
+    #a8b7e6 100%  /* tím nhạt kiểu biểu đồ */
+  );
+  border: 1px solid rgba(226, 232, 240, 0.7); /* giống border chart */
+  border-radius: 20px;
+  padding: 20px;
+
+  /* shadow kiểu chart */
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.02),
+    0 2px 4px rgba(0, 0, 0, 0.04);
+
+  transition: 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.05),
+    0 3px 8px rgba(0, 0, 0, 0.04);
+}

@@ -1,0 +1,102 @@
+/* --- Grid wrapper --- */
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+@media (min-width: 768px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1200px){ .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1536px){ .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* --- Card --- */
+.card{
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(15,23,42,.06);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(15,23,42,.10);
+}
+
+/* --- Header --- */
+.row{
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.flexGrow{ min-width:0; flex:1; }
+.name{
+  color:#0f172a; font-weight: 600; font-size: 15px; line-height: 1.2;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.email{
+  color:#64748b; font-size: 13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.kebab{
+  margin-left:auto; height:32px; width:32px; border-radius:8px; color:#94a3b8;
+  background:transparent; border:none; cursor:pointer;
+}
+.kebab:hover{ background:#f8fafc; color:#475569; }
+
+/* --- Avatar --- */
+.avatar{
+  height:44px; width:44px; border-radius:999px; color:#fff; font-weight:700;
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.6) inset, 0 4px 12px rgba(15,23,42,.12);
+}
+.av_admin{ background: linear-gradient(135deg,#ef4444,#b91c1c); }
+.av_moderator{ background: linear-gradient(135deg,#f59e0b,#d97706); }
+.av_user{ background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
+.av_viewer{ background: linear-gradient(135deg,#10b981,#059669); }
+
+/* --- Meta --- */
+.metaGrid{
+  display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:12px;
+}
+.metaLabel{
+  font-size: 11px; color:#94a3b8; letter-spacing:.04em; text-transform:uppercase;
+  margin-bottom:6px;
+}
+
+/* --- Badges --- */
+.badge{
+  display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
+  font-size: 12px; font-weight:600; border-radius:999px; border:1px solid transparent;
+}
+.role_admin{ background:#fee2e2; color:#b91c1c; border-color:#fecaca; }
+.role_moderator{ background:#fef3c7; color:#b45309; border-color:#fde68a; }
+.role_user{ background:#dbeafe; color:#1d4ed8; border-color:#bfdbfe; }
+.role_viewer{ background:#d1fae5; color:#047857; border-color:#a7f3d0; }
+
+.state_online{ background:#d1fae5; color:#047857; border-color:#a7f3d0; }
+.state_offline{ background:#f1f5f9; color:#334155; border-color:#e2e8f0; }
+.state_blocked{ background:#ffe4e6; color:#be123c; border-color:#fecdd3; }
+
+.dot{ width:8px; height:8px; border-radius:50%; display:inline-block; }
+.dotOn{ background:#10b981; }
+.dotOff{ background:#94a3b8; }
+.dotBlock{ background:#f43f5e; }
+
+/* --- Last login --- */
+.lastRow{
+  display:flex; align-items:center; gap:8px; color:#64748b; font-size:12px; margin-top:12px;
+}
+.clock{ font-size:14px; }
+.lastStrong{ font-weight:600; color:#334155; }
+
+/* --- Actions --- */
+.actions{
+  margin-top:12px; display:flex; align-items:center; justify-content:flex-end; gap:16px;
+}
+.link{
+  background:none; border:none; cursor:pointer; font-size:13px; font-weight:600;
+  padding:0; text-decoration:none;
+}
+.linkEdit{ color:#6d28d9; }
+.linkEdit:hover{ color:#5b21b6; }
+.linkDel{ color:#e11d48; }
+.linkDel:hover{ color:#be123c; }
