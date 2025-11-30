@@ -1,4 +1,4 @@
-/* ===== OVERLAY ===== */
+/* ===== OVERLAY – mờ + blur nhẹ ===== */
 .overlay {
   position: fixed;
   inset: 0;
@@ -8,22 +8,74 @@
   justify-content: center;
   z-index: 50;
   padding: 16px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: overlayFadeIn 0.18s ease-out;
 }
 
-/* ===== MODAL ===== */
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ===== MODAL – pastel glass + viền dịu ===== */
 .modal {
   width: 100%;
   max-width: 480px;
-  background: #ffffff;
-  border-radius: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(250, 247, 255, 0.95), transparent 60%),
+    radial-gradient(circle at bottom right, rgba(226, 232, 255, 0.9), transparent 55%),
+    linear-gradient(135deg, #ffffff, #f9fafb);
+  border-radius: 22px;
   box-shadow:
-    0 18px 45px rgba(15, 23, 42, 0.18),
-    0 0 0 1px rgba(148, 163, 184, 0.15);
+    0 22px 55px rgba(15, 23, 42, 0.22),
+    0 0 0 1px rgba(148, 163, 184, 0.18);
   padding: 24px 24px 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  animation: modalPop 0.2s ease-out;
+}
+
+/* viền gradient rất nhẹ quanh modal */
+.modal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from 220deg,
+    rgba(168, 85, 247, 0.35),
+    rgba(79, 70, 229, 0.28),
+    rgba(56, 189, 248, 0.25),
+    rgba(52, 211, 153, 0.25),
+    rgba(248, 113, 113, 0.25),
+    rgba(168, 85, 247, 0.35)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ===== TITLE ===== */
@@ -35,9 +87,18 @@
   color: #1e293b; /* slate-800 */
 }
 
+/* line nhỏ dưới title */
+.modal h2 + p,
+.modal h2 + span {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+}
+
 /* ===== ERROR / LOADING ===== */
 .error {
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 12px;
   font-size: 13px;
   line-height: 1.4;
@@ -62,32 +123,62 @@
   color: #0f172a;
 }
 
+/* chấm nhỏ trang trí label */
+.label span,
+.label > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label span::before,
+.label > label::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #a5b4fc, #c4b5fd);
+  box-shadow: 0 0 6px rgba(129, 140, 248, 0.55);
+}
+
+/* input/select pastel */
 .input,
 .select {
   height: 40px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   padding: 0 12px;
   font-size: 14px;
   color: #0f172a;
   outline: none;
-  background-color: #ffffff;
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(239, 246, 255, 0.9));
   transition:
-    border-color 0.12s ease,
-    box-shadow 0.12s ease,
-    background-color 0.12s ease;
+    border-color 0.14s ease,
+    box-shadow 0.14s ease,
+    background-color 0.14s ease,
+    transform 0.06s ease;
+}
+
+.input::placeholder {
+  color: #94a3b8;
 }
 
 .input:focus,
 .select:focus {
   border-color: #4f46e5; /* indigo-600 */
-  box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.15);
+  box-shadow:
+    0 0 0 1px rgba(79, 70, 229, 0.2),
+    0 8px 20px rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  transform: translateY(-1px);
 }
 
 .input:disabled,
 .select:disabled {
   background-color: #f8fafc;
   color: #94a3b8;
+  box-shadow: none;
 }
 
 /* Email readonly nhìn khác 1 xíu */
@@ -133,33 +224,36 @@
   font-weight: 500;
   cursor: pointer;
   transition:
-    background-color 0.12s ease,
-    color 0.12s ease,
-    box-shadow 0.12s ease,
-    transform 0.05s ease;
+    background-color 0.14s ease,
+    color 0.14s ease,
+    box-shadow 0.14s ease,
+    transform 0.06s ease;
 }
 
-/* nút Hủy */
+/* nút Hủy – xám pastel */
 .cancel {
-  background: #f1f5f9;
+  background: linear-gradient(135deg, #f1f5f9, #e5e7eb);
   color: #0f172a;
   border-color: #e2e8f0;
 }
 
 .cancel:hover:not(:disabled) {
-  background: #e2e8f0;
+  background: linear-gradient(135deg, #e5e7eb, #dbeafe);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
 }
 
-/* nút Lưu */
+/* nút Lưu – gradient tím đậm */
 .primary {
-  background: #0f172a;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
   color: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 10px 26px rgba(79, 70, 229, 0.45);
 }
 
 .primary:hover:not(:disabled) {
-  background: #020617;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.3);
+  background: linear-gradient(135deg, #4338ca, #6d28d9);
+  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.55);
+  transform: translateY(-1px);
 }
 
 .cancel:disabled,

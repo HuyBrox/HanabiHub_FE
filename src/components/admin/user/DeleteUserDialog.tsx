@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import styles from "./CreateUserModal.module.css";
+import styles from "./DeleteUserDialog.module.css";
 import {
   useSoftDeleteAdminUserMutation,
   useDeleteAdminUserMutation,

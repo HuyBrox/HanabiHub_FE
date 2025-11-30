@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  FormEvent,
+  MouseEvent,
+  KeyboardEvent,
+} from "react";
 import styles from "./CreateUserModal.module.css";
 import {
   useCreateAdminUserMutation,
@@ -39,6 +46,7 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
   const validate = () => {
     if (!fullname.trim()) return "Vui lòng nhập họ và tên";
     if (!email.trim()) return "Vui lòng nhập email";
+
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!ok) return "Email không hợp lệ";
 
@@ -52,7 +60,7 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
     return "";
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setClientErr("");
 
@@ -91,12 +99,42 @@ export default function CreateUserModal({ open, onClose, onCreated }: Props) {
     if (!open) setClientErr("");
   }, [open]);
 
+  // ESC để đóng modal
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent | any) => {
+      if (e.key === "Escape" && !isLoading) {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, isLoading, onClose]);
+
   if (!open) return null;
 
+  const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && !isLoading) {
+      onClose();
+    }
+  };
+
   return (
-    <div className={styles.overlay}>
-      <form className={styles.modal} onSubmit={handleSubmit}>
-        <h2>Thêm người dùng</h2>
+    <div
+      className={styles.overlay}
+      onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-user-title"
+    >
+      <form
+        className={styles.modal}
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="create-user-title">Thêm người dùng</h2>
 
         {(clientErr || apiErrMsg) && (
           <div className={styles.error}>

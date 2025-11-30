@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import styles from "./UsersView.module.css";
-// Các component sẵn có của b (giữ nguyên api props như b đang dùng)
+
 import StatsCards from "./StatsCards";
 import UserFilters from "./UserFilters";
 import UserGrid from "./UserGrid";
@@ -10,20 +10,19 @@ import CreateUserModal from "./CreateUserModal";
 import UpdateUserModal from "./UpdateUserModal";
 import DeleteUserDialog from "./DeleteUserDialog";
 
-// RTK Query hooks đã tạo
+// RTK Query API
 import {
-  useListUsersQuery,
-  useCreateUserMutation,
-  useUpdateUserMutation,
-  useDeleteUserMutation,
-  type User,
+  useListAdminUsersQuery,
+  useCreateAdminUserMutation,
+  useUpdateAdminUserMutation,
+  useDeleteAdminUserMutation,
+  useGetAdminStatsQuery,
+  type AdminUserDTO as User,
 } from "@/store/services/admin/usersAdminApi";
 
-// Debounce nhỏ để search mượt
+// Debounce search
 function useDebounced<T>(value: T, delay = 400) {
   const [v, setV] = useState(value);
-  // đơn giản: đổi state sau delay
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useMemo(() => {
     const t = setTimeout(() => setV(value), delay);
     return () => clearTimeout(t);
@@ -32,39 +31,53 @@ function useDebounced<T>(value: T, delay = 400) {
 }
 
 export default function UsersView() {
-  // UI state
   const [openCreate, setOpenCreate] = useState(false);
-  const [openUpdate, setOpenUpdate] = useState<{ open: boolean; id?: string }>({ open: false });
-  const [openDelete, setOpenDelete] = useState<{ open: boolean; id?: string }>({ open: false });
+  const [openUpdate, setOpenUpdate] = useState<{ open: boolean; id?: string }>({
+    open: false,
+  });
+  const [openDelete, setOpenDelete] = useState<{ open: boolean; id?: string }>(
+    { open: false }
+  );
 
-  // filter/search
   const [searchQ, setSearchQ] = useState("");
   const debouncedQ = useDebounced(searchQ, 450);
 
-  // gọi API list
-  const { data, isLoading, isFetching, error } = useListUsersQuery(
+  /** GET list users */
+  const { data, isLoading, isFetching, error } = useListAdminUsersQuery(
     { search: debouncedQ, page: 1, limit: 12 },
     { refetchOnMountOrArgChange: true }
   );
 
-  // mutations (nếu b cần gọi trực tiếp trong modal)
-  const [createUser] = useCreateUserMutation();
-  const [updateUser] = useUpdateUserMutation();
-  const [deleteUser] = useDeleteUserMutation();
+  /** GET stats */
+  const { data: statsData, isLoading: statsLoading } = useGetAdminStatsQuery();
 
-  // dữ liệu hiển thị
+  /** API mutations */
+  const [createUser] = useCreateAdminUserMutation();
+  const [updateUser] = useUpdateAdminUserMutation();
+  const [deleteUser] = useDeleteAdminUserMutation();
+
   const users: User[] = data?.data ?? [];
 
-  // thống kê bốn thẻ
-  const stats = useMemo(() => {
+  /** Fallback stats nếu BE không trả về metrics */
+  const localStats = useMemo(() => {
     const total = users.length;
-    const admin = users.filter((u) => (u as any).role === "admin").length;
-    const online = users.filter((u) => (u as any).online || (u as any).isOnline).length;
-    // viewCount: giả lập nếu BE chưa có trường này
-    const viewCount = 8700;
-
-    return { total, admin, online, viewCount };
+    const admin = users.filter((u) => u.role === "admin").length;
+    const online = users.filter((u) => u.online || (u as any).isOnline).length;
+    return { total, admin, online };
   }, [users]);
+
+  /** Ghép stats từ BE + fallback */
+  const mergedStats = {
+    totalUsers: statsData?.data.totalUsers ?? localStats.total,
+    adminCount: statsData?.data.adminCount ?? localStats.admin,
+    onlineCount: statsData?.data.onlineCount ?? localStats.online,
+
+    // GIỮ METRICS CHO % THÁNG TRƯỚC
+    metrics: statsData?.data.metrics ?? {
+      users: { changePercent: null },
+      admins: { changePercent: null },
+    },
+  };
 
   return (
     <div className={styles.container}>
@@ -74,25 +87,21 @@ export default function UsersView() {
           <h1 className={styles.title}>Quản Lý Người Dùng</h1>
           <p className={styles.subtitle}>Tổng quan về tài khoản người dùng và công cụ quản trị.</p>
         </div>
-        <button className={styles.primaryBtn} onClick={() => setOpenCreate(true)}>
-          + Thêm Người Dùng
-        </button>
       </div>
 
-      {/* STATS */}
+      {/* 4 STAT CARDS */}
       <StatsCards
-        totalUsers={stats.total}
-        adminCount={stats.admin}
-        onlineCount={stats.online}
-        views={stats.viewCount}
+        totalUsers={mergedStats.totalUsers}
+        adminCount={mergedStats.adminCount}
+        onlineCount={mergedStats.onlineCount}
+        metrics={mergedStats.metrics}
+        loading={statsLoading}
+        onOpenCreate={() => setOpenCreate(true)}
       />
 
       {/* FILTERS */}
       <div className={styles.card}>
-        <UserFilters
-          onSearch={(q: string) => setSearchQ(q)}
-          // nếu b có role/status trong UserFilters có thể thêm prop onChange...
-        />
+        <UserFilters onSearch={(q: string) => setSearchQ(q)} />
       </div>
 
       {/* LIST */}
@@ -111,25 +120,16 @@ export default function UsersView() {
       </div>
 
       {/* MODALS */}
-      <CreateUserModal
-        open={openCreate}
-        onClose={() => setOpenCreate(false)}
-        // nếu modal cần gọi API:
-        // onSubmit={async (payload) => { await createUser(payload).unwrap(); setOpenCreate(false); }}
-      />
-
+      <CreateUserModal open={openCreate} onClose={() => setOpenCreate(false)} />
       <UpdateUserModal
         open={openUpdate.open}
         userId={openUpdate.id}
         onClose={() => setOpenUpdate({ open: false })}
-        // onSubmit={async (payload) => { if (!openUpdate.id) return; await updateUser({ id: openUpdate.id, payload}).unwrap(); setOpenUpdate({open:false}); }}
       />
-
       <DeleteUserDialog
         open={openDelete.open}
         userId={openDelete.id}
         onClose={() => setOpenDelete({ open: false })}
-        // onConfirm={async () => { if (!openDelete.id) return; await deleteUser(openDelete.id).unwrap(); setOpenDelete({open:false}); }}
       />
     </div>
   );

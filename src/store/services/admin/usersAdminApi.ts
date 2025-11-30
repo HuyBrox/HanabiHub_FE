@@ -80,7 +80,8 @@ export interface AdminStatsResponse {
     totalUsers: number;
     adminCount: number;
     onlineCount: number;
-    visits: number;           // BE sẽ trả số tài khoản inactive
+    // số tài khoản bị vô hiệu hóa (inactive)
+    visits: number;
     metrics: AdminStatsMetrics;
   };
   message?: string;
@@ -94,7 +95,7 @@ export const usersAdminApi = createApi({
   reducerPath: "usersAdminApi",
   baseQuery: fetchBaseQuery({
     baseUrl: API_URL,
-    credentials: "include", // gửi cookie sang BE
+    credentials: "include",
   }),
   tagTypes: ["AdminUsers", "AdminStats"],
   endpoints: (builder) => ({

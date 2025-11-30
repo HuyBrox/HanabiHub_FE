@@ -1,7 +1,9 @@
 "use client";
 
-type Role = "admin" | "moderator" | "user" | "viewer";
-type Status = "active" | "inactive" | "blocked";
+import styles from "./UserGrid.module.css";
+
+type Role = "admin" | "user";
+type Status = "active" | "inactive";
 
 export interface AdminUserView {
   id: string;
@@ -9,9 +11,8 @@ export interface AdminUserView {
   email: string;
   role: Role;
   status: Status;
-  online?: boolean;          // 👈 nhận từ BE
+  online?: boolean;
   lastLoginAt?: string;
-  avatar?: string;
 }
 
 interface UserGridProps {
@@ -29,126 +30,98 @@ export default function UserGrid({ users, onEdit, onDelete }: UserGridProps) {
     );
   }
 
+  const roleLabel: Record<Role, string> = {
+    admin: "Admin",
+    user: "User",
+  };
+
+  const statusLabel: Record<Status, string> = {
+    active: "Đang hoạt động",
+    inactive: "Ngưng hoạt động",
+  };
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className={styles.grid}>
       {users.map((user) => {
         const initial = user.name?.[0]?.toUpperCase() ?? "U";
 
-        const roleLabel: Record<Role, string> = {
-          admin: "Admin",
-          moderator: "Moderator",
-          user: "User",
-          viewer: "Viewer",
-        };
+        /* ==== ROLE COLOR ==== */
+        const roleClass = user.role === "admin" ? styles.role_admin : styles.role_user;
 
-        const roleColor: Record<Role, string> = {
-          admin: "bg-rose-50 text-rose-700",
-          moderator: "bg-amber-50 text-amber-700",
-          user: "bg-sky-50 text-sky-700",
-          viewer: "bg-emerald-50 text-emerald-700",
-        };
+        /* ==== ONLINE CHIP ==== */
+        const isOnline = user.online === true && user.status === "active";
 
-        const statusLabel: Record<Status, string> = {
-          active: "Đang hoạt động",
-          inactive: "Ngưng hoạt động",
-          blocked: "Đã chặn",
-        };
+        const stateClass = isOnline ? styles.state_online : styles.state_offline;
+        const dotClass = isOnline ? styles.dotOn : styles.dotOff;
+        const stateText = isOnline ? "Online" : "Offline";
 
-        // 👇 DÙNG CỜ online THẬT TỪ BE
-        const isOnline = user.online === true;
+        /* ==== AVATAR COLOR ==== */
+        const avatarClass = user.role === "admin" ? styles.av_admin : styles.av_user;
+
+        const lastLogin = user.lastLoginAt
+          ? new Date(user.lastLoginAt).toLocaleDateString("vi-VN")
+          : "Không rõ";
 
         return (
-          <article
-            key={user.id}
-            className="group relative flex flex-col rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md"
-          >
-            {/* Menu 3 chấm */}
-            <button
-              className="absolute right-4 top-3 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              type="button"
-            >
-              ⋯
-            </button>
+          <article key={user.id} className={styles.card}>
+            {/* Header: avatar + info + menu */}
+            <div className={styles.row}>
+              <div className={`${styles.avatar} ${avatarClass}`}>{initial}</div>
 
-            {/* Header: avatar + name + email */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-lg font-semibold text-white shadow-sm">
-                {initial}
+              <div className={styles.flexGrow}>
+                <div className={styles.name}>{user.name}</div>
+                <div className={styles.email}>{user.email}</div>
               </div>
-              <div className="min-w-0">
-                <h3 className="truncate text-base font-semibold text-slate-900">
-                  {user.name}
-                </h3>
-                <p className="truncate text-xs text-slate-500">
-                  {user.email}
-                </p>
+
+              <button className={styles.kebab} type="button">
+                ⋯
+              </button>
+            </div>
+
+            {/* Role + Online */}
+            <div className={styles.metaGrid}>
+              <div>
+                <div className={styles.metaLabel}>Vai trò</div>
+                <div className={`${styles.badge} ${roleClass}`}>
+                  {roleLabel[user.role]}
+                </div>
+              </div>
+
+              <div>
+                <div className={styles.metaLabel}>Trạng thái</div>
+                <div className={`${styles.badge} ${stateClass}`}>
+                  <span className={`${styles.dot} ${dotClass}`} />
+                  {stateText}
+                </div>
               </div>
             </div>
 
-            {/* Body: role + online chip + status text */}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {/* Vai trò */}
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${roleColor[user.role]}`}
-              >
-                {roleLabel[user.role]}
-              </span>
-
-              {/* Online / Offline – DÙNG user.online */}
-              <span
-                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                  isOnline
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "bg-slate-100 text-slate-500"
-                }`}
-              >
-                <span
-                  className={`mr-1 h-2 w-2 rounded-full ${
-                    isOnline ? "bg-emerald-500" : "bg-slate-400"
-                  }`}
-                />
-                {isOnline ? "Online" : "Offline"}
+            {/* Last login */}
+            <div className={styles.lastRow}>
+              <span className={styles.clock}>⏱</span>
+              <span>
+                Đăng nhập cuối:{" "}
+                <span className={styles.lastStrong}>{lastLogin}</span>
               </span>
             </div>
-
-            {/* Info lines */}
-            <dl className="mt-4 space-y-2 text-xs text-slate-500">
-              <div className="flex items-center justify-between">
-                <dt className="font-medium text-slate-600">Trạng thái hệ thống</dt>
-                <dd className="text-right text-slate-700">
-                  {statusLabel[user.status]}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="flex items-center gap-1 font-medium text-slate-600">
-                  <span className="text-[11px]">⏱</span> Đăng nhập cuối
-                </dt>
-                <dd className="text-right">
-                  {user.lastLoginAt
-                    ? new Date(user.lastLoginAt).toLocaleDateString("vi-VN")
-                    : "Không rõ"}
-                </dd>
-              </div>
-            </dl>
 
             {/* Actions */}
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => onEdit?.(user.id)}
-                  className="inline-flex items-center gap-1 font-medium text-violet-600 hover:text-violet-700"
-                >
-                  <span className="text-[11px]">✏️</span> Sửa
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete?.(user.id)}
-                  className="inline-flex items-center gap-1 font-medium text-rose-600 hover:text-rose-700"
-                >
-                  <span className="text-[11px]">🗑</span> Xóa
-                </button>
-              </div>
+            <div className={styles.actions}>
+              <button
+                type="button"
+                onClick={() => onEdit?.(user.id)}
+                className={`${styles.link} ${styles.linkEdit}`}
+              >
+                ✏️ Sửa
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onDelete?.(user.id)}
+                className={`${styles.link} ${styles.linkDel}`}
+              >
+                🗑 Xóa
+              </button>
             </div>
           </article>
         );

@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  FormEvent,
+  KeyboardEvent,
+  MouseEvent,
+} from "react";
 import styles from "./UpdateUserModal.module.css";
 import {
   useGetAdminUserByIdQuery,
@@ -38,20 +45,38 @@ export default function UpdateUserModal({ open, userId, onClose }: Props) {
     );
   }, [error]);
 
+  const notFound = !loadingUser && !!userId && !data?.data;
+
+  // Đổ data từ BE vào form
   useEffect(() => {
     if (data?.data && open) {
       const u = data.data;
       setFullname(u.name || "");
       setRole((u.role as Role) || "user");
+
       // nếu BE trả về gì lạ thì fallback về "active"
       const s = (u.status as Status) || "active";
       setStatus(s === "inactive" ? "inactive" : "active");
     }
   }, [data, open]);
 
+  // ESC để đóng modal
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent | any) => {
+      if (e.key === "Escape" && !isLoading) {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, isLoading, onClose]);
+
   if (!open) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setClientErr("");
 
@@ -78,20 +103,40 @@ export default function UpdateUserModal({ open, userId, onClose }: Props) {
     }
   };
 
-  return (
-    <div className={styles.overlay}>
-      <form className={styles.modal} onSubmit={handleSubmit}>
-        <h2>Chỉnh sửa người dùng</h2>
+  // click ra ngoài để đóng modal
+  const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && !isLoading) {
+      onClose();
+    }
+  };
 
-        {(clientErr || apiErrMsg) && (
+  return (
+    <div
+      className={styles.overlay}
+      onClick={handleOverlayClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="update-user-title"
+    >
+      <form
+        className={styles.modal}
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 id="update-user-title">Chỉnh sửa người dùng</h2>
+        <p>Cập nhật họ tên, vai trò và trạng thái hoạt động của tài khoản.</p>
+
+        {(clientErr || apiErrMsg || notFound) && (
           <div className={styles.error}>
-            {clientErr || apiErrMsg || "Không thể lưu. Vui lòng thử lại."}
+            {notFound
+              ? "Không tìm thấy thông tin người dùng. Vui lòng tải lại trang."
+              : clientErr || apiErrMsg || "Không thể lưu. Vui lòng thử lại."}
           </div>
         )}
 
         {loadingUser ? (
           <div className={styles.loading}>Đang tải thông tin…</div>
-        ) : (
+        ) : !notFound ? (
           <>
             <label className={styles.label}>
               Họ và tên
@@ -100,6 +145,7 @@ export default function UpdateUserModal({ open, userId, onClose }: Props) {
                 value={fullname}
                 onChange={(e) => setFullname(e.target.value)}
                 placeholder="Nhập họ và tên…"
+                autoFocus
               />
             </label>
 
@@ -129,7 +175,7 @@ export default function UpdateUserModal({ open, userId, onClose }: Props) {
               </label>
             </div>
           </>
-        )}
+        ) : null}
 
         <div className={styles.actions}>
           <button
@@ -140,7 +186,11 @@ export default function UpdateUserModal({ open, userId, onClose }: Props) {
           >
             Hủy
           </button>
-          <button type="submit" className={styles.primary} disabled={isLoading}>
+          <button
+            type="submit"
+            className={styles.primary}
+            disabled={isLoading || notFound}
+          >
             {isLoading ? "Đang lưu…" : "Lưu"}
           </button>
         </div>
