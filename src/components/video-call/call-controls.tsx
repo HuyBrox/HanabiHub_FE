@@ -9,7 +9,7 @@ import {
   VideoOff,
   Phone,
   PhoneOff,
-  RotateCcw,
+  SkipForward,
 } from "lucide-react";
 
 interface CallControlsProps {
@@ -17,7 +17,7 @@ interface CallControlsProps {
   isVideoOff?: boolean;
   onToggleMute?: () => void;
   onToggleVideo?: () => void;
-  onSwitchCamera?: () => void;
+  onNextPartner?: () => void;
   onEndCall?: () => void;
   onStartCall?: () => void;
   disabled?: boolean;
@@ -29,7 +29,7 @@ export function CallControls({
   isVideoOff = false,
   onToggleMute,
   onToggleVideo,
-  onSwitchCamera,
+  onNextPartner,
   onEndCall,
   onStartCall,
   disabled = false,
@@ -70,16 +70,16 @@ export function CallControls({
           )}
         </Button>
 
-        {/* Switch Camera (Mobile) */}
+        {/* Next Partner (Mobile) */}
         <Button
           variant="secondary"
           size="lg"
           className="h-12 w-12 sm:h-14 sm:w-14 rounded-full sm:hidden"
-          onClick={onSwitchCamera}
-          disabled={disabled}
-          aria-label="Switch camera"
+          onClick={onNextPartner}
+          disabled={disabled || !isConnected}
+          aria-label="Next partner"
         >
-          <RotateCcw className="h-5 w-5" />
+          <SkipForward className="h-5 w-5" />
         </Button>
 
         {/* End/Start Call */}
@@ -107,16 +107,16 @@ export function CallControls({
           </Button>
         )}
 
-        {/* Switch Camera (Desktop) */}
+        {/* Next Partner (Desktop) */}
         <Button
           variant="secondary"
           size="lg"
           className="h-12 w-12 sm:h-14 sm:w-14 rounded-full hidden sm:flex"
-          onClick={onSwitchCamera}
-          disabled={disabled}
-          aria-label="Switch camera"
+          onClick={onNextPartner}
+          disabled={disabled || !isConnected}
+          aria-label="Next partner"
         >
-          <RotateCcw className="h-5 w-5 sm:h-6 sm:w-6" />
+          <SkipForward className="h-5 w-5 sm:h-6 sm:w-6" />
         </Button>
       </div>
 
@@ -132,7 +132,7 @@ export function CallControls({
           {isConnected ? "End Call" : "Start"}
         </span>
         <span className="text-xs text-gray-600 dark:text-gray-400 w-14 text-center">
-          Switch
+          Next
         </span>
       </div>
     </Card>

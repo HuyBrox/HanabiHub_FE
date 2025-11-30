@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,12 +23,23 @@ import {
   User,
   ArrowRight,
   AlertCircle,
+  Key,
 } from "lucide-react";
+import Script from "next/script";
 import { cn } from "@/lib/utils";
 import { AuthFormProps } from "@/types/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotification } from "@/components/notification";
 import styles from "./AuthForm.module.css";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
+  useSendOtpRegisterMutation,
+  useRegisterUserMutation,
+} from "@/store/services/authApi";
 
 export function AuthForm({
   mode,
@@ -38,27 +50,47 @@ export function AuthForm({
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    name: "",
+    username: "",
+    fullname: "",
     confirmPassword: "",
+    otp: "",
   });
 
   const [fieldErrors, setFieldErrors] = useState<{
     email?: string;
     password?: string;
-    name?: string;
+    username?: string;
+    fullname?: string;
     confirmPassword?: string;
   }>({});
 
   const [localError, setLocalError] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const { login, isLoading, isAuthenticated } = useAuth();
-  const { success } = useNotification();
+  const { login, googleLogin, isLoading, isAuthenticated } = useAuth();
+  const { success, error: notifyError } = useNotification();
   const router = useRouter();
+
+  // RTK Query hooks
+  const [sendOtpRegister, { isLoading: isSendingOtp }] =
+    useSendOtpRegisterMutation();
+  const [registerUser, { isLoading: isRegistering }] =
+    useRegisterUserMutation();
 
   // Clear error khi chuyển mode
   useEffect(() => {
     setFieldErrors({});
     setLocalError(null);
+    setOtpSent(false);
+    setFormData({
+      email: "",
+      password: "",
+      username: "",
+      fullname: "",
+      confirmPassword: "",
+      otp: "",
+    });
   }, [mode]);
 
   // Chỉ redirect sau khi login thành công và không phải modal
@@ -77,6 +109,89 @@ export function AuthForm({
     }
   }, [isAuthenticated, isModal, router]);
 
+  const handleGoogleSignIn = useCallback(
+    async (response: any) => {
+      if (!response.credential) {
+        notifyError("Không thể lấy thông tin từ Google", { title: "Lỗi" });
+        return;
+      }
+
+      setIsGoogleLoading(true);
+      setLocalError(null);
+
+      try {
+        const result = await googleLogin(response.credential);
+        if (result.success) {
+          success("Đăng nhập Google thành công", { title: "Thành công" });
+          if (isModal) {
+            window.dispatchEvent(new CustomEvent("auth-success"));
+          }
+        } else {
+          setLocalError(result.error || "Đăng nhập Google thất bại");
+          notifyError(result.error || "Đăng nhập Google thất bại", {
+            title: "Lỗi",
+          });
+        }
+      } catch (error: any) {
+        const errorMessage =
+          error?.data?.message || error?.message || "Đăng nhập Google thất bại";
+        setLocalError(errorMessage);
+        notifyError(errorMessage, { title: "Lỗi" });
+      } finally {
+        setIsGoogleLoading(false);
+      }
+    },
+    [googleLogin, success, notifyError, isModal]
+  );
+
+  // Initialize Google Sign-In when script loads
+  useEffect(() => {
+    const initGoogleSignIn = () => {
+      if (
+        typeof window !== "undefined" &&
+        (window as any).google &&
+        mode === "login"
+      ) {
+        (window as any).google.accounts.id.initialize({
+          client_id:
+            process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID",
+          callback: handleGoogleSignIn,
+        });
+
+        // Render button after script loads
+        const buttonContainer = document.getElementById("google-signin-button");
+        if (buttonContainer && buttonContainer.children.length === 0) {
+          try {
+            (window as any).google.accounts.id.renderButton(buttonContainer, {
+              theme: "outline",
+              size: "large",
+              width: "100%",
+              text: "signin_with",
+              locale: "vi",
+            });
+          } catch (error) {
+            console.error("Error rendering Google button:", error);
+          }
+        }
+      }
+    };
+
+    // Try to initialize immediately if script already loaded
+    if (typeof window !== "undefined" && (window as any).google) {
+      initGoogleSignIn();
+    }
+
+    // Also listen for script load event
+    const checkGoogle = setInterval(() => {
+      if (typeof window !== "undefined" && (window as any).google) {
+        initGoogleSignIn();
+        clearInterval(checkGoogle);
+      }
+    }, 100);
+
+    return () => clearInterval(checkGoogle);
+  }, [mode, handleGoogleSignIn]);
+
   // Validation functions với useCallback để tránh re-create
   const validateEmail = useCallback((email: string): string | undefined => {
     if (!email) return "Email là bắt buộc";
@@ -94,9 +209,23 @@ export function AuthForm({
     []
   );
 
-  const validateName = useCallback(
-    (name: string): string | undefined => {
-      if (mode === "register" && !name) return "Họ tên là bắt buộc";
+  const validateUsername = useCallback(
+    (username: string): string | undefined => {
+      if (mode === "register" && !username) return "Tên người dùng là bắt buộc";
+      if (mode === "register" && username.length < 3)
+        return "Tên người dùng phải có ít nhất 3 ký tự";
+      if (mode === "register" && username.length > 100)
+        return "Tên người dùng không được quá 100 ký tự";
+      return undefined;
+    },
+    [mode]
+  );
+
+  const validateFullname = useCallback(
+    (fullname: string): string | undefined => {
+      if (mode === "register" && !fullname) return "Họ tên là bắt buộc";
+      if (mode === "register" && fullname.length > 200)
+        return "Họ tên không được quá 200 ký tự";
       return undefined;
     },
     [mode]
@@ -119,7 +248,8 @@ export function AuthForm({
 
     errors.email = validateEmail(formData.email);
     errors.password = validatePassword(formData.password);
-    errors.name = validateName(formData.name);
+    errors.username = validateUsername(formData.username);
+    errors.fullname = validateFullname(formData.fullname);
     errors.confirmPassword = validateConfirmPassword(
       formData.confirmPassword,
       formData.password
@@ -138,9 +268,85 @@ export function AuthForm({
     formData,
     validateEmail,
     validatePassword,
-    validateName,
+    validateUsername,
+    validateFullname,
     validateConfirmPassword,
   ]);
+
+  // Hàm gửi OTP
+  const handleSendOtp = useCallback(async () => {
+    setLocalError(null);
+
+    // Chỉ validate email khi gửi OTP
+    // Không check email tồn tại - backend sẽ check sau khi verify OTP
+    const emailError = validateEmail(formData.email);
+    if (emailError) {
+      setFieldErrors({ email: emailError });
+      setLocalError(emailError);
+      return;
+    }
+
+    try {
+      const result = await sendOtpRegister({ email: formData.email }).unwrap();
+      success("OTP đã được gửi đến email của bạn", { title: "Thành công" });
+      setOtpSent(true);
+    } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.message || "Không thể gửi OTP";
+      setLocalError(errorMessage);
+      notifyError(errorMessage, { title: "Lỗi" });
+    }
+  }, [formData.email, sendOtpRegister, validateEmail, success, notifyError]);
+
+  // Hàm xác thực OTP và đăng ký
+  const handleVerifyAndRegister = useCallback(async () => {
+    setLocalError(null);
+
+    // Validate OTP
+    if (!formData.otp || formData.otp.length !== 6) {
+      setLocalError("Vui lòng nhập đầy đủ mã OTP");
+      return;
+    }
+
+    // Validate toàn bộ form trước khi đăng ký
+    // Backend sẽ check email/username tồn tại sau khi verify OTP
+    if (!validateForm()) {
+      setLocalError("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    try {
+      const result = await registerUser({
+        username: formData.username,
+        fullname: formData.fullname,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        otp: formData.otp,
+      }).unwrap();
+
+      success("Đăng ký thành công! Vui lòng đăng nhập.", {
+        title: "Thành công",
+      });
+
+      // Chuyển về màn hình login
+      setOtpSent(false);
+      setFormData({
+        email: "",
+        password: "",
+        username: "",
+        fullname: "",
+        confirmPassword: "",
+        otp: "",
+      });
+      onModeChange("login");
+    } catch (err: any) {
+      const errorMessage =
+        err?.data?.message || err?.message || "Đăng ký thất bại";
+      setLocalError(errorMessage);
+      notifyError(errorMessage, { title: "Lỗi" });
+    }
+  }, [formData, registerUser, success, notifyError, onModeChange]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -148,12 +354,11 @@ export function AuthForm({
 
       setLocalError(null); // Clear local error
 
-      // Validate form
-      if (!validateForm()) {
-        return;
-      }
-
       if (mode === "login") {
+        // Validate form cho login
+        if (!validateForm()) {
+          return;
+        }
         const result = await login({
           email: formData.email,
           password: formData.password,
@@ -164,9 +369,38 @@ export function AuthForm({
         } else if (isModal) {
           window.dispatchEvent(new CustomEvent("auth-success"));
         }
+      } else if (mode === "register") {
+        // Nếu chưa gửi OTP, chỉ validate email và gửi OTP
+        if (!otpSent) {
+          // Chỉ validate email khi gửi OTP
+          const emailError = validateEmail(formData.email);
+          if (emailError) {
+            setFieldErrors({ email: emailError });
+            setLocalError(emailError);
+            return;
+          }
+          await handleSendOtp();
+        } else {
+          // Nếu đã gửi OTP, validate toàn bộ form và đăng ký
+          if (!validateForm()) {
+            setLocalError("Vui lòng điền đầy đủ thông tin");
+            return;
+          }
+          await handleVerifyAndRegister();
+        }
       }
     },
-    [mode, formData, validateForm, login, isModal]
+    [
+      mode,
+      formData,
+      validateForm,
+      validateEmail,
+      login,
+      isModal,
+      otpSent,
+      handleSendOtp,
+      handleVerifyAndRegister,
+    ]
   );
 
   const handleModeSwitch = useCallback(
@@ -185,8 +419,12 @@ export function AuthForm({
     []
   );
 
-  const handleNameChange = useMemo(
-    () => handleInputChange("name"),
+  const handleUsernameChange = useMemo(
+    () => handleInputChange("username"),
+    [handleInputChange]
+  );
+  const handleFullnameChange = useMemo(
+    () => handleInputChange("fullname"),
     [handleInputChange]
   );
   const handleEmailChange = useMemo(
@@ -202,6 +440,10 @@ export function AuthForm({
     [handleInputChange]
   );
 
+  const handleOtpChange = useCallback((value: string) => {
+    setFormData((prev) => ({ ...prev, otp: value }));
+  }, []);
+
   return (
     <Card
       key="auth-form" // Stable key để tránh re-mount
@@ -212,10 +454,14 @@ export function AuthForm({
     >
       <CardHeader className="space-y-1 text-center">
         <div className="flex items-center justify-center mb-4">
-          <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-xl">
-              日
-            </span>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+            <Image
+              src="/images/logos/logohanabi.png"
+              alt="HanabiHub Logo"
+              width={48}
+              height={48}
+              className="object-contain"
+            />
           </div>
         </div>
         <CardTitle className="text-2xl font-bold">
@@ -238,38 +484,76 @@ export function AuthForm({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name field for register mode */}
+          {/* Username field for register mode */}
           <div
             className={cn(
               "transition-all duration-300 ease-in-out overflow-hidden",
-              mode === "register" ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+              mode === "register" && !otpSent
+                ? "max-h-24 opacity-100"
+                : "max-h-0 opacity-0"
             )}
           >
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="username">Username</Label>
               <div className="relative">
                 <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="name"
+                  id="username"
                   type="text"
-                  placeholder="Enter your full name"
+                  placeholder="Enter your username"
                   className={cn(
                     "pl-10",
-                    fieldErrors.name &&
+                    fieldErrors.username &&
                       "border-red-500 focus:ring-red-500 focus:border-red-500"
                   )}
-                  value={formData.name}
-                  onChange={handleNameChange}
-                  disabled={isLoading}
+                  value={formData.username}
+                  onChange={handleUsernameChange}
+                  disabled={isLoading || isSendingOtp || isRegistering}
                 />
               </div>
-              {fieldErrors.name && (
-                <p className="text-red-500 text-xs mt-1">{fieldErrors.name}</p>
+              {fieldErrors.username && (
+                <p className="text-red-500 text-xs mt-1">
+                  {fieldErrors.username}
+                </p>
               )}
             </div>
           </div>
 
-          {/* Email field */}
+          {/* Fullname field for register mode */}
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              mode === "register" && !otpSent
+                ? "max-h-24 opacity-100"
+                : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="fullname">Full Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="fullname"
+                  type="text"
+                  placeholder="Enter your full name"
+                  className={cn(
+                    "pl-10",
+                    fieldErrors.fullname &&
+                      "border-red-500 focus:ring-red-500 focus:border-red-500"
+                  )}
+                  value={formData.fullname}
+                  onChange={handleFullnameChange}
+                  disabled={isLoading || isSendingOtp || isRegistering}
+                />
+              </div>
+              {fieldErrors.fullname && (
+                <p className="text-red-500 text-xs mt-1">
+                  {fieldErrors.fullname}
+                </p>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
@@ -285,7 +569,12 @@ export function AuthForm({
                 )}
                 value={formData.email}
                 onChange={handleEmailChange}
-                disabled={isLoading}
+                disabled={
+                  isLoading ||
+                  isSendingOtp ||
+                  isRegistering ||
+                  (mode === "register" && otpSent)
+                }
               />
             </div>
             {fieldErrors.email && (
@@ -293,7 +582,6 @@ export function AuthForm({
             )}
           </div>
 
-          {/* Password field */}
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <div className="relative">
@@ -309,7 +597,12 @@ export function AuthForm({
                 )}
                 value={formData.password}
                 onChange={handlePasswordChange}
-                disabled={isLoading}
+                disabled={
+                  isLoading ||
+                  isSendingOtp ||
+                  isRegistering ||
+                  (mode === "register" && otpSent)
+                }
               />
               <Button
                 type="button"
@@ -336,7 +629,9 @@ export function AuthForm({
           <div
             className={cn(
               "transition-all duration-300 ease-in-out overflow-hidden",
-              mode === "register" ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+              mode === "register" && !otpSent
+                ? "max-h-24 opacity-100"
+                : "max-h-0 opacity-0"
             )}
           >
             <div className="space-y-2">
@@ -354,7 +649,7 @@ export function AuthForm({
                   )}
                   value={formData.confirmPassword}
                   onChange={handleConfirmPasswordChange}
-                  disabled={isLoading}
+                  disabled={isLoading || isSendingOtp || isRegistering}
                 />
               </div>
               {fieldErrors.confirmPassword && (
@@ -365,27 +660,137 @@ export function AuthForm({
             </div>
           </div>
 
-          {/* Submit button */}
+          {/* OTP field - hiện sau khi gửi OTP thành công */}
+          <div
+            className={cn(
+              "transition-all duration-300 ease-in-out overflow-hidden",
+              mode === "register" && otpSent
+                ? "max-h-40 opacity-100"
+                : "max-h-0 opacity-0"
+            )}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="otp">Enter OTP Code</Label>
+              <p className="text-sm text-muted-foreground">
+                We&apos;ve sent a 6-digit code to {formData.email}
+              </p>
+              <div className="flex justify-center">
+                <InputOTP
+                  maxLength={6}
+                  value={formData.otp}
+                  onChange={handleOtpChange}
+                  disabled={isRegistering}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <Button
+                type="button"
+                variant="link"
+                className="w-full text-sm"
+                onClick={handleSendOtp}
+                disabled={isSendingOtp}
+              >
+                {isSendingOtp ? "Sending..." : "Resend OTP"}
+              </Button>
+            </div>
+          </div>
+
           <Button
             type="submit"
             className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-            disabled={isLoading}
+            disabled={isLoading || isSendingOtp || isRegistering}
           >
-            {isLoading ? (
+            {isLoading || isSendingOtp || isRegistering ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                {mode === "login" ? "Signing in..." : "Creating account..."}
+                {mode === "login"
+                  ? "Signing in..."
+                  : otpSent
+                  ? "Verifying..."
+                  : "Sending OTP..."}
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                {mode === "login" ? "Sign In" : "Create Account"}
+                {mode === "login"
+                  ? "Sign In"
+                  : otpSent
+                  ? "Verify & Register"
+                  : "Send OTP"}
                 <ArrowRight className="h-4 w-4" />
               </div>
             )}
           </Button>
         </form>
 
-        {/* Mode switch */}
+        {/* Google Sign-In Button - chỉ hiện khi login mode */}
+        {mode === "login" && (
+          <>
+            <Script
+              src="https://accounts.google.com/gsi/client"
+              strategy="afterInteractive"
+              onLoad={() => {
+                if (typeof window !== "undefined" && (window as any).google) {
+                  (window as any).google.accounts.id.initialize({
+                    client_id:
+                      process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+                      "YOUR_GOOGLE_CLIENT_ID",
+                    callback: handleGoogleSignIn,
+                  });
+
+                  // Render button after script loads
+                  setTimeout(() => {
+                    const buttonContainer = document.getElementById(
+                      "google-signin-button"
+                    );
+                    if (
+                      buttonContainer &&
+                      buttonContainer.children.length === 0
+                    ) {
+                      try {
+                        (window as any).google.accounts.id.renderButton(
+                          buttonContainer,
+                          {
+                            theme: "outline",
+                            size: "large",
+                            width: "100%",
+                            text: "signin_with",
+                            locale: "vi",
+                          }
+                        );
+                      } catch (error) {
+                        console.error("Error rendering Google button:", error);
+                      }
+                    }
+                  }, 100);
+                }
+              }}
+            />
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Hoặc tiếp tục với
+                </span>
+              </div>
+            </div>
+            {/* Google button container - Google sẽ render button vào đây */}
+            <div
+              id="google-signin-button"
+              className="w-full flex justify-center"
+            ></div>
+          </>
+        )}
+
         <div className="text-center pt-4 border-t">
           <p className="text-sm text-muted-foreground">
             {mode === "login"

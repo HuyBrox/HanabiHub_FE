@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Star, BookOpen, GraduationCap, Trophy, Crown } from "lucide-react";
+import { Star, BookOpen, GraduationCap, Trophy, Crown, Shuffle } from "lucide-react";
 
 interface LevelSelectorProps {
   selectedLevel: string;
@@ -17,6 +17,13 @@ interface LevelSelectorProps {
 }
 
 const levels = [
+  {
+    code: "NO_FILTER",
+    name: "No Filter",
+    description: "Match with anyone regardless of level",
+    icon: Shuffle,
+    color: "text-purple-500",
+  },
   {
     code: "N5",
     name: "Beginner",

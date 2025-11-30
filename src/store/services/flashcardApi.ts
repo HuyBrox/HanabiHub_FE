@@ -304,7 +304,7 @@ export const flashcardApi = createApi({
       TrackFlashcardSessionRequest
     >({
       query: (data) => ({
-        url: "/activity/track-flashcard-session",
+        url: "/user-activity/track-flashcard-session",
         method: "POST",
         body: data,
         headers: {
@@ -319,7 +319,7 @@ export const flashcardApi = createApi({
       TrackCardLearningRequest
     >({
       query: (data) => ({
-        url: "/activity/track-card",
+        url: "/user-activity/track-card",
         method: "POST",
         body: data,
         headers: {

@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shimmer } from "@/components/ui/shimmer";
 import { User, Mic, MicOff, VideoOff } from "lucide-react";
-import Image from "next/image";
+import { RefObject } from "react";
+import { cn } from "@/lib/utils";
 
 interface VideoFrameProps {
   type: "local" | "remote";
@@ -14,6 +15,8 @@ interface VideoFrameProps {
   isMuted?: boolean;
   userName?: string;
   level?: string;
+  videoRef?: React.RefObject<HTMLVideoElement | null>;
+  flipped?: boolean; // CSS flip for mirror effect
 }
 
 export function VideoFrame({
@@ -24,29 +27,28 @@ export function VideoFrame({
   isMuted = false,
   userName = "User",
   level,
+  videoRef,
+  flipped = false,
 }: VideoFrameProps) {
   const isLocal = type === "local";
 
   return (
-    <Card className="relative aspect-video bg-gray-900 overflow-hidden group">
+    <Card className="relative w-full h-full bg-gray-900 overflow-hidden group">
       {/* Video Content */}
       {isLoading ? (
         <Shimmer className="w-full h-full" />
-      ) : isConnected && !isVideoOff ? (
+      ) : !isVideoOff && videoRef ? (
         <div className="relative w-full h-full bg-gray-800">
-          {/* TODO: Backend integration - Replace with actual video stream */}
-          {/* Example: <video ref={videoRef} autoPlay muted={isLocal} className="w-full h-full object-cover" /> */}
-
-          {/* Demo placeholder */}
-          <Image
-            src={isLocal ? "/sample-user-video.png" : "/sample-remote-user.png"}
-            alt={`${userName} video`}
-            fill
-            className="object-cover"
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted={isLocal}
+            className={cn(
+              "w-full h-full object-cover",
+              flipped && "scale-x-[-1]"
+            )}
           />
-
-          {/* Video overlay for demo */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
         </div>
       ) : (
         <div className="flex items-center justify-center h-full bg-gray-800">

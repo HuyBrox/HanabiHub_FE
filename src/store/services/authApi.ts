@@ -54,6 +54,44 @@ export const authApi = createApi({
       }),
       providesTags: ["Auth"],
     }),
+    // Gửi OTP để đăng ký
+    sendOtpRegister: builder.mutation<any, { email: string }>({
+      query: (body) => ({
+        url: "/send-otp-register",
+        method: "POST",
+        body,
+      }),
+    }),
+    // Đăng ký tài khoản
+    registerUser: builder.mutation<
+      any,
+      {
+        username: string;
+        fullname: string;
+        email: string;
+        password: string;
+        confirmPassword: string;
+        otp: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/register",
+        method: "POST",
+        body,
+      }),
+    }),
+    // Google OAuth2 login
+    googleLogin: builder.mutation<
+      AuthResponse,
+      { idToken?: string; accessToken?: string }
+    >({
+      query: (body) => ({
+        url: "/google",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Auth"],
+    }),
   }),
 });
 //rtk query tự generate hooks dựa trên endpoint đã khai báo
@@ -62,4 +100,7 @@ export const {
   useLogoutMutation,
   useRefreshTokenMutation,
   useGetCurrentUserQuery,
+  useSendOtpRegisterMutation,
+  useRegisterUserMutation,
+  useGoogleLoginMutation,
 } = authApi;

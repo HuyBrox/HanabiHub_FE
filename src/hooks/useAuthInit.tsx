@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useGetCurrentUserQuery } from "../store/services/authApi";
-import { loginStart, loginSuccess, logout } from "../store/slices/authSlice";
+import { loginStart, loginSuccess, logoutThunk } from "../store/slices/authSlice";
 import { RootState } from "../store";
+import { authApi } from "../store/services/authApi";
 // Update the import path to the correct relative location
 import { LoadingPage } from "../components/loading";
 
@@ -12,6 +13,7 @@ import { LoadingPage } from "../components/loading";
 export const useAuthInit = () => {
   const dispatch = useDispatch();
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Gọi API để lấy thông tin user hiện tại (nếu có token trong cookie)
   const { data, isSuccess, isError, isLoading, refetch, error } =
@@ -34,12 +36,12 @@ export const useAuthInit = () => {
       const errorStatus = (error as any)?.status;
       if (errorStatus === 401 || errorStatus === 403) {
         console.log("🔓 Session expired, logging out...");
-        dispatch(logout());
+        dispatch(logoutThunk() as any);
       } else {
         console.log(
           "❌ No valid session found - token may be expired or invalid"
         );
-        dispatch(logout());
+        dispatch(logoutThunk() as any);
       }
     }
   }, [isSuccess, isError, data, dispatch, error]);
@@ -71,17 +73,35 @@ export const useAuthInit = () => {
     };
   }, [refetch, isAuthenticated]);
 
-  // Periodic check session mỗi 10 phút nếu đang authenticated
+  // ✅ PROACTIVE TOKEN REFRESH - Refresh token trước khi hết hạn
+  // Access token hết hạn sau 15 phút, refresh sau 12 phút để tránh lỗi
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      // Clear interval nếu user logout
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+      return;
+    }
 
-    const interval = setInterval(() => {
-      console.log("⏰ Periodic session check...");
-      refetch();
-    }, 10 * 60 * 1000); // 10 phút
+    console.log("🔄 Setting up proactive token refresh (every 12 minutes)");
 
-    return () => clearInterval(interval);
-  }, [refetch, isAuthenticated]);
+    // Refresh ngay lập tức sau 12 phút đầu tiên
+    const REFRESH_INTERVAL = 12 * 60 * 1000; // 12 phút (trước khi token 15 phút hết hạn)
+
+    refreshIntervalRef.current = setInterval(() => {
+      console.log("⏰ Proactive token refresh triggered...");
+      dispatch(authApi.endpoints.refreshToken.initiate() as any);
+    }, REFRESH_INTERVAL);
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
+  }, [dispatch, isAuthenticated]);
 
   return { isLoading };
 };

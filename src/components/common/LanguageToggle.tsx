@@ -22,7 +22,7 @@ export function LanguageToggle({ collapsed = false }: LanguageToggleProps) {
         className="h-9 w-9 hover:bg-orange-100 dark:hover:bg-orange-900/20"
         title={language === "en" ? "Switch to Vietnamese" : "Chuyển sang tiếng Anh"}
       >
-        <Languages className="h-4 w-4" />
+        <Languages className="h-5 w-5" />
       </Button>
     )
   }
@@ -31,9 +31,9 @@ export function LanguageToggle({ collapsed = false }: LanguageToggleProps) {
     <Button
       variant="ghost"
       onClick={toggleLanguage}
-      className="w-full justify-start gap-2 hover:bg-orange-100 dark:hover:bg-orange-900/20"
+      className="w-full justify-start gap-3 hover:bg-orange-100 dark:hover:bg-orange-900/20"
     >
-      <Languages className="h-4 w-4" />
+      <Languages className="h-5 w-5" />
       <span className="text-sm font-medium">{language === "en" ? "VI" : "EN"}</span>
     </Button>
   )

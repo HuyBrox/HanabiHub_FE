@@ -24,17 +24,29 @@ const transformMessageToUI = (
   message: any,
   currentUserId: string
 ): MessageUI => {
+  const isMyMessage = message.senderId === currentUserId;
+  // Xác định status cho message của mình
+  let status: "sending" | "sent" | "delivered" | "read" | "failed" | undefined;
+  if (isMyMessage) {
+    if (message.isRead) {
+      status = "read";
+    } else {
+      // Mặc định là "sent", sẽ được cập nhật bởi socket events
+      status = "sent";
+    }
+  }
+
   return {
     id: message._id,
     text: message.message,
-    sender: message.senderId === currentUserId ? "me" : "other",
+    sender: isMyMessage ? "me" : "other",
     timestamp: new Date(message.createdAt).toLocaleTimeString("vi-VN", {
       hour: "2-digit",
       minute: "2-digit",
     }),
     read: message.isRead,
     createdAt: new Date(message.createdAt),
-    status: message.senderId === currentUserId ? ("sent" as const) : undefined,
+    status,
   };
 };
 
@@ -159,11 +171,6 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
 
           // Scroll to bottom for new message
           setTimeout(() => scrollToBottom(), 50);
-
-          // Auto mark as read if conversation is open
-          setTimeout(() => {
-            markMessageAsSeen(payload.messageId, payload.senderId);
-          }, 1000);
         }
       },
       onUserTyping: (payload) => {
@@ -184,6 +191,32 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
               setTypingTimeout(null);
             }
           }
+        }
+      },
+      onMessageDelivered: (payload) => {
+        // Cập nhật status của message khi được gửi thành công
+        // Chỉ cập nhật message của mình (sender === "me")
+        if (payload.messageId) {
+          setAllMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === payload.messageId && msg.sender === "me"
+                ? { ...msg, status: "delivered" as const }
+                : msg
+            )
+          );
+        }
+      },
+      onMessageSeen: (payload) => {
+        // Cập nhật status của message khi được đánh dấu đã đọc
+        // Chỉ cập nhật message của mình (sender === "me")
+        if (payload.messageId) {
+          setAllMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === payload.messageId && msg.sender === "me"
+                ? { ...msg, status: "read" as const, read: true }
+                : msg
+            )
+          );
         }
       },
     });
@@ -382,17 +415,30 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
     setTimeout(() => scrollToBottom(), 50);
 
     try {
-      await sendMessage({
+      const response = await sendMessage({
         receiverId: conversation.partnerId,
         message: messageText,
       }).unwrap();
 
-      // Message sent successfully - update status to "sent"
-      setAllMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempMessage.id ? { ...msg, status: "sent" as const } : msg
-        )
-      );
+      // Replace temp message with real message from API
+      if (response.data?.message) {
+        const realMessage = transformMessageToUI(
+          response.data.message,
+          user?._id || ""
+        );
+        setAllMessages((prev) =>
+          prev.map((msg) => (msg.id === tempMessage.id ? realMessage : msg))
+        );
+      } else {
+        // Fallback: update status to "sent" if no response data
+        setAllMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === tempMessage.id
+              ? { ...msg, status: "sent" as const }
+              : msg
+          )
+        );
+      }
 
       // Focus input after sending
       setTimeout(() => {
@@ -467,6 +513,18 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
       setIsInitialLoad(false);
     }
   }, [displayMessages, isInitialLoad]);
+
+  // Auto scroll to bottom when typing indicator appears
+  useEffect(() => {
+    if (isPartnerTyping && messagesContainerRef.current) {
+      // Scroll xuống để hiển thị typing indicator
+      const container = messagesContainerRef.current;
+      // Sử dụng setTimeout để đảm bảo DOM đã render typing indicator
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 50);
+    }
+  }, [isPartnerTyping]);
 
   // Handle scroll position when loading more messages
   useEffect(() => {
@@ -717,9 +775,7 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
           <div className="flex justify-start mb-4">
             <div className="bg-muted text-foreground px-4 py-2 rounded-2xl max-w-xs">
               <div className="flex items-center gap-1">
-                <span className="text-sm text-muted-foreground">
-                  {conversation.name} đang soạn tin nhắn
-                </span>
+                <span className="text-sm text-muted-foreground">Đang nhập</span>
                 <div className="flex gap-1">
                   <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                   <div className="w-1 h-1 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
@@ -755,6 +811,10 @@ export default function ChatArea({ conversation, onClose }: ChatAreaProps) {
               placeholder="Aa"
               value={newMessage}
               onChange={handleInputChange}
+              onFocus={() => {
+                // Mark all messages as read when user focuses on input
+                markAsRead({ partnerId: conversation.partnerId });
+              }}
               disabled={sendingMessage}
               className="pr-12"
               tabIndex={0}

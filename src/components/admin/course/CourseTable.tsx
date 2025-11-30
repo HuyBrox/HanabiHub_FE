@@ -1,50 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Eye, BookOpen, Users, Clock } from "lucide-react";
+import { useGetAllCoursesQuery, Course } from "@/store/services/courseApi";
 import styles from "./CourseTable.module.css";
-
-interface Lesson {
-  _id: string;
-  title: string;
-}
-
-interface Instructor {
-  _id: string;
-  fullname: string;
-  username: string;
-  avatar?: string;
-}
-
-interface Course {
-  _id: string;
-  title: string;
-  description: string;
-  thumbnail: string;
-  instructor: Instructor;
-  lessons: Lesson[];
-  students: string[];
-  price: number;
-  createdAt: string;
-}
-
-interface ApiResponse {
-  success: boolean;
-  message: string;
-  data: {
-    courses: Course[];
-    pagination: {
-      total: number;
-      page: number;
-      limit: number;
-      totalPages: number;
-    };
-  };
-  timestamp: string;
-}
 
 const CourseCard = ({ course }: { course: Course }) => {
   const router = useRouter();
@@ -84,33 +46,37 @@ const CourseCard = ({ course }: { course: Course }) => {
         <div className={styles.stats}>
           <div className={styles.stat}>
             <BookOpen className={styles.statIcon} />
-            <span>{course.lessons.length} bài</span>
+            <span>{course.lessons?.length || 0} bài</span>
           </div>
           <div className={styles.stat}>
             <Users className={styles.statIcon} />
-            <span>{course.students.length} HV</span>
+            <span>
+              {course.studentCount || course.students?.length || 0} HV
+            </span>
           </div>
         </div>
 
-        <div className={styles.instructor}>
-          <div className={styles.instructorAvatar}>
-            {course.instructor.avatar ? (
-              <Image
-                src={course.instructor.avatar}
-                alt={course.instructor.fullname}
-                fill
-                className={styles.avatar}
-              />
-            ) : (
-              <div className={styles.avatarPlaceholder}>
-                {course.instructor.fullname.charAt(0).toUpperCase()}
-              </div>
-            )}
+        {course.instructor && (
+          <div className={styles.instructor}>
+            <div className={styles.instructorAvatar}>
+              {course.instructor.avatar ? (
+                <Image
+                  src={course.instructor.avatar}
+                  alt={course.instructor.fullname}
+                  fill
+                  className={styles.avatar}
+                />
+              ) : (
+                <div className={styles.avatarPlaceholder}>
+                  {course.instructor.fullname.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <span className={styles.instructorName}>
+              {course.instructor.fullname}
+            </span>
           </div>
-          <span className={styles.instructorName}>
-            {course.instructor.fullname}
-          </span>
-        </div>
+        )}
 
         <button onClick={handleViewDetails} className={styles.viewButton}>
           <Eye className={styles.buttonIcon} />
@@ -125,38 +91,19 @@ export default function CourseTable() {
   const trackRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragConstraint, setDragConstraint] = useState(0);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/courses?limit=20`,
-          {
-            credentials: "include",
-          }
-        );
+  // Sử dụng RTK Query thay vì fetch trực tiếp
+  // Memoize query params to prevent infinite re-fetching
+  const coursesQueryParams = useMemo(() => ({ limit: 20 }), []);
 
-        const result: ApiResponse = await response.json();
+  const {
+    data: coursesData,
+    isLoading,
+    isError,
+    error,
+  } = useGetAllCoursesQuery(coursesQueryParams);
 
-        if (result.success) {
-          setCourses(result.data.courses);
-        } else {
-          setError(result.message);
-        }
-      } catch (err) {
-        setError("Không thể tải danh sách khóa học");
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCourses();
-  }, []);
+  const courses = coursesData?.data || [];
 
   useEffect(() => {
     const calculateConstraints = () => {
@@ -182,10 +129,15 @@ export default function CourseTable() {
     );
   }
 
-  if (error) {
+  if (isError) {
     return (
       <div className={styles.errorContainer}>
-        <p className={styles.errorText}>{error}</p>
+        <p className={styles.errorText}>
+          {error
+            ? (error as any)?.data?.message ||
+              "Không thể tải danh sách khóa học"
+            : "Có lỗi xảy ra"}
+        </p>
       </div>
     );
   }

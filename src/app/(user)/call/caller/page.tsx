@@ -3,12 +3,16 @@ import React, { useEffect, useRef } from "react";
 import { useCall } from "@/hooks/useCall";
 import { useSearchParams } from "next/navigation";
 import { withAuth } from "@/components/auth";
+import { VideoFrame } from "@/components/video-call/video-frame";
+import { CallControls } from "@/components/video-call/call-controls";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const CallerPageComponent: React.FC = () => {
   const search = useSearchParams();
   const receiverId = search.get("receiverId")!;
   const callType = (search.get("callType") as "video" | "audio") || "video";
-  const peerId = search.get("peerId");
 
   const { state, endCall, toggleMic, toggleCamera, startCallInPopup } =
     useCall();
@@ -38,131 +42,125 @@ const CallerPageComponent: React.FC = () => {
     }
   }, [state.remoteStream]);
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
-  };
+  const isMuted = state.localStream?.getAudioTracks()[0]?.enabled === false;
+  const isVideoOff = state.localStream?.getVideoTracks()[0]?.enabled === false;
 
   return (
-    <div className="fixed inset-0 bg-black text-white">
-      {/* Header */}
-      <div className="absolute top-4 left-4 right-4 z-10">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-300">
-            {state.ringing
-              ? "Đang gọi..."
-              : state.inCall
-              ? "Đang trong cuộc gọi"
-              : "Đang kết nối..."}
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-gray-900 to-black flex flex-col">
+      {/* Compact Header */}
+      <div className="absolute top-3 left-3 right-3 lg:top-4 lg:left-4 lg:right-4 z-20 flex items-center justify-between">
+        <Card className="bg-black/70 backdrop-blur-md border-white/10 px-3 py-1.5 lg:px-4 lg:py-2">
+          <div className="flex items-center gap-2 lg:gap-3">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <div>
+              <h2 className="text-white font-semibold text-xs lg:text-sm">
+                {state.ringing
+                  ? "Đang gọi..."
+                  : state.inCall
+                  ? "Đang trong cuộc gọi"
+                  : "Đang kết nối..."}
+              </h2>
+              <p className="text-gray-400 text-[10px] lg:text-xs">
+                {callType === "video" ? "Video Call" : "Voice Call"}
+              </p>
+            </div>
           </div>
-          <div className="text-sm text-gray-300">
-            {callType === "video" ? "Video Call" : "Voice Call"}
-          </div>
-        </div>
+        </Card>
+        <Badge
+          variant="secondary"
+          className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-xs"
+        >
+          Caller
+        </Badge>
       </div>
 
-      {/* Video Area */}
-      <div className="absolute inset-0 grid grid-cols-1 md:grid-cols-2 gap-2 p-4 pt-16 pb-20">
-        {/* Local Stream */}
-        <div className="relative bg-gray-900 rounded overflow-hidden">
-          <div className="absolute top-2 left-2 z-10 text-xs bg-black/50 px-2 py-1 rounded">
-            Bạn
-          </div>
+      {/* Video Container - Full Screen */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-1 lg:gap-3 p-1 lg:p-3 min-h-0 pb-24 lg:pb-20">
+        {/* Remote Video - Full height on desktop, full height on mobile */}
+        <div className="flex-1 relative min-h-0 rounded-md lg:rounded-lg overflow-hidden shadow-2xl border border-white/10 bg-black">
           {callType === "video" ? (
-            <video
-              ref={localVideoRef}
-              className="h-full w-full object-cover"
-              playsInline
-              muted
-            />
+            <>
+              <VideoFrame
+                type="remote"
+                isLoading={state.ringing}
+                isConnected={state.inCall}
+                isVideoOff={false}
+                isMuted={false}
+                userName="Người nhận"
+                videoRef={remoteVideoRef}
+                flipped={true}
+              />
+            </>
           ) : (
-            <div className="flex h-full items-center justify-center text-gray-300">
+            <Card className="relative w-full h-full bg-gradient-to-br from-green-900/30 to-green-600/20 flex items-center justify-center border-0">
               <div className="text-center">
-                <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                  🎤
+                <div className="w-24 h-24 bg-green-600/50 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/50 backdrop-blur-sm">
+                  <span className="text-5xl">{state.ringing ? "📞" : "🎤"}</span>
                 </div>
-                <div>Audio Call - Local</div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Remote Stream */}
-        <div className="relative bg-gray-900 rounded overflow-hidden">
-          <div className="absolute top-2 left-2 z-10 text-xs bg-black/50 px-2 py-1 rounded">
-            {state.ringing ? "Đang gọi..." : "Người nhận"}
-          </div>
-          {callType === "video" ? (
-            <video
-              ref={remoteVideoRef}
-              className="h-full w-full object-cover"
-              playsInline
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-gray-300">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                  {state.ringing ? "📞" : "🎤"}
-                </div>
-                <div>Audio Call - Remote</div>
+                <p className="text-white font-semibold text-xl">Người nhận</p>
+                <p className="text-gray-400 text-sm mt-2">Audio Call</p>
                 {state.ringing && (
-                  <div className="text-sm text-gray-400 mt-2">Đang gọi...</div>
+                  <Badge className="mt-4 bg-blue-500/20 text-blue-400 border-blue-500/30 animate-pulse">
+                    Đang gọi...
+                  </Badge>
                 )}
               </div>
-            </div>
+              {state.ringing && (
+                <div className="absolute inset-0 bg-black/30 backdrop-blur-sm rounded-lg" />
+              )}
+            </Card>
           )}
+        </div>
 
-          {/* Ringing overlay */}
-          {state.ringing && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+        {/* Local Video - Smaller overlay on desktop, full height on mobile */}
+        <div
+          className={cn(
+            "relative rounded-md lg:rounded-lg overflow-hidden shadow-2xl border border-white/10 bg-black",
+            "lg:w-96 lg:flex-shrink-0",
+            "w-full flex-1 lg:flex-none"
+          )}
+        >
+          {callType === "video" ? (
+            <VideoFrame
+              type="local"
+              isLoading={false}
+              isConnected={state.inCall}
+              isVideoOff={isVideoOff}
+              isMuted={isMuted}
+              userName="Bạn"
+              videoRef={localVideoRef}
+              flipped={true}
+            />
+          ) : (
+            <Card className="relative w-full h-full bg-gradient-to-br from-blue-900/30 to-blue-600/20 flex items-center justify-center border-0">
               <div className="text-center">
-                <div className="animate-pulse text-2xl mb-2">📞</div>
-                <div>Đang gọi...</div>
+                <div className="w-20 h-20 bg-blue-600/50 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/50 backdrop-blur-sm">
+                  <span className="text-4xl">🎤</span>
+                </div>
+                <p className="text-white font-semibold">Bạn</p>
+                <p className="text-gray-400 text-sm mt-1">Audio Call</p>
+                {isMuted && (
+                  <Badge className="mt-3 bg-red-500/20 text-red-400 border-red-500/30">
+                    Đã tắt mic
+                  </Badge>
+                )}
               </div>
-            </div>
+            </Card>
           )}
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="absolute bottom-6 left-0 right-0 mx-auto flex w-full max-w-md items-center justify-center gap-4">
-        <button
-          onClick={() => toggleMic()}
-          className={`rounded px-4 py-2 transition-colors ${
-            state.localStream?.getAudioTracks()[0]?.enabled !== false
-              ? "bg-gray-700 hover:bg-gray-600"
-              : "bg-red-600 hover:bg-red-700"
-          }`}
-        >
-          {state.localStream?.getAudioTracks()[0]?.enabled !== false
-            ? "🎤"
-            : "🔇"}
-        </button>
-
-        {callType === "video" && (
-          <button
-            onClick={() => toggleCamera()}
-            className={`rounded px-4 py-2 transition-colors ${
-              state.localStream?.getVideoTracks()[0]?.enabled !== false
-                ? "bg-gray-700 hover:bg-gray-600"
-                : "bg-red-600 hover:bg-red-700"
-            }`}
-          >
-            {state.localStream?.getVideoTracks()[0]?.enabled !== false
-              ? "📹"
-              : "📷"}
-          </button>
-        )}
-
-        <button
-          onClick={endCall}
-          className="rounded bg-red-600 px-6 py-2 font-semibold hover:bg-red-700 transition-colors"
-        >
-          Kết thúc
-        </button>
+      {/* Controls - Fixed at bottom */}
+      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 z-20 lg:bottom-4">
+        <CallControls
+          isMuted={isMuted}
+          isVideoOff={isVideoOff}
+          onToggleMute={toggleMic}
+          onToggleVideo={toggleCamera}
+          onEndCall={endCall}
+          isConnected={state.inCall}
+          disabled={false}
+        />
       </div>
     </div>
   );

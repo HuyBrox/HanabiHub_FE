@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,11 +19,14 @@ import {
   X,
   MessageCircle,
   Video,
+  Search,
 } from "lucide-react";
-import { ModeToggle, LanguageToggle } from "@/components/common";
+import { ModeToggle, LanguageToggle, JapaneseInputModeToggle } from "@/components/common";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/lib/language-context";
 import { AppSidebarProps, NavigationItem } from "@/types/layout";
+import { useSearch } from "@/contexts/SearchContext";
+import { SearchComponent } from "@/components/search/SearchComponent";
 import styles from "./AppSidebar.module.css";
 
 const navigation: NavigationItem[] = [
@@ -60,38 +64,51 @@ export function AppSidebar({}: AppSidebarProps) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { isAuthenticated, user, logout } = useAuth();
+  const { openSearch, closeSearch, isSearchOpen } = useSearch();
 
   return (
     <div
       className={cn(
-        "hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+        "hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
+        isSearchOpen ? "w-16" : isCollapsed ? "w-16" : "w-64"
       )}
+      style={{
+        transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      }}
     >
       {/* Header with Logo and Toggle */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-        {!isCollapsed && (
+        {!isCollapsed && !isSearchOpen && (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">
-                日
-              </span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
+              <Image
+                src="/images/logos/logohanabi.png"
+                alt="HanabiHub Logo"
+                width={32}
+                height={32}
+                className="object-contain"
+              />
             </div>
             <span className="font-semibold text-sidebar-foreground">
-              JapanLearn
+              HanabiHub
             </span>
           </div>
         )}
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => {
+            if (isSearchOpen) {
+              closeSearch();
+            }
+            setIsCollapsed(!isCollapsed);
+          }}
           className="text-sidebar-foreground hover:bg-sidebar-accent"
         >
-          {isCollapsed ? (
-            <Menu className="h-4 w-4" />
+          {isCollapsed || isSearchOpen ? (
+            <Menu className="h-5 w-5" />
           ) : (
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           )}
         </Button>
       </div>
@@ -101,22 +118,53 @@ export function AppSidebar({}: AppSidebarProps) {
         {navigation.map((item) => {
           const isActive = pathname === item.href;
           return (
-            <Link key={item.name} href={item.href}>
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={() => {
+                if (isSearchOpen) {
+                  closeSearch();
+                }
+              }}
+            >
               <Button
                 variant={isActive ? "default" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                   isActive &&
                     "bg-primary text-primary-foreground hover:bg-primary/90",
-                  isCollapsed && "px-2"
+                  (isCollapsed || isSearchOpen) && "px-2 justify-center"
                 )}
               >
-                <item.icon className="h-4 w-4 flex-shrink-0" />
-                {!isCollapsed && <span>{t(item.key)}</span>}
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && !isSearchOpen && <span className="font-medium">{t(item.key)}</span>}
               </Button>
             </Link>
           );
         })}
+
+        {/* Search Button */}
+        <Button
+          variant={isSearchOpen ? "default" : "ghost"}
+          onClick={() => {
+            if (isSearchOpen) {
+              closeSearch();
+            } else {
+              openSearch();
+            }
+          }}
+          className={cn(
+            "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+            isSearchOpen &&
+              "bg-primary text-primary-foreground hover:bg-primary/90",
+            (isCollapsed || isSearchOpen) && "px-2 justify-center"
+          )}
+        >
+          <Search className="h-5 w-5 flex-shrink-0" />
+          {!isCollapsed && !isSearchOpen && (
+            <span className="font-medium">{t("nav.search") || "Tìm kiếm"}</span>
+          )}
+        </Button>
 
         {/* Profile/Login section */}
         {isAuthenticated ? (
@@ -124,14 +172,14 @@ export function AppSidebar({}: AppSidebarProps) {
             <Button
               variant={pathname === "/profile" ? "default" : "ghost"}
               className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                 pathname === "/profile" &&
                   "bg-primary text-primary-foreground hover:bg-primary/90",
-                isCollapsed && "px-2"
+                (isCollapsed || isSearchOpen) && "px-2 justify-center"
               )}
             >
-              {isCollapsed ? (
-                <Avatar className="h-4 w-4">
+              {(isCollapsed || isSearchOpen) ? (
+                <Avatar className="h-6 w-6">
                   <AvatarImage
                     src={user?.avatar || "/placeholder.svg"}
                     alt={user?.fullname || user?.username || "User"}
@@ -144,7 +192,7 @@ export function AppSidebar({}: AppSidebarProps) {
                 </Avatar>
               ) : (
                 <>
-                  <Avatar className="h-4 w-4">
+                  <Avatar className="h-6 w-6">
                     <AvatarImage
                       src={user?.avatar || "/placeholder.svg"}
                       alt={user?.fullname || user?.username || "User"}
@@ -155,7 +203,7 @@ export function AppSidebar({}: AppSidebarProps) {
                         "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="truncate">
+                  <span className="truncate font-medium">
                     {user?.fullname || user?.username || "User"}
                   </span>
                 </>
@@ -167,69 +215,76 @@ export function AppSidebar({}: AppSidebarProps) {
             <Button
               variant="ghost"
               className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
-                isCollapsed && "px-2"
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                (isCollapsed || isSearchOpen) && "px-2 justify-center"
               )}
             >
-              <User className="h-4 w-4 flex-shrink-0" />
-              {!isCollapsed && <span>{t("nav.login")}</span>}
+              <User className="h-5 w-5 flex-shrink-0" />
+              {!isCollapsed && !isSearchOpen && (
+                <span className="font-medium">{t("nav.login")}</span>
+              )}
             </Button>
           </Link>
         )}
       </nav>
 
-      {/* Language Toggle, Theme Toggle and Auth Button */}
-      <div className="p-4 border-t border-sidebar-border space-y-2">
-        <div
-          className={cn(
-            "flex",
-            isCollapsed ? "justify-center" : "justify-start"
-          )}
-        >
-          <LanguageToggle collapsed={isCollapsed} />
-        </div>
-        <div
-          className={cn(
-            "flex",
-            isCollapsed ? "justify-center" : "justify-start"
-          )}
-        >
-          <ModeToggle />
-          {!isCollapsed && (
-            <span className="ml-3 text-sm text-sidebar-foreground self-center">
-              {t("nav.theme")}
-            </span>
-          )}
-        </div>
-
-        {/* Auth Button - Login/Logout */}
-        {isAuthenticated ? (
-          <Button
-            variant="ghost"
-            onClick={logout}
+      {/* Language Toggle, Theme Toggle, Japanese Input Mode Toggle and Auth Button */}
+      {!isSearchOpen && (
+        <div className="p-4 border-t border-sidebar-border space-y-2">
+          <div
             className={cn(
-              "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
-              isCollapsed && "px-2"
+              "flex",
+              isCollapsed ? "justify-center" : "justify-start"
             )}
           >
-            <LogOut className="h-4 w-4 flex-shrink-0" />
-            {!isCollapsed && <span>{t("nav.logout")}</span>}
-          </Button>
-        ) : (
-          <Link href="/login">
+            <LanguageToggle collapsed={isCollapsed} />
+          </div>
+          <div
+            className={cn(
+              "flex",
+              isCollapsed ? "justify-center" : "justify-start"
+            )}
+          >
+            <ModeToggle />
+            {!isCollapsed && (
+              <span className="ml-3 text-sm text-sidebar-foreground self-center font-medium">
+                {t("nav.theme")}
+              </span>
+            )}
+          </div>
+
+          {/* Japanese Input Mode Toggle */}
+          <JapaneseInputModeToggle collapsed={isCollapsed} />
+
+          {/* Auth Button - Login/Logout */}
+          {isAuthenticated ? (
             <Button
               variant="ghost"
+              onClick={logout}
               className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
-                isCollapsed && "px-2"
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                isCollapsed && "px-2 justify-center"
               )}
             >
-              <User className="h-4 w-4 flex-shrink-0" />
-              {!isCollapsed && <span>{t("nav.login")}</span>}
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              {!isCollapsed && <span className="font-medium">{t("nav.logout")}</span>}
             </Button>
-          </Link>
-        )}
-      </div>
+          ) : (
+            <Link href="/login">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                  isCollapsed && "px-2 justify-center"
+                )}
+              >
+                <User className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && <span className="font-medium">{t("nav.login")}</span>}
+              </Button>
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

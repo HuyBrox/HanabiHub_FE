@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useGetCurrentUserQuery } from "../store/services/authApi";
-import { loginSuccess } from "../store/slices/authSlice";
+import { loginSuccess, logoutThunk, setInitialized } from "../store/slices/authSlice";
+import { RootState } from "../store";
 import { LoadingPage } from "@/components/loading";
 
 /**
@@ -12,22 +13,45 @@ import { LoadingPage } from "@/components/loading";
  */
 export const useAuthInit = () => {
   const dispatch = useDispatch();
+  const { isAuthenticated, isInitialized } = useSelector((state: RootState) => state.auth);
 
   // Gọi API để lấy thông tin user hiện tại (nếu có token trong cookie)
-  const { data, isSuccess, isError, isLoading } = useGetCurrentUserQuery();
+  const { data, isSuccess, isError, isLoading, error } = useGetCurrentUserQuery(undefined, {
+    // Chỉ gọi API nếu chưa được khởi tạo
+    skip: isInitialized,
+  });
 
   useEffect(() => {
+    if (isLoading) {
+      return; // Đang loading, chưa làm gì
+    }
+
     if (isSuccess && data?.success && data.data) {
-      // Backend trả về user object trực tiếp trong data (không phải data.user)
+      // Backend trả về user object trực tiếp trong data
       dispatch(loginSuccess(data.data));
-      console.log("Auth state restored from /user/profile:", data.data);
+      console.log("✅ Auth state restored from /user/profile:", data.data);
     } else if (isError) {
       // Nếu API fail (401, 403, etc.), user không authenticated hoặc token expired
-      console.log("No valid session found - token may be expired or invalid");
+      const errorStatus = (error as any)?.status;
+      if (errorStatus === 401 || errorStatus === 403) {
+        console.log("🔓 Session expired, logging out...");
+        dispatch(logoutThunk() as any);
+      } else {
+        console.log("❌ No valid session found - token may be expired or invalid");
+        dispatch(logoutThunk() as any);
+      }
     }
-  }, [isSuccess, isError, data, dispatch]);
 
-  return { isLoading };
+    // Đánh dấu đã khởi tạo xong
+    dispatch(setInitialized());
+  }, [isSuccess, isError, data, dispatch, error, isLoading]);
+
+  // Nếu đã có auth state từ localStorage và chưa cần gọi API
+  if (isAuthenticated && isInitialized) {
+    return { isLoading: false };
+  }
+
+  return { isLoading: isLoading || !isInitialized };
 };
 
 /**

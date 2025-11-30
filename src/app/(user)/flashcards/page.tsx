@@ -76,7 +76,7 @@ function FlashcardsPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
   const [selectedType, setSelectedType] = useState<"flashcard" | "flashlist">(
-    "flashlist"
+    "flashcard"
   );
   const [openModal, setOpenModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -465,8 +465,8 @@ function FlashcardsPage() {
     <div className="min-h-screen bg-background relative">
       {/* Scroll anchor */}
       <div ref={contentTopRef} className="absolute top-0" />
-      {/* Thanh switcher bên phải */}
-      <div className="fixed top-1/2 right-[15px] -translate-y-1/2 z-50 flex flex-col">
+      {/* Thanh switcher bên phải - ẩn trên mobile, hiện trên desktop */}
+      <div className="hidden md:flex fixed top-1/2 right-[15px] -translate-y-1/2 z-50 flex-col">
         <button
           onClick={() => setSelectedType("flashcard")}
           className={`w-12 h-14 bg-primary text-white font-bold text-sm shadow-md transition
@@ -496,14 +496,36 @@ function FlashcardsPage() {
       </div>
 
       {/* Header: Search + Filters */}
-      <div className="p-6 border-b border-border">
-        <div className="max-w-6xl mx-auto flex flex-col gap-4">
-          <h1 className="text-2xl font-bold">Flashcards & Sets</h1>
-          <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
+      <div className="p-3 md:p-4 lg:p-6 border-b border-border">
+        <div className="max-w-6xl mx-auto flex flex-col gap-3 md:gap-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg md:text-xl lg:text-2xl font-bold">Flashcards & Sets</h1>
+            {/* Mobile type switcher */}
+            <div className="md:hidden flex gap-2">
+              <Button
+                variant={selectedType === "flashcard" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedType("flashcard")}
+                className="h-8 text-xs"
+              >
+                Cards
+              </Button>
+              <Button
+                variant={selectedType === "flashlist" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedType("flashlist")}
+                className="h-8 text-xs"
+              >
+                Sets
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-col lg:flex-row gap-2 md:gap-3 lg:gap-4 items-stretch lg:items-center">
             {/* Nút tạo mới */}
             <Button
               variant="outline"
-              className="border-2 border-dashed border-primary text-primary w-full lg:w-auto"
+              size="sm"
+              className="border-2 border-dashed border-primary text-primary w-full lg:w-auto text-xs md:text-sm h-9 md:h-10"
               onClick={() => setOpenModal(true)}
             >
               + Tạo mới
@@ -512,17 +534,17 @@ function FlashcardsPage() {
 
             {/* Search */}
             <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-2 md:left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground" />
               <Input
                 placeholder="Tìm kiếm flashcard..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-8 md:pl-10 text-sm h-9 md:h-10"
               />
               {/* Loading indicator khi đang debounce */}
               {isTyping && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <div className="absolute right-2 md:right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 md:h-4 md:w-4 border-b-2 border-primary"></div>
                 </div>
               )}
             </div>
@@ -532,7 +554,7 @@ function FlashcardsPage() {
               value={selectedCategory}
               onValueChange={setSelectedCategory}
             >
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="w-full sm:w-40 h-9 md:h-10 text-sm">
                 <SelectValue placeholder="Bộ lọc" />
               </SelectTrigger>
               <SelectContent>
@@ -546,7 +568,7 @@ function FlashcardsPage() {
 
             {/* Level */}
             <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-              <SelectTrigger className="w-full sm:w-32">
+              <SelectTrigger className="w-full sm:w-32 h-9 md:h-10 text-sm">
                 <SelectValue placeholder="Level" />
               </SelectTrigger>
               <SelectContent>
@@ -563,10 +585,10 @@ function FlashcardsPage() {
       </div>
 
       {/* Grid */}
-      <div className="p-6">
-        <div className="max-w-6xl mx-auto mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="p-3 md:p-4 lg:p-6">
+        <div className="max-w-6xl mx-auto mb-4 md:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-base md:text-lg lg:text-xl font-semibold">
               {selectedType === "flashcard" ? "Flashcards" : "Flash Sets"}
             </h2>
             {isSearching && !isTyping && (
@@ -575,50 +597,50 @@ function FlashcardsPage() {
               </p>
             )}
           </div>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-xs md:text-sm text-muted-foreground">
             {filteredSets.length}{" "}
             {selectedType === "flashcard" ? "cards" : "sets"} tìm thấy
           </span>
         </div>
         <div className="max-w-6xl mx-auto">
           {filteredSets.length === 0 && !isTyping ? (
-            <div className="text-center py-12">
-              <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
+            <div className="text-center py-8 md:py-12">
+              <BookOpen className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mx-auto mb-3 md:mb-4" />
+              <h3 className="text-base md:text-lg font-semibold mb-2">
                 {isSearching
                   ? "Không tìm thấy kết quả"
                   : "Chưa có flashcard nào"}
               </h3>
-              <p className="text-muted-foreground">
+              <p className="text-sm md:text-base text-muted-foreground">
                 {isSearching
                   ? "Thử thay đổi từ khoá hoặc bộ lọc"
                   : "Hãy tạo flashcard đầu tiên của bạn"}
               </p>
             </div>
           ) : filteredSets.length === 0 && isTyping ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <h3 className="text-lg font-semibold mb-2">Đang tìm kiếm...</h3>
-              <p className="text-muted-foreground">
+            <div className="text-center py-8 md:py-12">
+              <div className="animate-spin rounded-full h-6 w-6 md:h-8 md:w-8 border-b-2 border-primary mx-auto mb-3 md:mb-4"></div>
+              <h3 className="text-base md:text-lg font-semibold mb-2">Đang tìm kiếm...</h3>
+              <p className="text-sm md:text-base text-muted-foreground">
                 Vui lòng chờ trong giây lát
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-5">
               {filteredSets.map((set) => (
                 <Card
                   key={set._id}
-                  className="group hover:shadow-xl hover:shadow-primary/10 dark:hover:shadow-primary/20 hover:-translate-y-1 transition-all duration-300 ease-out cursor-pointer border-border/50 hover:border-primary/30"
+                  className="group md:hover:shadow-xl md:hover:shadow-primary/10 dark:md:hover:shadow-primary/20 md:hover:-translate-y-1 transition-all duration-300 ease-out cursor-pointer border-border/50 md:hover:border-primary/30"
                 >
-                  <CardHeader className="pb-2 p-2 sm:p-3 md:p-4 md:pb-2">
+                  <CardHeader className="pb-1.5 md:pb-2 p-2 md:p-3 lg:p-4">
                     <div className="flex items-start justify-between mb-1">
                       <Badge
                         variant="outline"
-                        className={`text-[9px] sm:text-[10px] md:text-xs ${getCategoryStyle(
+                        className={`text-[8px] md:text-[10px] lg:text-xs ${getCategoryStyle(
                           set.category
-                        )} flex items-center gap-0.5 px-1 sm:px-1.5 py-0.5 group-hover:scale-105 transition-transform duration-300`}
+                        )} flex items-center gap-0.5 px-1 md:px-1.5 py-0.5 md:group-hover:scale-105 transition-transform duration-300`}
                       >
-                        <span className="hidden sm:inline">
+                        <span className="hidden md:inline">
                           {getCategoryIcon(set.category)}
                         </span>
                         {
@@ -629,56 +651,57 @@ function FlashcardsPage() {
                       </Badge>
                       <Badge
                         variant="secondary"
-                        className="text-[9px] sm:text-[10px] md:text-xs px-1 sm:px-1.5 py-0.5 group-hover:scale-105 transition-transform duration-300"
+                        className="text-[8px] md:text-[10px] lg:text-xs px-1 md:px-1.5 py-0.5 md:group-hover:scale-105 transition-transform duration-300"
                       >
                         {set.level}
                       </Badge>
                     </div>
-                    <div className="aspect-video bg-muted rounded-lg mb-2 overflow-hidden">
+                    <div className="aspect-video bg-muted rounded-md md:rounded-lg mb-1.5 md:mb-2 overflow-hidden">
                       <img
                         src={set.thumbnail || "/placeholder.svg"}
                         alt={set.type === "flashlist" ? set.title : set.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
+                        className="w-full h-full object-cover md:group-hover:scale-110 transition-transform duration-500 ease-out"
                       />
                     </div>
-                    <CardTitle className="text-xs sm:text-sm md:text-base line-clamp-2 group-hover:text-primary transition-colors duration-300">
+                    <CardTitle className="text-xs md:text-sm lg:text-base line-clamp-2 md:group-hover:text-primary transition-colors duration-300 leading-tight">
                       {set.type === "flashlist" ? set.title : set.name}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0 p-2 sm:p-3 md:p-4 md:pt-0">
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 line-clamp-2">
+                  <CardContent className="pt-0 p-2 md:p-3 lg:p-4">
+                    <p className="text-[9px] md:text-xs text-muted-foreground mb-1.5 md:mb-2 line-clamp-2 leading-tight">
                       {set.description || "Chưa có mô tả"}
                     </p>
 
-                    <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground mb-2">
-                      <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                        <span className="flex items-center gap-0.5 sm:gap-1">
-                          <BookOpen className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                          <span className="hidden sm:inline">
+                    <div className="flex items-center justify-between text-[8px] md:text-[10px] text-muted-foreground mb-1.5 md:mb-2">
+                      <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                        <span className="flex items-center gap-0.5 md:gap-1">
+                          <BookOpen className="h-2 w-2 md:h-2.5 md:w-2.5" />
+                          <span className="hidden md:inline">
                             {set.cardCount} cards
                           </span>
-                          <span className="sm:hidden">{set.cardCount}</span>
+                          <span className="md:hidden">{set.cardCount}</span>
                         </span>
-                        <span className="flex items-center gap-0.5 sm:gap-1">
-                          <Clock className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                          {estimateStudyTime(set.cardCount)}
+                        <span className="flex items-center gap-0.5 md:gap-1">
+                          <Clock className="h-2 w-2 md:h-2.5 md:w-2.5" />
+                          <span className="hidden sm:inline">{estimateStudyTime(set.cardCount)}</span>
+                          <span className="sm:hidden text-[7px]">{estimateStudyTime(set.cardCount)}</span>
                         </span>
                         {set.type === "flashlist" &&
                           (set.averageRating || 0) > 0 && (
-                            <span className="flex items-center gap-0.5 sm:gap-1">
-                              <Star className="h-2 w-2 sm:h-2.5 sm:w-2.5 fill-yellow-400 text-yellow-400" />
+                            <span className="flex items-center gap-0.5 md:gap-1">
+                              <Star className="h-2 w-2 md:h-2.5 md:w-2.5 fill-yellow-400 text-yellow-400" />
                               {(set.averageRating || 0).toFixed(1)}
                             </span>
                           )}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="text-[9px] sm:text-[10px] text-muted-foreground">
-                        <p className="truncate max-w-[70px] sm:max-w-none">
-                          Tạo bởi {set.author}
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="text-[8px] md:text-[10px] text-muted-foreground flex-1 min-w-0">
+                        <p className="truncate">
+                          <span className="hidden sm:inline">Tạo bởi </span>{set.author}
                         </p>
-                        <p className="hidden md:block">
+                        <p className="hidden md:block text-[9px]">
                           {formatDate(set.updatedAt)}
                         </p>
                       </div>
@@ -691,11 +714,10 @@ function FlashcardsPage() {
                       >
                         <Button
                           size="sm"
-                          className="bg-primary hover:bg-primary/90 h-6 sm:h-7 md:h-8 text-[10px] sm:text-xs px-1.5 sm:px-2 group-hover:scale-105 group-hover:shadow-md transition-all duration-300 ease-out"
+                          className="bg-primary hover:bg-primary/90 h-6 md:h-7 lg:h-8 text-[9px] md:text-[10px] lg:text-xs px-1.5 md:px-2 md:group-hover:scale-105 md:group-hover:shadow-md transition-all duration-300 ease-out flex-shrink-0"
                         >
-                          <Play className="h-2 w-2 sm:h-2.5 sm:w-2.5 mr-0.5" />
-                          <span className="hidden sm:inline">Học</span>
-                          <span className="sm:hidden">Học</span>
+                          <Play className="h-2 w-2 md:h-2.5 md:w-2.5 mr-0.5" />
+                          Học
                         </Button>
                       </Link>
                     </div>
@@ -709,36 +731,37 @@ function FlashcardsPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="pb-10">
+        <div className="pb-6 md:pb-10 px-3 md:px-6">
           <div className="max-w-6xl mx-auto">
             <Pagination>
-              <PaginationContent>
+              <PaginationContent className="flex-wrap gap-1 md:gap-2">
                 {/* Previous Button */}
                 <PaginationItem>
                   <PaginationPrevious
                     onClick={() => handlePageChange(currentPage - 1)}
-                    className={`cursor-pointer ${
+                    className={`cursor-pointer text-xs md:text-sm ${
                       currentPage === 1
                         ? "pointer-events-none opacity-50"
                         : "hover:bg-accent"
                     }`}
                   >
-                    <span>Trước</span>
+                    <span className="hidden sm:inline">Trước</span>
+                    <span className="sm:hidden">‹</span>
                   </PaginationPrevious>
                 </PaginationItem>
 
-                {/* Page Numbers */}
+                {/* Page Numbers - ẩn một số trên mobile */}
                 {generatePageNumbers().map((page, index) =>
                   page === "ellipsis" ? (
-                    <PaginationItem key={`ellipsis-${index}`}>
+                    <PaginationItem key={`ellipsis-${index}`} className="hidden md:block">
                       <PaginationEllipsis />
                     </PaginationItem>
                   ) : (
-                    <PaginationItem key={page}>
+                    <PaginationItem key={page} className={typeof page === 'number' && Math.abs(page - currentPage) > 1 && page !== 1 && page !== totalPages ? 'hidden md:block' : ''}>
                       <PaginationLink
                         onClick={() => handlePageChange(page)}
                         isActive={currentPage === page}
-                        className="cursor-pointer"
+                        className="cursor-pointer text-xs md:text-sm h-8 w-8 md:h-10 md:w-10"
                       >
                         {page}
                       </PaginationLink>
@@ -750,20 +773,21 @@ function FlashcardsPage() {
                 <PaginationItem>
                   <PaginationNext
                     onClick={() => handlePageChange(currentPage + 1)}
-                    className={`cursor-pointer ${
+                    className={`cursor-pointer text-xs md:text-sm ${
                       currentPage === totalPages
                         ? "pointer-events-none opacity-50"
                         : "hover:bg-accent"
                     }`}
                   >
-                    <span>Sau</span>
+                    <span className="hidden sm:inline">Sau</span>
+                    <span className="sm:hidden">›</span>
                   </PaginationNext>
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
 
             {/* Pagination Info */}
-            <div className="text-center mt-4 text-sm text-muted-foreground">
+            <div className="text-center mt-3 md:mt-4 text-xs md:text-sm text-muted-foreground">
               Trang {currentPage} / {totalPages}
             </div>
           </div>
