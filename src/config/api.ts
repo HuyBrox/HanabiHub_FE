@@ -1,4 +1,11 @@
-// API Configuration
+/**
+ * API Configuration
+ * Uses environment variables from .env file
+ * 
+ * Required .env variables:
+ * - NEXT_PUBLIC_API_URL: Backend API base URL (default: http://localhost:8080/api/v1)
+ * - NEXT_PUBLIC_BACKEND_HEALTH_CHECK: Health check endpoint (default: http://localhost:8080/testServer)
+ */
 export const API_CONFIG = {
   BASE_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
   HEALTH_CHECK: process.env.NEXT_PUBLIC_BACKEND_HEALTH_CHECK || "http://localhost:8080/testServer",
@@ -7,7 +14,10 @@ export const API_CONFIG = {
   RETRY_DELAY: 1000
 };
 
-// API Endpoints
+/**
+ * API Endpoints
+ * All endpoints are relative to API_CONFIG.BASE_URL
+ */
 export const API_ENDPOINTS = {
   // Notifications
   NOTIFICATIONS: {
@@ -16,7 +26,14 @@ export const API_ENDPOINTS = {
     SCHEDULE: '/notifications/schedule',
     HISTORY: '/notifications/history',
     STATS: '/notifications/stats',
-    EXPORT: '/notifications/export'
+    MY: '/notifications/my', // User's own notifications
+    MARK_AS_READ: (id: string) => `/notifications/${id}/read`,
+    UPDATE: (id: string) => `/notifications/${id}`,
+    DELETE: (id: string) => `/notifications/${id}`,
+    SCHEDULED: '/notifications/scheduled',
+    SCHEDULED_UPDATE: (id: string) => `/notifications/scheduled/${id}`,
+    SCHEDULED_CANCEL: (id: string) => `/notifications/scheduled/${id}`,
+    SCHEDULED_STATS: '/notifications/scheduled/stats',
   },
   
   // News
@@ -27,7 +44,6 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/news/${id}`,
     DELETE: (id: string) => `/news/${id}`,
     STATS: '/news/stats',
-    EXPORT: '/news/export'
   },
   
   // Reports
@@ -37,7 +53,6 @@ export const API_ENDPOINTS = {
     APPROVE: (id: string) => `/reports/${id}/approve`,
     REJECT: (id: string) => `/reports/${id}/reject`,
     STATS: '/reports/stats',
-    EXPORT: '/reports/export'
   },
   
   // Templates
@@ -49,17 +64,27 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/templates/${id}`,
     USE: (id: string) => `/templates/${id}/use`,
     STATS: '/templates/stats',
-    EXPORT: '/templates/export'
   },
   
   // Users
   USERS: {
     SEARCH: '/users/search',
     STATS: '/users/stats'
+  },
+  
+  // Export
+  EXPORT: {
+    NEWS: '/export/news',
+    REPORTS: '/export/reports',
+    NOTIFICATIONS: '/export/notifications',
+    TEMPLATES: '/export/templates',
   }
 };
 
-// Health Check Function
+/**
+ * Health Check Function
+ * Checks if backend server is running
+ */
 export const checkBackendHealth = async (): Promise<boolean> => {
   try {
     const response = await fetch(API_CONFIG.HEALTH_CHECK);
@@ -68,6 +93,4 @@ export const checkBackendHealth = async (): Promise<boolean> => {
     console.error('Backend health check failed:', error);
     return false;
   }
-};
-
-
+}; 

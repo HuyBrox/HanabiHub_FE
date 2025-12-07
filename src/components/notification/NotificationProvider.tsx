@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import NotificationContainer from "./NotificationContainer";
 import { useSocketContext } from "@/providers/SocketProvider";
+import { buildApiUrl } from "@/utils/api-helper";
 
 const NotificationContext = createContext<any>(null);
 
@@ -26,7 +27,7 @@ export const NotificationProvider = ({
     // Mark as read in backend if notificationId provided
     if (notificationId) {
       try {
-        await fetch(`http://localhost:8080/api/v1/notifications/${notificationId}/read`, {
+        await fetch(buildApiUrl(`/notifications/${notificationId}/read`), {
           method: 'PUT',
           credentials: 'include',
         });
@@ -59,7 +60,7 @@ export const NotificationProvider = ({
 
     const fetchUnreadNotifications = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/v1/notifications/my?unreadOnly=true&limit=5", {
+        const response = await fetch(buildApiUrl("/notifications/my?unreadOnly=true&limit=5"), {
           credentials: "include", // Send cookies
         });
 
@@ -82,6 +83,7 @@ export const NotificationProvider = ({
               title: notif.title,
               duration: 0, // Persistent until user closes
               notificationId: notif._id, // Pass backend notification ID for mark as read
+              metadata: notif.metadata || undefined,
             });
           });
         }
@@ -101,7 +103,21 @@ export const NotificationProvider = ({
   useEffect(() => {
     if (!socket || !connected) return;
 
+    // Track processed notification IDs to prevent duplicates
+    const processedIds = new Set<string>();
+
     const handleNotification = (payload: any) => {
+      // Prevent duplicate notifications
+      const notificationId = payload.notificationId || payload._id || `${payload.title}-${payload.message}`;
+      if (processedIds.has(notificationId)) {
+        console.log("⚠️ Duplicate notification ignored:", notificationId);
+        return;
+      }
+      processedIds.add(notificationId);
+
+      // Clean up old IDs after 1 minute to prevent memory leak
+      setTimeout(() => processedIds.delete(notificationId), 60000);
+
       console.log("📢 Received notification from socket:", payload);
       
       // Display notification toast
@@ -110,7 +126,10 @@ export const NotificationProvider = ({
         message: payload.message || payload.content,
         title: payload.title,
         duration: 8000, // Show for 8 seconds
-        notificationId: payload.notificationId, // Pass backend notification ID for mark as read
+        notificationId: payload.notificationId || payload._id, // Pass backend notification ID for mark as read
+        metadata: payload.metadata || (payload.newsId ? { newsId: payload.newsId } : undefined),
+        newsId: payload.newsId,
+        image: payload.image,
       });
 
       // Play notification sound (optional)
@@ -128,6 +147,7 @@ export const NotificationProvider = ({
 
     return () => {
       socket.off("notification", handleNotification);
+      processedIds.clear();
     };
   }, [socket, connected]);
 

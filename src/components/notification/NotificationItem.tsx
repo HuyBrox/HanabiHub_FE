@@ -62,7 +62,7 @@ export default function NotificationItem({
               {notification.title}
             </div>
           )}
-          <div className="text-sm text-gray-700">{notification.message}</div>
+          <div className="text-sm text-gray-700">{notification.message || notification.content}</div>
         </div>
 
         <button

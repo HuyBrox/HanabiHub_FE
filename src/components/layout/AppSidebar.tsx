@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -19,12 +19,16 @@ import {
   X,
   MessageCircle,
   Video,
+  Bell,
 } from "lucide-react";
 import { ModeToggle, LanguageToggle } from "@/components/common";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/lib/language-context";
 import { AppSidebarProps, NavigationItem } from "@/types/layout";
+import { NotificationPanel } from "@/components/notification/NotificationPanel";
 import styles from "./AppSidebar.module.css";
+import { useSocketContext } from "@/providers/SocketProvider";
+import { buildApiUrl } from "@/utils/api-helper";
 
 const navigation: NavigationItem[] = [
   { name: "Home", href: "/", icon: Home, key: "nav.home" },
@@ -58,9 +62,62 @@ const navigation: NavigationItem[] = [
 
 export function AppSidebar({}: AppSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
   const { t } = useLanguage();
   const { isAuthenticated, user, logout } = useAuth();
+  const { socket, connected } = useSocketContext();
+
+  // ✅ Fetch unread count from API
+  const fetchUnreadCount = async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      const response = await fetch(
+        buildApiUrl("/notifications/my?unreadOnly=true&limit=1"),
+        { credentials: "include" }
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        setUnreadCount(data.data.total || 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch unread count:", error);
+    }
+  };
+
+  // Fetch unread count when authenticated
+  useEffect(() => {
+    if (isAuthenticated && connected) {
+      fetchUnreadCount();
+    }
+  }, [isAuthenticated, connected]);
+
+  // Listen for new notifications via socket
+  useEffect(() => {
+    if (!socket || !connected || !isAuthenticated) return;
+
+    const handleNotification = () => {
+      setUnreadCount((prev) => prev + 1);
+    };
+
+    socket.on("notification", handleNotification);
+
+    return () => {
+      socket.off("notification", handleNotification);
+    };
+  }, [socket, connected, isAuthenticated]);
+
+  // Reset unread count when panel opens
+  const handleOpenPanel = () => {
+    setIsNotificationPanelOpen(true);
+    // Optionally reset count when opening panel
+    // setUnreadCount(0);
+  };
 
   return (
     <div
@@ -122,6 +179,32 @@ export function AppSidebar({}: AppSidebarProps) {
             </Link>
           );
         })}
+
+        {/* Notification Bell - Opens Panel */}
+        {isAuthenticated && (
+          <div className="relative">
+            <Button
+              variant="ghost"
+              onClick={handleOpenPanel}
+              className={cn(
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
+                isNotificationPanelOpen && "bg-accent",
+                isCollapsed && "px-2"
+              )}
+            >
+              <Bell className="h-4 w-4 flex-shrink-0" />
+              {!isCollapsed && <span>{t("nav.notifications")}</span>}
+              {/* Notification badge - Dynamic from API */}
+              {unreadCount > 0 && (
+                <div className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center px-1">
+                  <span className="text-white text-xs font-bold">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                </div>
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Profile/Login section */}
         {isAuthenticated ? (
@@ -235,6 +318,12 @@ export function AppSidebar({}: AppSidebarProps) {
           </Link>
         )}
       </div>
+
+      {/* Notification Panel - Tách riêng component */}
+      <NotificationPanel
+        isOpen={isNotificationPanelOpen}
+        onClose={() => setIsNotificationPanelOpen(false)}
+      />
     </div>
   );
 }

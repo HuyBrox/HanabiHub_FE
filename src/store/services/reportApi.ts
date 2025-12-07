@@ -5,6 +5,8 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 // ==================== TYPES ====================
 export interface ReportItem {
   _id: string;
+  // Legacy alias used across code (some components use report.id)
+  id?: string;
   reason: string;
   description: string;
   status: "pending" | "approved" | "rejected";

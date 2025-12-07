@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true, // ✅ Bật lại - Hydration warning đã được fix bằng ExtensionCleanup
   eslint: {
     // Cho phép build ngay cả khi có lỗi ESLint
     ignoreDuringBuilds: true,

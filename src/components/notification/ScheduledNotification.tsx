@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Send, Save } from 'lucide-react';
+import { Calendar, Clock, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -27,6 +26,11 @@ interface ScheduledNotificationData {
 export default function ScheduledNotification({ onSchedule }: ScheduledNotificationProps) {
   const [mounted, setMounted] = useState(false);
   const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [scheduledDate, setScheduledDate] = useState<Date | null>(null);
+  const [scheduledTime, setScheduledTime] = useState<Date | null>(null);
+  const [recipients, setRecipients] = useState<'all' | 'specific'>('all');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -35,11 +39,6 @@ export default function ScheduledNotification({ onSchedule }: ScheduledNotificat
   if (!mounted) {
     return <div className="animate-pulse bg-gray-200 h-64 rounded-lg"></div>;
   }
-  const [message, setMessage] = useState('');
-  const [scheduledDate, setScheduledDate] = useState<Date | null>(null);
-  const [scheduledTime, setScheduledTime] = useState<Date | null>(null);
-  const [recipients, setRecipients] = useState<'all' | 'specific'>('all');
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   const handleSchedule = () => {
     if (!title || !message || !scheduledDate || !scheduledTime) {
@@ -207,3 +206,4 @@ export default function ScheduledNotification({ onSchedule }: ScheduledNotificat
     </Card>
   );
 }
+

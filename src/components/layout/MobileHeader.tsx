@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -16,17 +16,35 @@ import {
   LogOut,
   Menu,
   X,
+  MessageCircle,
+  Video,
+  Bell,
 } from "lucide-react";
 import { ModeToggle, LanguageToggle } from "@/components/common";
 import { useLanguage } from "@/lib/language-context";
 import { useAuth } from "@/hooks/useAuth";
 import { MobileHeaderProps, NavigationItem, LayoutUser } from "@/types/layout";
+import { NotificationPanel } from "@/components/notification/NotificationPanel";
+import { useSocketContext } from "@/providers/SocketProvider";
+import { buildApiUrl } from "@/utils/api-helper";
 import styles from "./MobileHeader.module.css";
 
 const navigation: NavigationItem[] = [
   { name: "Home", href: "/", icon: Home, key: "nav.home" },
   { name: "Courses", href: "/courses", icon: BookOpen, key: "nav.courses" },
   { name: "Community", href: "/community", icon: Users, key: "nav.community" },
+  {
+    name: "Messages",
+    href: "/messages",
+    icon: MessageCircle,
+    key: "nav.messages",
+  },
+  {
+    name: "Video Call",
+    href: "/call/random",
+    icon: Video,
+    key: "nav.videoCall",
+  },
   {
     name: "Flashcards",
     href: "/flashcards",
@@ -39,14 +57,70 @@ const navigation: NavigationItem[] = [
     icon: Bot,
     key: "nav.aiPractice",
   },
+  {
+    name: "Notifications",
+    href: "/notifications",
+    icon: Bell,
+    key: "nav.notifications",
+  },
   { name: "Profile", href: "/profile", icon: User, key: "nav.profile" },
 ];
 
 export function MobileHeader({}: MobileHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
   const { t } = useLanguage();
   const { isAuthenticated, user, logout } = useAuth();
+  const { socket, connected } = useSocketContext();
+
+  // ✅ Fetch unread count from API
+  const fetchUnreadCount = async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      const response = await fetch(
+        buildApiUrl("/notifications/my?unreadOnly=true&limit=1"),
+        { credentials: "include" }
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        setUnreadCount(data.data.total || 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch unread count:", error);
+    }
+  };
+
+  // Fetch unread count when authenticated
+  useEffect(() => {
+    if (isAuthenticated && connected) {
+      fetchUnreadCount();
+    }
+  }, [isAuthenticated, connected]);
+
+  // Listen for new notifications via socket
+  useEffect(() => {
+    if (!socket || !connected || !isAuthenticated) return;
+
+    const handleNotification = () => {
+      setUnreadCount((prev) => prev + 1);
+    };
+
+    socket.on("notification", handleNotification);
+
+    return () => {
+      socket.off("notification", handleNotification);
+    };
+  }, [socket, connected, isAuthenticated]);
+
+  const handleOpenNotificationPanel = () => {
+    setIsNotificationPanelOpen(true);
+  };
 
   return (
     <>
@@ -128,41 +202,69 @@ export function MobileHeader({}: MobileHeaderProps) {
             </div>
 
             {/* Mobile Navigation */}
-            <nav className="flex-1 p-4 space-y-2">
+            <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
               {navigation.map((item) => {
                 const isActive = pathname === item.href;
                 const isProfileItem = item.key === "nav.profile";
+                const isNotificationItem = item.key === "nav.notifications";
 
                 return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Button
-                      variant={isActive ? "default" : "ghost"}
-                      className={cn(
-                        "w-full justify-start gap-3 text-foreground hover:bg-accent",
-                        isActive &&
-                          "bg-primary text-primary-foreground hover:bg-primary/90"
-                      )}
-                    >
-                      {isProfileItem && isAuthenticated && user?.avatar ? (
-                        <img
-                          src={user.avatar || "/placeholder.svg"}
-                          alt={user.fullname || user.username || "User"}
-                          className="h-4 w-4 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
+                  <div key={item.name} className="relative">
+                    {isNotificationItem && isAuthenticated ? (
+                      <Button
+                        variant={isActive ? "default" : "ghost"}
+                        onClick={() => {
+                          handleOpenNotificationPanel();
+                          setIsMenuOpen(false);
+                        }}
+                        className={cn(
+                          "w-full justify-start gap-3 text-foreground hover:bg-accent",
+                          isActive &&
+                            "bg-primary text-primary-foreground hover:bg-primary/90"
+                        )}
+                      >
                         <item.icon className="h-4 w-4 flex-shrink-0" />
-                      )}
-                      <span>
-                        {isProfileItem && isAuthenticated && user?.avatar
-                          ? (user.fullname || user.username || "User")
-                          : t(item.key)}
-                      </span>
-                    </Button>
-                  </Link>
+                        <span>{t(item.key)}</span>
+                        {/* Notification badge */}
+                        {unreadCount > 0 && (
+                          <div className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center px-1">
+                            <span className="text-white text-xs font-bold">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </span>
+                          </div>
+                        )}
+                      </Button>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Button
+                          variant={isActive ? "default" : "ghost"}
+                          className={cn(
+                            "w-full justify-start gap-3 text-foreground hover:bg-accent",
+                            isActive &&
+                              "bg-primary text-primary-foreground hover:bg-primary/90"
+                          )}
+                        >
+                          {isProfileItem && isAuthenticated && user?.avatar ? (
+                            <img
+                              src={user.avatar || "/placeholder.svg"}
+                              alt={user.fullname || user.username || "User"}
+                              className="h-4 w-4 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <item.icon className="h-4 w-4 flex-shrink-0" />
+                          )}
+                          <span>
+                            {isProfileItem && isAuthenticated && user?.avatar
+                              ? (user.fullname || user.username || "User")
+                              : t(item.key)}
+                          </span>
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 );
               })}
             </nav>
@@ -204,6 +306,12 @@ export function MobileHeader({}: MobileHeaderProps) {
           </div>
         </div>
       )}
+
+      {/* Notification Panel - Tách riêng component */}
+      <NotificationPanel
+        isOpen={isNotificationPanelOpen}
+        onClose={() => setIsNotificationPanelOpen(false)}
+      />
     </>
   );
 }

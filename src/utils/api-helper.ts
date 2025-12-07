@@ -1,5 +1,30 @@
-// API Helper Utilities
+// ==================== API HELPER UTILITIES ====================
+// ✅ Merged from api-helper.ts and apiHelper.ts for consistency
 
+/**
+ * Builds the correct API URL by handling both cases:
+ * - NEXT_PUBLIC_API_URL = "http://localhost:8080" → adds /api/v1
+ * - NEXT_PUBLIC_API_URL = "http://localhost:8080/api/v1" → uses directly
+ * 
+ * @param endpoint - API endpoint (e.g., "/notifications/my" or "notifications/my")
+ * @returns Full API URL
+ */
+export function buildApiUrl(endpoint: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+  
+  // Ensure endpoint starts with /
+  const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  
+  // If baseUrl already includes /api/v1, use it directly
+  if (baseUrl.includes("/api/v1")) {
+    return `${baseUrl}${normalizedEndpoint}`;
+  }
+  
+  // Otherwise, add /api/v1
+  return `${baseUrl}/api/v1${normalizedEndpoint}`;
+}
+
+// ==================== TYPES ====================
 export interface ApiResponse<T = any> {
   success: boolean;
   data: T;
@@ -18,6 +43,7 @@ export interface PaginatedResponse<T = any> {
   };
 }
 
+// ==================== API RESPONSE HANDLERS ====================
 /**
  * Handle API response and extract data
  */
@@ -47,6 +73,7 @@ export const handlePaginatedResponse = <T>(response: any): PaginatedResponse<T> 
   throw new Error(response?.error || response?.message || 'API request failed');
 };
 
+// ==================== UTILITY FUNCTIONS ====================
 /**
  * Build query string from parameters
  */
@@ -167,6 +194,7 @@ export const retryApiCall = async <T>(
   throw lastError!;
 };
 
+// ==================== ERROR HANDLING ====================
 /**
  * Common error messages
  */
@@ -212,5 +240,6 @@ export const getErrorMessage = (error: any): string => {
   
   return error?.message || errorMessages.UNKNOWN;
 };
+
 
 

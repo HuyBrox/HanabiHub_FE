@@ -41,8 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useNotification } from "@/components/notification";
-import BackendStatus from "@/components/BackendStatus";
+import { useNotification } from "@/components/notification/NotificationProvider";
 
 // ✅ RTK Query Hooks - Auto caching & refetching
 import { 
@@ -93,6 +92,7 @@ import {
   useCreateTemplateMutation,
   useUpdateTemplateMutation,
   useDeleteTemplateMutation,
+  useUseTemplateMutation,
   useGetTemplateStatsQuery,
   type TemplateItem, 
   type CreateTemplateRequest, 
@@ -107,7 +107,7 @@ import {
 } from "@/store/services/userApi";
 
 // Utils
-import { handleApiResponse, handlePaginatedResponse, formatTimeAgo, getErrorMessage, debounce } from "@/utils/apiHelper";
+import { handleApiResponse, handlePaginatedResponse, formatTimeAgo, getErrorMessage, debounce } from "@/utils/api-helper";
 import { handleExportResponse, generateFilename } from "@/utils/exportHelper";
 
 // Loading states
@@ -117,6 +117,16 @@ const LOADING_STATES = {
   SUCCESS: 'success',
   ERROR: 'error'
 } as const;
+
+type LoadingState = {
+  users: string;
+  news: string;
+  reports: string;
+  notifications: string;
+  templates: string;
+  scheduled: string;
+  sending: string;
+};
 
 export default function AdminContentAndNotificationsPage() {
   // Tab state
@@ -168,36 +178,9 @@ export default function AdminContentAndNotificationsPage() {
   const [scheduleIsSystem, setScheduleIsSystem] = useState(true);
   const [scheduleSelectedUsers, setScheduleSelectedUsers] = useState<string[]>([]);
   
-  // Data states
-  const [users, setUsers] = useState<UserItem[]>([]);
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [reports, setReports] = useState<ReportItem[]>([]);
-  const [notifications, setNotifications] = useState<NotificationHistory[]>([]);
-  const [templates, setTemplates] = useState<TemplateItem[]>([]);
-  const [scheduledNotifications, setScheduledNotifications] = useState<ScheduledNotificationItem[]>([]);
-  
   // History tab date range filter states
   const [historyFromDate, setHistoryFromDate] = useState<Date | null>(null);
   const [historyToDate, setHistoryToDate] = useState<Date | null>(null);
-  
-  // Statistics states
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
-  const [newsStats, setNewsStats] = useState<NewsStats | null>(null);
-  const [reportStats, setReportStats] = useState<ReportStats | null>(null);
-  const [notificationStats, setNotificationStats] = useState<NotificationStats | null>(null);
-  const [templateStats, setTemplateStats] = useState<TemplateStats | null>(null);
-  const [scheduledStats, setScheduledStats] = useState<ScheduledNotificationStats | null>(null);
-  
-  // Loading states
-  const [loading, setLoading] = useState({
-    users: LOADING_STATES.IDLE,
-    news: LOADING_STATES.IDLE,
-    reports: LOADING_STATES.IDLE,
-    notifications: LOADING_STATES.IDLE,
-    templates: LOADING_STATES.IDLE,
-    scheduled: LOADING_STATES.IDLE,
-    sending: LOADING_STATES.IDLE
-  });
   
   // Modal states
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -220,6 +203,142 @@ export default function AdminContentAndNotificationsPage() {
   const [reportAction, setReportAction] = useState<"approve" | "reject">("approve");
 
   const { success, error } = useNotification();
+  
+  // ==================== ✅ RTK QUERY HOOKS ====================
+  
+  // Users - Auto fetch when params change
+  const { data: usersData, isLoading: usersLoading } = useSearchUsersQuery({
+    page: currentPage,
+    limit: usersPerPage,
+    search: userSearchQuery,
+  });
+  const users = usersData?.data || [];
+  
+  // News - Auto fetch when params change
+  const { data: newsData, isLoading: newsLoading, refetch: refetchNews } = useGetNewsListQuery({
+    page: newsCurrentPage,
+    limit: newsPerPage,
+    search: newsSearchQuery,
+    status: newsStatusFilter !== "all" ? newsStatusFilter : undefined,
+  });
+  const news = newsData?.data || [];
+  
+  // Reports - Auto fetch when params change
+  const { data: reportsData, isLoading: reportsLoading } = useGetReportsListQuery({
+    page: reportCurrentPage,
+    limit: reportsPerPage,
+    search: reportSearchQuery,
+    status: reportStatusFilter !== "all" ? reportStatusFilter : undefined,
+  });
+  const reports = reportsData?.data || [];
+  
+  // Notification History - Auto fetch when params change
+  const { data: notificationsData, isLoading: notificationsLoading } = useGetNotificationHistoryQuery({
+    page: historyCurrentPage,
+    limit: historyPerPage,
+    search: historySearchQuery,
+    type: historyTypeFilter !== "all" ? historyTypeFilter : undefined,
+    fromDate: historyFromDate?.toISOString(),
+    toDate: historyToDate?.toISOString(),
+  });
+  const notifications = notificationsData?.data || [];
+  
+  // Templates - Auto fetch when params change
+  const { data: templatesData, isLoading: templatesLoading, refetch: refetchTemplates } = useGetTemplatesListQuery({
+    search: templateSearchQuery,
+    type: templateTypeFilter !== "all" ? templateTypeFilter : undefined,
+  });
+  const templates = templatesData?.data || [];
+  
+  // Scheduled Notifications - Auto fetch with refetch
+  const { data: scheduledData, isLoading: scheduledLoading, refetch: refetchScheduled } = useGetScheduledNotificationsQuery({
+    page: 1,
+    limit: 50,
+    status: "pending",
+  });
+  const scheduledNotifications = scheduledData?.data || [];
+  
+  // Stats - Auto fetch with refetch
+  const { data: userStatsData, refetch: refetchUserStats } = useGetUserStatsQuery();
+  const { data: newsStatsData, refetch: refetchNewsStats } = useGetNewsStatsQuery();
+  const { data: reportStatsData, refetch: refetchReportStats } = useGetReportStatsQuery();
+  const { data: notificationStatsData, refetch: refetchNotificationStats } = useGetNotificationStatsQuery();
+  const { data: templateStatsData, refetch: refetchTemplateStats } = useGetTemplateStatsQuery();
+  const { data: scheduledStatsData, refetch: refetchScheduledStats } = useGetScheduledStatsQuery();
+  
+  const userStats = userStatsData?.data || null;
+  const newsStats = newsStatsData?.data || null;
+  const reportStats = reportStatsData?.data || null;
+  const notificationStats = notificationStatsData?.data || null;
+  const templateStats = templateStatsData?.data || null;
+  const scheduledStats = scheduledStatsData?.data || null;
+
+  // Helper to refetch templates & stats after mutations
+  const fetchTemplates = () => refetchTemplates();
+  const fetchStats = () => {
+    refetchUserStats();
+    refetchNewsStats();
+    refetchReportStats();
+    refetchNotificationStats();
+    refetchTemplateStats();
+    refetchScheduledStats();
+  };
+  
+  // Mutations
+  const [sendSystemNotif, { isLoading: sendingSystem }] = useSendSystemNotificationMutation();
+  const [sendSpecificNotif, { isLoading: sendingSpecific }] = useSendSpecificNotificationMutation();
+  const [updateNotif] = useUpdateNotificationMutation();
+  const [deleteNotif] = useDeleteNotificationMutation();
+  
+  const [scheduleNotif] = useScheduleNotificationMutation();
+  const [updateScheduled] = useUpdateScheduledNotificationMutation();
+  const [cancelScheduled] = useCancelScheduledNotificationMutation();
+  
+  const [createNewsM] = useCreateNewsMutation();
+  const [updateNewsM] = useUpdateNewsMutation();
+  const [deleteNewsM] = useDeleteNewsMutation();
+  
+  const [createTemplateM] = useCreateTemplateMutation();
+  const [updateTemplateM] = useUpdateTemplateMutation();
+  const [deleteTemplateM] = useDeleteTemplateMutation();
+  const [applyTemplate] = useUseTemplateMutation();
+  
+  const [approveReportM] = useApproveReportMutation();
+  const [rejectReportM] = useRejectReportMutation();
+  
+  // Loading states for backward compatibility — store as React state so we can update sending/scheduled independently
+  const [loading, setLoading] = useState(() => ({
+    users: usersLoading ? 'loading' : 'success',
+    news: newsLoading ? 'loading' : 'success',
+    reports: reportsLoading ? 'loading' : 'success',
+    notifications: notificationsLoading ? 'loading' : 'success',
+    templates: templatesLoading ? 'loading' : 'success',
+    scheduled: scheduledLoading ? 'loading' : 'success',
+    sending: (sendingSystem || sendingSpecific) ? 'loading' : 'idle',
+  }));
+
+  // Keep `loading` in sync with RTK Query `isLoading` flags
+  useEffect(() => {
+    setLoading((prev) => ({ ...prev, users: usersLoading ? 'loading' : 'success' }));
+  }, [usersLoading]);
+  useEffect(() => {
+    setLoading((prev) => ({ ...prev, news: newsLoading ? 'loading' : 'success' }));
+  }, [newsLoading]);
+  useEffect(() => {
+    setLoading((prev) => ({ ...prev, reports: reportsLoading ? 'loading' : 'success' }));
+  }, [reportsLoading]);
+  useEffect(() => {
+    setLoading((prev) => ({ ...prev, notifications: notificationsLoading ? 'loading' : 'success' }));
+  }, [notificationsLoading]);
+  useEffect(() => {
+    setLoading((prev) => ({ ...prev, templates: templatesLoading ? 'loading' : 'success' }));
+  }, [templatesLoading]);
+  useEffect(() => {
+    setLoading((prev) => ({ ...prev, scheduled: scheduledLoading ? 'loading' : 'success' }));
+  }, [scheduledLoading]);
+  useEffect(() => {
+    setLoading((prev) => ({ ...prev, sending: (sendingSystem || sendingSpecific) ? 'loading' : 'idle' }));
+  }, [sendingSystem, sendingSpecific]);
 
   // Admin note templates
   const adminNoteTemplates = [
@@ -273,86 +392,7 @@ export default function AdminContentAndNotificationsPage() {
     []
   );
 
-  // Fetch users for notification
-  const fetchUsers = async () => {
-    try {
-      setLoading(prev => ({ ...prev, users: LOADING_STATES.LOADING }));
-      const response = await userApi.getUsersList({
-        page: currentPage,
-        limit: usersPerPage,
-        search: userSearchQuery
-      });
-      const data = handlePaginatedResponse<UserItem>(response);
-      setUsers(data.data);
-      setLoading(prev => ({ ...prev, users: LOADING_STATES.SUCCESS }));
-    } catch (err) {
-      error(getErrorMessage(err));
-      setLoading(prev => ({ ...prev, users: LOADING_STATES.ERROR }));
-      setUsers([]); // Set empty array on error
-    }
-  };
-
-  // Fetch news
-  const fetchNews = async () => {
-    try {
-      setLoading(prev => ({ ...prev, news: LOADING_STATES.LOADING }));
-      const response = await newsApi.getNewsList({
-        page: newsCurrentPage,
-        limit: newsPerPage,
-        search: newsSearchQuery,
-        status: newsStatusFilter !== "all" ? newsStatusFilter : undefined
-      });
-      const data = handlePaginatedResponse<NewsItem>(response);
-      setNews(data.data);
-      setLoading(prev => ({ ...prev, news: LOADING_STATES.SUCCESS }));
-    } catch (err) {
-      error(getErrorMessage(err));
-      setLoading(prev => ({ ...prev, news: LOADING_STATES.ERROR }));
-      setNews([]); // Set empty array on error
-    }
-  };
-
-  // Fetch reports
-  const fetchReports = async () => {
-    try {
-      setLoading(prev => ({ ...prev, reports: LOADING_STATES.LOADING }));
-      const response = await reportApi.getReportsList({
-        page: reportCurrentPage,
-        limit: reportsPerPage,
-        search: reportSearchQuery,
-        status: reportStatusFilter !== "all" ? reportStatusFilter : undefined
-      });
-      const data = handlePaginatedResponse<ReportItem>(response);
-      setReports(data.data);
-      setLoading(prev => ({ ...prev, reports: LOADING_STATES.SUCCESS }));
-    } catch (err) {
-      error(getErrorMessage(err));
-      setLoading(prev => ({ ...prev, reports: LOADING_STATES.ERROR }));
-      setReports([]); // Set empty array on error
-    }
-  };
-
-  // Fetch notification history
-  const fetchNotifications = async () => {
-    try {
-      setLoading(prev => ({ ...prev, notifications: LOADING_STATES.LOADING }));
-      const response = await notificationApi.getNotificationHistory({
-        page: historyCurrentPage,
-        limit: historyPerPage,
-        search: historySearchQuery,
-        type: historyTypeFilter !== "all" ? historyTypeFilter : undefined,
-        fromDate: historyFromDate ? historyFromDate.toISOString() : undefined,
-        toDate: historyToDate ? historyToDate.toISOString() : undefined
-      });
-      const data = handlePaginatedResponse<NotificationHistory>(response);
-      setNotifications(data.data);
-      setLoading(prev => ({ ...prev, notifications: LOADING_STATES.SUCCESS }));
-    } catch (err) {
-      error(getErrorMessage(err));
-      setLoading(prev => ({ ...prev, notifications: LOADING_STATES.ERROR }));
-      setNotifications([]); // Set empty array on error
-    }
-  };
+  // ✅ RTK Query auto-fetches - no manual fetch functions needed!
 
   // Quick date range filters for History tab
   const setHistoryDateRange = (range: 'today' | 'week' | 'month' | 'all') => {
@@ -383,78 +423,9 @@ export default function AdminContentAndNotificationsPage() {
     }
   };
 
-  // Fetch templates
-  const fetchTemplates = async () => {
-    try {
-      setLoading(prev => ({ ...prev, templates: LOADING_STATES.LOADING }));
-      const response = await templateApi.getTemplatesList({
-        search: templateSearchQuery,
-        type: templateTypeFilter !== "all" ? templateTypeFilter : undefined
-      });
-      const data = handlePaginatedResponse<TemplateItem>(response);
-      setTemplates(data.data);
-      setLoading(prev => ({ ...prev, templates: LOADING_STATES.SUCCESS }));
-    } catch (err) {
-      error(getErrorMessage(err));
-      setLoading(prev => ({ ...prev, templates: LOADING_STATES.ERROR }));
-      setTemplates([]); // Set empty array on error
-    }
-  };
+  // ✅ RTK Query auto-fetches based on query params - no useEffect needed!
 
-  // Fetch statistics
-  const fetchStats = async () => {
-    try {
-      const [userStatsRes, newsStatsRes, reportStatsRes, notificationStatsRes, templateStatsRes] = await Promise.all([
-        userApi.getUserStats(),
-        newsApi.getNewsStats(),
-        reportApi.getReportStats(),
-        notificationApi.getNotificationStats(),
-        templateApi.getTemplateStats()
-      ]);
-
-      setUserStats(handleApiResponse(userStatsRes));
-      setNewsStats(handleApiResponse(newsStatsRes));
-      setReportStats(handleApiResponse(reportStatsRes));
-      setNotificationStats(handleApiResponse(notificationStatsRes));
-      setTemplateStats(handleApiResponse(templateStatsRes));
-    } catch (err) {
-      error(getErrorMessage(err));
-    }
-  };
-
-  // Load data on component mount (authentication handled by backend via cookies)
-  useEffect(() => {
-    fetchUsers();
-    fetchNews();
-    fetchReports();
-    fetchNotifications();
-    fetchTemplates();
-    fetchStats();
-  }, []);
-
-  // Load data when filters change
-  useEffect(() => {
-    fetchUsers();
-  }, [currentPage, userSearchQuery]);
-
-  useEffect(() => {
-    fetchNews();
-  }, [newsCurrentPage, newsSearchQuery, newsStatusFilter]);
-
-  useEffect(() => {
-    fetchReports();
-  }, [reportCurrentPage, reportSearchQuery, reportStatusFilter]);
-
-  useEffect(() => {
-    fetchNotifications();
-  }, [historyCurrentPage, historySearchQuery, historyTypeFilter]);
-
-  useEffect(() => {
-    setTemplateCurrentPage(1); // Reset to page 1 when search/filter changes
-    fetchTemplates();
-  }, [templateSearchQuery, templateTypeFilter]);
-
-  // Notification Actions
+  // Notification Actions - ✅ Using RTK Query mutations
   const handleSendNotification = async (type: "all" | "specific") => {
     if (type === "specific" && selectedUsers.length === 0) {
       error("Vui lòng chọn ít nhất một người dùng");
@@ -466,34 +437,29 @@ export default function AdminContentAndNotificationsPage() {
     }
 
     try {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-      
       if (type === "all") {
-        await notificationApi.sendSystemNotification({
+        await sendSystemNotif({
           title: notificationTitle,
           message: notificationMessage,
           type: "system"
-        });
+        }).unwrap();
         success("Đã gửi thông báo đến tất cả người dùng");
       } else {
-        await notificationApi.sendSpecificNotification({
+        await sendSpecificNotif({
           title: notificationTitle,
           message: notificationMessage,
           type: "personal",
           recipientIds: selectedUsers
-        });
+        }).unwrap();
         success(`Đã gửi thông báo đến ${selectedUsers.length} người dùng`);
       }
       
       setNotificationTitle("");
       setNotificationMessage("");
       setSelectedUsers([]);
-      fetchNotifications(); // Refresh notification history
-      fetchStats(); // Refresh stats
-    } catch (err) {
-      error(getErrorMessage(err));
-    } finally {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+      // ✅ RTK Query auto-refetches - no manual refetch needed
+    } catch (err: any) {
+      error(err.data?.message || getErrorMessage(err));
     }
   };
 
@@ -531,16 +497,14 @@ export default function AdminContentAndNotificationsPage() {
     }
 
     try {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-      
-      await newsApi.createNews({
+      await createNewsM({
         title: newsTitle,
         content: newsContent,
         image: newsImage || undefined,
         publishedAt: newsPublishedAt ? newsPublishedAt.toISOString() : undefined,
         status: "published",
         tags: []
-      });
+      }).unwrap();
       
       success("Đã tạo bài tin tức mới");
       // Reset form
@@ -549,12 +513,12 @@ export default function AdminContentAndNotificationsPage() {
       setNewsImage(null);
       setNewsImagePreview(null);
       setNewsPublishedAt(null);
-      fetchNews(); // Refresh news list
-      fetchStats(); // Refresh stats
-    } catch (err) {
-      error(getErrorMessage(err));
-    } finally {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+      // ✅ RTK Query auto-refetches
+    } catch (err: any) {
+      // RTK Query error structure: err.data?.message or err.error?.data?.message
+      const errorMessage = err?.data?.message || err?.error?.data?.message || err?.message || getErrorMessage(err);
+      console.error("Create news error:", err);
+      error(errorMessage);
     }
   };
 
@@ -565,9 +529,7 @@ export default function AdminContentAndNotificationsPage() {
     }
 
     try {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-      
-      await templateApi.createTemplate({
+      await createTemplateM({
         name: templateName,
         title: templateTitle,
         message: templateMessage,
@@ -611,14 +573,14 @@ export default function AdminContentAndNotificationsPage() {
   // Use Template Handler
   const handleUseTemplate = async (template: TemplateItem) => {
     try {
-      await templateApi.useTemplate(template._id);
+      await applyTemplate(template._id).unwrap();
       setActiveTab("notifications");
       setNotificationTitle(template.title);
       setNotificationMessage(template.message);
       success(`Đã áp dụng template "${template.name}" vào form gửi thông báo`);
-      fetchTemplates(); // Refresh templates to update usage count
-    } catch (err) {
-      error(getErrorMessage(err));
+      // ✅ RTK Query auto-refetches
+    } catch (err: any) {
+      error(err.data?.message || getErrorMessage(err));
     }
   };
 
@@ -626,24 +588,22 @@ export default function AdminContentAndNotificationsPage() {
   const handleUpdateTemplate = async () => {
     if (editingTemplate) {
       try {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-        
-        await templateApi.updateTemplate(editingTemplate._id, {
-          name: editingTemplate.name,
-          title: editingTemplate.title,
-          message: editingTemplate.message,
-          type: editingTemplate.type
-        });
+        await updateTemplateM({
+          id: editingTemplate._id,
+          data: {
+            name: editingTemplate.name,
+            title: editingTemplate.title,
+            message: editingTemplate.message,
+            type: editingTemplate.type
+          }
+        }).unwrap();
         
         success(`Template "${editingTemplate.name}" đã được cập nhật thành công!`);
         setShowEditTemplateModal(false);
         setEditingTemplate(null);
-        fetchTemplates(); // Refresh templates list
-        fetchStats(); // Refresh stats
-      } catch (err) {
-        error(getErrorMessage(err));
-      } finally {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+        // ✅ RTK Query auto-refetches
+      } catch (err: any) {
+        error(err.data?.message || getErrorMessage(err));
       }
     }
   };
@@ -651,17 +611,11 @@ export default function AdminContentAndNotificationsPage() {
   // Delete Template Handler
   const handleDeleteTemplate = async (template: TemplateItem) => {
     try {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-      
-      await templateApi.deleteTemplate(template._id);
-      
+      await deleteTemplateM(template._id).unwrap();
       success(`Template "${template.name}" đã được xóa thành công!`);
-      fetchTemplates(); // Refresh templates list
-      fetchStats(); // Refresh stats
-    } catch (err) {
-      error(getErrorMessage(err));
-    } finally {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+      // ✅ RTK Query auto-refetches
+    } catch (err: any) {
+      error(err.data?.message || getErrorMessage(err));
     }
   };
 
@@ -684,25 +638,23 @@ export default function AdminContentAndNotificationsPage() {
   const handleUpdateNews = async () => {
     if (editingNews) {
       try {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-        
-        await newsApi.updateNews(editingNews._id, {
-          title: editingNews.title,
-          content: editingNews.content,
-          image: editingNews.image,
-          status: editingNews.status,
-          publishedAt: editingNews.publishedAt
-        });
+        await updateNewsM({
+          id: editingNews._id,
+          data: {
+            title: editingNews.title,
+            content: editingNews.content,
+            image: editingNews.image,
+            status: editingNews.status,
+            publishedAt: editingNews.publishedAt
+          }
+        }).unwrap();
         
         success(`Tin tức "${editingNews.title}" đã được cập nhật thành công!`);
         setShowEditNewsModal(false);
         setEditingNews(null);
-        fetchNews(); // Refresh news list
-        fetchStats(); // Refresh stats
-      } catch (err) {
-        error(getErrorMessage(err));
-      } finally {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+        // ✅ RTK Query auto-refetches
+      } catch (err: any) {
+        error(err.data?.message || getErrorMessage(err));
       }
     }
   };
@@ -710,19 +662,13 @@ export default function AdminContentAndNotificationsPage() {
   const handleConfirmDeleteNews = async () => {
     if (deletingNews) {
       try {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-        
-        await newsApi.deleteNews(deletingNews._id);
-        
+        await deleteNewsM(deletingNews._id).unwrap();
         success(`Tin tức "${deletingNews.title}" đã được xóa thành công!`);
         setShowDeleteConfirmModal(false);
         setDeletingNews(null);
-        fetchNews(); // Refresh news list
-        fetchStats(); // Refresh stats
-      } catch (err) {
-        error(getErrorMessage(err));
-      } finally {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+        // ✅ RTK Query auto-refetches
+      } catch (err: any) {
+        error(err.data?.message || getErrorMessage(err));
       }
     }
   };
@@ -741,22 +687,20 @@ export default function AdminContentAndNotificationsPage() {
   const handleUpdateNotification = async () => {
     if (editingNotification) {
       try {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-        
-        await notificationApi.updateNotification(editingNotification._id, {
-          title: editingNotification.title,
-          content: editingNotification.content
-        });
+        await updateNotif({
+          id: editingNotification._id,
+          data: {
+            title: editingNotification.title,
+            content: editingNotification.content
+          }
+        }).unwrap();
         
         success(`Thông báo "${editingNotification.title}" đã được cập nhật thành công!`);
         setShowEditNotificationModal(false);
         setEditingNotification(null);
-        fetchNotifications(); // Refresh notifications list
-        fetchStats(); // Refresh stats
-      } catch (err) {
-        error(getErrorMessage(err));
-      } finally {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+        // ✅ RTK Query auto-refetches
+      } catch (err: any) {
+        error(err.data?.message || getErrorMessage(err));
       }
     }
   };
@@ -764,20 +708,13 @@ export default function AdminContentAndNotificationsPage() {
   const handleConfirmDeleteNotification = async () => {
     if (deletingNotification) {
       try {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-        
-        await notificationApi.deleteNotification(deletingNotification._id);
-        
+        await deleteNotif(deletingNotification._id).unwrap();
         success(`Thông báo "${deletingNotification.title}" đã được xóa thành công!`);
         setShowDeleteNotificationModal(false);
         setDeletingNotification(null);
-        fetchNotifications(); // Refresh notifications list
-        fetchStats(); // Refresh stats
-        
-      } catch (err) {
-        error(getErrorMessage(err));
-      } finally {
-        setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
+        // ✅ RTK Query auto-refetches
+      } catch (err: any) {
+        error(err.data?.message || getErrorMessage(err));
       }
     }
   };
@@ -786,30 +723,7 @@ export default function AdminContentAndNotificationsPage() {
   // SCHEDULED NOTIFICATION HANDLERS
   // ============================================
   
-  const fetchScheduledNotifications = async () => {
-    try {
-      setLoading(prev => ({ ...prev, scheduled: LOADING_STATES.LOADING }));
-      const response = await scheduledNotificationApi.getScheduled({ limit: 100 });
-      
-      if (response.success && response.data) {
-        setScheduledNotifications(response.data);
-        setLoading(prev => ({ ...prev, scheduled: LOADING_STATES.SUCCESS }));
-      }
-    } catch (err) {
-      error("Không thể tải danh sách lịch gửi");
-      setLoading(prev => ({ ...prev, scheduled: LOADING_STATES.ERROR }));
-      setScheduledNotifications([]);
-    }
-  };
-
-  const fetchScheduledStats = async () => {
-    try {
-      const stats = await scheduledNotificationApi.getStats();
-      setScheduledStats(stats);
-    } catch (err) {
-      console.error("Error fetching scheduled stats:", err);
-    }
-  };
+  // ✅ Scheduled data fetched by useGetScheduledNotificationsQuery and useGetScheduledStatsQuery
 
   const handleScheduleNotification = async () => {
     if (!scheduleTitle || !scheduleContent || !scheduleDate) {
@@ -844,7 +758,7 @@ export default function AdminContentAndNotificationsPage() {
         scheduleData.recurringEndDate = scheduleEndDate.toISOString();
       }
 
-      await scheduledNotificationApi.schedule(scheduleData);
+      await scheduleNotif(scheduleData).unwrap();
 
       success(
         `Đã đặt lịch gửi thông báo ${scheduleRecurring !== "none" ? `(${scheduleRecurring})` : ""}`
@@ -860,9 +774,7 @@ export default function AdminContentAndNotificationsPage() {
       setScheduleSelectedUsers([]);
       setShowScheduleForm(false);
 
-      // Refresh lists
-      fetchScheduledNotifications();
-      fetchScheduledStats();
+      // ✅ RTK Query auto-refetches
     } catch (err) {
       error(getErrorMessage(err));
     } finally {
@@ -877,11 +789,9 @@ export default function AdminContentAndNotificationsPage() {
 
     try {
       setLoading(prev => ({ ...prev, scheduled: LOADING_STATES.LOADING }));
-      await scheduledNotificationApi.cancel(scheduled._id);
+      await cancelScheduled(scheduled._id).unwrap();
       success(`Đã hủy lịch gửi "${scheduled.title}"`);
-      
-      fetchScheduledNotifications();
-      fetchScheduledStats();
+      // ✅ RTK Query auto-refetches
     } catch (err) {
       error(getErrorMessage(err));
     } finally {
@@ -889,62 +799,34 @@ export default function AdminContentAndNotificationsPage() {
     }
   };
 
-  // Export Handlers
+  // Export Handlers - TODO: Implement with RTK Query lazy queries
+  // For now, these are disabled. Can be implemented later with:
+  // const [triggerExport] = useLazyExportNewsQuery();
+  // onClick: triggerExport('excel')
+  
   const handleExportNews = async () => {
-    try {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-      const response = await newsApi.exportNews('excel');
-      handleExportResponse(response, 'news', 'excel');
-      success("Đã xuất danh sách tin tức ra Excel");
-    } catch (err) {
-      error(getErrorMessage(err));
-    } finally {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
-    }
+    error("Export function not yet implemented with RTK Query");
+    // TODO: Use useLazyExportNewsQuery
   };
 
   const handleExportReports = async () => {
-    try {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-      const response = await reportApi.exportReports('excel');
-      handleExportResponse(response, 'reports', 'excel');
-      success("Đã xuất danh sách tố cáo ra Excel");
-    } catch (err) {
-      error(getErrorMessage(err));
-    } finally {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
-    }
+    error("Export function not yet implemented with RTK Query");
+    // TODO: Use useLazyExportReportsQuery
   };
 
   const handleExportNotifications = async () => {
-    try {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-      const response = await notificationApi.exportNotificationHistory('excel');
-      handleExportResponse(response, 'notifications', 'excel');
-      success("Đã xuất lịch sử thông báo ra Excel");
-    } catch (err) {
-      error(getErrorMessage(err));
-    } finally {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
-    }
+    error("Export function not yet implemented with RTK Query");
+    // TODO: Use useLazyExportNotificationHistoryQuery
   };
 
   const handleExportTemplates = async () => {
-    try {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
-      const response = await templateApi.exportTemplates('excel');
-      handleExportResponse(response, 'templates', 'excel');
-      success("Đã xuất danh sách template ra Excel");
-    } catch (err) {
-      error(getErrorMessage(err));
-    } finally {
-      setLoading(prev => ({ ...prev, sending: LOADING_STATES.IDLE }));
-    }
+    error("Export function not yet implemented with RTK Query");
+    // TODO: Use useLazyExportTemplatesQuery
   };
 
 
   const handleApproveReport = (reportId: string) => {
-    const report = reports.find(r => r.id === reportId);
+    const report = reports.find(r => (r._id === reportId || r.id === reportId));
     if (report) {
       setCurrentReport(report);
       setReportAction("approve");
@@ -954,7 +836,7 @@ export default function AdminContentAndNotificationsPage() {
   };
 
   const handleRejectReport = (reportId: string) => {
-    const report = reports.find(r => r.id === reportId);
+    const report = reports.find(r => (r._id === reportId || r.id === reportId));
     if (report) {
       setCurrentReport(report);
       setReportAction("reject");
@@ -969,9 +851,11 @@ export default function AdminContentAndNotificationsPage() {
         setLoading(prev => ({ ...prev, sending: LOADING_STATES.LOADING }));
         
         if (reportAction === "approve") {
-          await reportApi.approveReport(currentReport.id, { adminNote });
+          const idToUse = currentReport._id || currentReport.id!;
+          await approveReportM({ id: idToUse, data: { adminNote } }).unwrap();
         } else {
-          await reportApi.rejectReport(currentReport.id, { adminNote });
+          const idToUse = currentReport._id || currentReport.id!;
+          await rejectReportM({ id: idToUse, data: { adminNote } }).unwrap();
         }
         
         const actionText = reportAction === "approve" ? "duyệt" : "từ chối";
@@ -980,8 +864,7 @@ export default function AdminContentAndNotificationsPage() {
         setShowAdminNoteModal(false);
         setCurrentReport(null);
         setAdminNote("");
-        fetchReports(); // Refresh reports list
-        fetchStats(); // Refresh stats
+        // ✅ RTK Query auto-refetches
       } catch (err) {
         error(getErrorMessage(err));
       } finally {
@@ -1013,55 +896,59 @@ export default function AdminContentAndNotificationsPage() {
   const historyTotalPages = Math.ceil((notificationStats?.total || 0) / historyPerPage);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
+      <div className="mb-4 md:mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Quản Lý Nội Dung & Thông Báo</h1>
-            <p className="text-gray-600">Quản lý tin tức, thông báo và xét duyệt tố cáo</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Quản Lý Nội Dung & Thông Báo</h1>
+            <p className="text-sm md:text-base text-gray-600">Quản lý tin tức, thông báo và xét duyệt tố cáo</p>
           </div>
-          <BackendStatus />
         </div>
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid w-full grid-cols-5 bg-white border border-gray-200 rounded-lg p-1">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 md:mb-6">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5 bg-white border border-gray-200 rounded-lg p-1 gap-1">
           <TabsTrigger 
             value="notifications" 
-            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-4 py-2 text-gray-700 font-medium transition-all"
+            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-2 md:px-4 py-2 text-xs md:text-sm text-gray-700 font-medium transition-all"
           >
-            <Bell className="w-4 h-4 mr-2" />
-            Thông Báo
+            <Bell className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Thông Báo</span>
+            <span className="sm:hidden">TB</span>
           </TabsTrigger>
           <TabsTrigger 
             value="news" 
-            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-4 py-2 text-gray-700 font-medium transition-all"
+            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-2 md:px-4 py-2 text-xs md:text-sm text-gray-700 font-medium transition-all"
           >
-            <Newspaper className="w-4 h-4 mr-2" />
-            Tin Tức
+            <Newspaper className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Tin Tức</span>
+            <span className="sm:hidden">TT</span>
           </TabsTrigger>
           <TabsTrigger 
             value="reports" 
-            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-4 py-2 text-gray-700 font-medium transition-all"
+            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-2 md:px-4 py-2 text-xs md:text-sm text-gray-700 font-medium transition-all"
           >
-            <Flag className="w-4 h-4 mr-2" />
-            Tố Cáo
+            <Flag className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Tố Cáo</span>
+            <span className="sm:hidden">TC</span>
           </TabsTrigger>
           <TabsTrigger 
             value="history" 
-            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-4 py-2 text-gray-700 font-medium transition-all"
+            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-2 md:px-4 py-2 text-xs md:text-sm text-gray-700 font-medium transition-all"
           >
-            <History className="w-4 h-4 mr-2" />
-            Lịch Sử
+            <History className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Lịch Sử</span>
+            <span className="sm:hidden">LS</span>
           </TabsTrigger>
           <TabsTrigger 
             value="templates" 
-            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-4 py-2 text-gray-700 font-medium transition-all"
+            className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-md px-2 md:px-4 py-2 text-xs md:text-sm text-gray-700 font-medium transition-all"
           >
-            <FileText className="w-4 h-4 mr-2" />
-            Template
+            <FileText className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <span className="hidden sm:inline">Template</span>
+            <span className="sm:hidden">TP</span>
           </TabsTrigger>
         </TabsList>
 
@@ -1353,8 +1240,9 @@ export default function AdminContentAndNotificationsPage() {
                   onClick={() => {
                     setShowScheduleForm(!showScheduleForm);
                     if (!showScheduleForm) {
-                      fetchScheduledNotifications();
-                      fetchScheduledStats();
+                      // ✅ RTK Query refetch instead of manual fetch
+                      refetchScheduled();
+                      refetchScheduledStats();
                     }
                   }}
                 >
@@ -1413,7 +1301,7 @@ export default function AdminContentAndNotificationsPage() {
                       dateFormat="dd/MM/yyyy HH:mm"
                       minDate={new Date()}
                       placeholderText="Chọn ngày và giờ..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md ${styles.datetimeInput}`}
                     />
                   </div>
                   <div>
@@ -1444,7 +1332,7 @@ export default function AdminContentAndNotificationsPage() {
                       dateFormat="dd/MM/yyyy"
                       minDate={scheduleDate || new Date()}
                       placeholderText="Chọn ngày kết thúc hoặc để trống..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md ${styles.dateInput}`}
                       isClearable
                     />
                   </div>
@@ -1702,7 +1590,7 @@ export default function AdminContentAndNotificationsPage() {
                       timeIntervals={15}
                       dateFormat="dd/MM/yyyy HH:mm"
                       placeholderText="Chọn ngày xuất bản (mặc định: hiện tại)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md ${styles.datetimeInput}`}
                       isClearable
                     />
                     <p className="text-xs text-gray-500 mt-2">
@@ -2001,7 +1889,7 @@ export default function AdminContentAndNotificationsPage() {
                   ) : (
                     <>
                       {reports.map((report) => (
-                        <div key={report.id} className="border border-gray-200 rounded-lg p-4">
+                        <div key={report._id || report.id} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
@@ -2050,7 +1938,7 @@ export default function AdminContentAndNotificationsPage() {
                                 <Button 
                                   size="sm" 
                                   className="bg-green-600 hover:bg-green-700 text-white"
-                                  onClick={() => handleApproveReport(report.id)}
+                                  onClick={() => handleApproveReport(report._id || report.id!)}
                                   disabled={loading.sending === LOADING_STATES.LOADING}
                                 >
                                   <CheckCircle className="w-4 h-4 mr-1" />
@@ -2060,7 +1948,7 @@ export default function AdminContentAndNotificationsPage() {
                                   size="sm" 
                                   variant="outline"
                                   className="border-red-300 text-red-600 hover:bg-red-50"
-                                  onClick={() => handleRejectReport(report.id)}
+                                  onClick={() => handleRejectReport(report._id || report.id!)}
                                   disabled={loading.sending === LOADING_STATES.LOADING}
                                 >
                                   <XCircle className="w-4 h-4 mr-1" />
@@ -2212,7 +2100,7 @@ export default function AdminContentAndNotificationsPage() {
                       onChange={(date) => setHistoryFromDate(date)}
                       dateFormat="dd/MM/yyyy"
                       placeholderText="Chọn ngày bắt đầu..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md ${styles.dateInput}`}
                       isClearable
                     />
                   </div>
@@ -2224,7 +2112,7 @@ export default function AdminContentAndNotificationsPage() {
                       dateFormat="dd/MM/yyyy"
                       placeholderText="Chọn ngày kết thúc..."
                       minDate={historyFromDate || undefined}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md ${styles.dateInput}`}
                       isClearable
                     />
                   </div>
@@ -2880,7 +2768,7 @@ export default function AdminContentAndNotificationsPage() {
               <div className="border-b border-gray-200 pb-4">
                 <h1 className="text-3xl font-bold text-black mb-2">{viewingNews.title}</h1>
                 <div className="flex items-center gap-4 text-sm text-gray-800">
-                  <span className="font-semibold">Tác giả: {viewingNews.author}</span>
+                  <span className="font-semibold">Tác giả: {typeof viewingNews.author === 'object' ? (viewingNews.author?.fullname || viewingNews.author?.username || 'Unknown') : viewingNews.author}</span>
                   <span className="font-semibold">Lượt xem: {viewingNews.views}</span>
                   <span className="font-semibold">Thích: {viewingNews.likes}</span>
                   <span className="font-semibold">Bình luận: {viewingNews.comments}</span>
@@ -2889,7 +2777,7 @@ export default function AdminContentAndNotificationsPage() {
                   </Badge>
                 </div>
                 <div className="flex gap-1 mt-2">
-                  {viewingNews.tags.map((tag: string, index: number) => (
+                  {viewingNews?.tags?.map((tag: string, index: number) => (
                     <Badge key={index} variant="outline" className="text-xs text-gray-800 border-gray-400">
                       #{tag}
                     </Badge>
@@ -2940,7 +2828,9 @@ export default function AdminContentAndNotificationsPage() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <h3 className="font-semibold text-red-800 mb-2">Tin tức sẽ bị xóa:</h3>
                 <p className="text-red-700 font-medium">{deletingNews.title}</p>
-                <p className="text-sm text-red-600 mt-1">Tác giả: {deletingNews.author}</p>
+                <p className="text-sm text-red-600 mt-1">
+                  Tác giả: {typeof deletingNews.author === 'object' ? (deletingNews.author?.fullname || deletingNews.author?.username || 'Unknown') : deletingNews.author}
+                </p>
               </div>
             </div>
           )}
@@ -3107,7 +2997,7 @@ export default function AdminContentAndNotificationsPage() {
             <div className="space-y-3">
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <h4 className="font-semibold text-red-900 mb-1">{deletingNotification.title}</h4>
-                <p className="text-sm text-red-700">{deletingNotification.message}</p>
+                <p className="text-sm text-red-700">{deletingNotification.content || deletingNotification.message}</p>
               </div>
               
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

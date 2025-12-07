@@ -14,6 +14,8 @@ export interface NotificationHistory {
   _id: string;
   title: string;
   content: string; // Backend uses 'content' not 'message'
+  // UI uses `message` in places; provide alias
+  message?: string;
   type: "system" | "personal";
   receivers: string[]; // Array of user IDs
   isSystem: boolean;

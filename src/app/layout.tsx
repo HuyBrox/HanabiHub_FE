@@ -1,15 +1,15 @@
 import type React from "react";
 import type { Metadata } from "next";
+import Script from "next/script";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-import { ThemeProvider } from "@/components/common";
+import { ThemeProvider, ExtensionCleanup } from "@/components/common";
 import { LanguageProvider } from "@/lib/language-context";
 import { AuthInitializer } from "@/hooks/useAuthInit"; // để khởi tạo auth khi app load lên, nếu có session hợp lệ thì sẽ tự động login
 import RtkProvider from "./providers";
 import { NotificationProvider } from "@/components/notification";
 import IncomingCallPopup from "@/components/IncomingCallPopup";
-import NoSSR from "@/components/NoSSR";
 
 export const metadata: Metadata = {
   title: "HanabiHub - Learn Japanese Easily",
@@ -30,15 +30,13 @@ export default function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
       <head>
-        <style>{`
-html {
-  font-family: ${GeistSans.style.fontFamily};
-  --font-sans: ${GeistSans.variable};
-  --font-mono: ${GeistMono.variable};
-}
-        `}</style>
-        {/* Script chống flash theme & language */}
-        <script
+        {/* Theme & Language initialization - using Next.js Script for better hydration handling */}
+      </head>
+      <body suppressHydrationWarning>
+        {/* ✅ Script chạy trước khi React hydrate để chống flash theme/language */}
+        <Script
+          id="theme-language-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
@@ -59,34 +57,24 @@ html {
             `,
           }}
         />
-      </head>
-      <body>
-        <NoSSR fallback={
-          <div className="fixed inset-0 flex items-center justify-center bg-gray-50">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading...</p>
-            </div>
-          </div>
-        }>
-          <RtkProvider>
-            <AuthInitializer>
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-                disableTransitionOnChange
-              >
-                <LanguageProvider>
-                  <NotificationProvider>
-                    {children}
-                    <IncomingCallPopup />
-                  </NotificationProvider>
-                </LanguageProvider>
-              </ThemeProvider>
-            </AuthInitializer>
-          </RtkProvider>
-        </NoSSR>
+        <ExtensionCleanup />
+        <RtkProvider>
+          <AuthInitializer>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <LanguageProvider>
+                <NotificationProvider>
+                  {children}
+                  <IncomingCallPopup />
+                </NotificationProvider>
+              </LanguageProvider>
+            </ThemeProvider>
+          </AuthInitializer>
+        </RtkProvider>
       </body>
     </html>
   );
