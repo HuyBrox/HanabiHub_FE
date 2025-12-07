@@ -152,7 +152,7 @@ export default function PostModal({ post, open, onOpenChange }: PostModalProps) 
           {/* Likes + comment count */}
           <div className="flex items-center justify-between text-xs text-gray-400">
             <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-blue-500 fill-blue-500" />
+              <Heart className="h-4 w-4 text-orange-500 fill-orange-500" />
               <span>{likesCount}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -164,9 +164,9 @@ export default function PostModal({ post, open, onOpenChange }: PostModalProps) 
           <div className="flex gap-2 border-y border-[#3a3b3c] py-2 text-sm font-medium text-gray-300">
             <button
               onClick={handleLike}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 hover:bg-[#3a3b3c] ${isLiked ? "text-blue-500" : ""}`}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 hover:bg-[#3a3b3c] ${isLiked ? "text-orange-500" : ""}`}
             >
-              <Heart className={`h-5 w-5 ${isLiked ? "fill-blue-500" : ""}`} />
+              <Heart className={`h-5 w-5 ${isLiked ? "fill-orange-500" : ""}`} />
               Thích
             </button>
             <div className="flex flex-1 items-center justify-center gap-2 rounded-md py-2 hover:bg-[#3a3b3c]">
