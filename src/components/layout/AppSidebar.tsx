@@ -64,7 +64,7 @@ export function AppSidebar({}: AppSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, isInitialized } = useAuth();
   const { openSearch, closeSearch, isSearchOpen } = useSearch();
 
   return (
@@ -145,7 +145,8 @@ export function AppSidebar({}: AppSidebarProps) {
         })}
 
         {/* Admin Management Button - Only show for admin users */}
-        {isAuthenticated && user?.isAdmin && (
+        {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+        {isInitialized && isAuthenticated && user?.isAdmin && (
           <Link href="/admin/dashboard">
             <Button
               variant={pathname?.startsWith("/admin") ? "default" : "ghost"}
@@ -188,31 +189,20 @@ export function AppSidebar({}: AppSidebarProps) {
         </Button>
 
         {/* Profile/Login section */}
-        {isAuthenticated ? (
-          <Link href="/profile">
-            <Button
-              variant={pathname === "/profile" ? "default" : "ghost"}
-              className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
-                pathname === "/profile" &&
-                  "bg-primary text-primary-foreground hover:bg-primary/90",
-                (isCollapsed || isSearchOpen) && "px-2 justify-center"
-              )}
-            >
-              {(isCollapsed || isSearchOpen) ? (
-                <Avatar className="h-6 w-6">
-                  <AvatarImage
-                    src={user?.avatar || "/placeholder.svg"}
-                    alt={user?.fullname || user?.username || "User"}
-                  />
-                  <AvatarFallback className="text-xs">
-                    {user?.fullname?.charAt(0)?.toUpperCase() ||
-                      user?.username?.charAt(0)?.toUpperCase() ||
-                      "U"}
-                  </AvatarFallback>
-                </Avatar>
-              ) : (
-                <>
+        {/* Chỉ render profile section sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+        {isInitialized ? (
+          isAuthenticated ? (
+            <Link href="/profile">
+              <Button
+                variant={pathname === "/profile" ? "default" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                  pathname === "/profile" &&
+                    "bg-primary text-primary-foreground hover:bg-primary/90",
+                  (isCollapsed || isSearchOpen) && "px-2 justify-center"
+                )}
+              >
+                {(isCollapsed || isSearchOpen) ? (
                   <Avatar className="h-6 w-6">
                     <AvatarImage
                       src={user?.avatar || "/placeholder.svg"}
@@ -224,28 +214,47 @@ export function AppSidebar({}: AppSidebarProps) {
                         "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="truncate font-medium">
-                    {user?.fullname || user?.username || "User"}
-                  </span>
-                </>
-              )}
-            </Button>
-          </Link>
+                ) : (
+                  <>
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage
+                        src={user?.avatar || "/placeholder.svg"}
+                        alt={user?.fullname || user?.username || "User"}
+                      />
+                      <AvatarFallback className="text-xs">
+                        {user?.fullname?.charAt(0)?.toUpperCase() ||
+                          user?.username?.charAt(0)?.toUpperCase() ||
+                          "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="truncate font-medium">
+                      {user?.fullname || user?.username || "User"}
+                    </span>
+                  </>
+                )}
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/login">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                  (isCollapsed || isSearchOpen) && "px-2 justify-center"
+                )}
+              >
+                <User className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && !isSearchOpen && (
+                  <span className="font-medium">{t("nav.login")}</span>
+                )}
+              </Button>
+            </Link>
+          )
         ) : (
-          <Link href="/login">
-            <Button
-              variant="ghost"
-              className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
-                (isCollapsed || isSearchOpen) && "px-2 justify-center"
-              )}
-            >
-              <User className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && !isSearchOpen && (
-                <span className="font-medium">{t("nav.login")}</span>
-              )}
-            </Button>
-          </Link>
+          // Placeholder khi chưa initialized để tránh hydration mismatch
+          <div className="w-full px-3 py-2">
+            <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
+          </div>
         )}
       </nav>
 
@@ -278,31 +287,39 @@ export function AppSidebar({}: AppSidebarProps) {
           <JapaneseInputModeToggle collapsed={isCollapsed} />
 
           {/* Auth Button - Login/Logout */}
-          {isAuthenticated ? (
-            <Button
-              variant="ghost"
-              onClick={logout}
-              className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
-                isCollapsed && "px-2 justify-center"
-              )}
-            >
-              <LogOut className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && <span className="font-medium">{t("nav.logout")}</span>}
-            </Button>
-          ) : (
-            <Link href="/login">
+          {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+          {isInitialized ? (
+            isAuthenticated ? (
               <Button
                 variant="ghost"
+                onClick={logout}
                 className={cn(
                   "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                   isCollapsed && "px-2 justify-center"
                 )}
               >
-                <User className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && <span className="font-medium">{t("nav.login")}</span>}
+                <LogOut className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && <span className="font-medium">{t("nav.logout")}</span>}
               </Button>
-            </Link>
+            ) : (
+              <Link href="/login">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                    isCollapsed && "px-2 justify-center"
+                  )}
+                >
+                  <User className="h-5 w-5 flex-shrink-0" />
+                  {!isCollapsed && <span className="font-medium">{t("nav.login")}</span>}
+                </Button>
+              </Link>
+            )
+          ) : (
+            // Placeholder khi chưa initialized
+            <div className="w-full px-3 py-2">
+              <div className="w-full h-9 bg-muted rounded-md animate-pulse" />
+            </div>
           )}
         </div>
       )}

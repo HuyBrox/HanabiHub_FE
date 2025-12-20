@@ -63,7 +63,7 @@ export function MobileHeader({}: MobileHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, isInitialized } = useAuth();
   const { openSearch } = useSearch();
 
   return (
@@ -84,7 +84,8 @@ export function MobileHeader({}: MobileHeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {isAuthenticated && user?.avatar ? (
+          {/* Chỉ render avatar sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+          {isInitialized && isAuthenticated && user?.avatar ? (
             <div className="relative w-8 h-8 rounded-full overflow-hidden">
               <Image
                 src={user.avatar || "/images/placeholders/placeholder.svg"}
@@ -101,7 +102,11 @@ export function MobileHeader({}: MobileHeaderProps) {
             </div>
           )}
           <span className="text-sm font-medium text-foreground truncate max-w-20">
-            {isAuthenticated ? (user?.fullname || user?.username || "User") : "Guest"}
+            {isInitialized
+              ? isAuthenticated
+                ? user?.fullname || user?.username || "User"
+                : "Guest"
+              : "Guest"}
           </span>
           <Button
             variant="ghost"
@@ -176,7 +181,8 @@ export function MobileHeader({}: MobileHeaderProps) {
               })}
 
               {/* Admin Management Button - Only show for admin users */}
-              {isAuthenticated && user?.isAdmin && (
+              {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+              {isInitialized && isAuthenticated && user?.isAdmin && (
                 <Link href="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
                   <Button
                     variant={pathname?.startsWith("/admin") ? "default" : "ghost"}
@@ -255,29 +261,37 @@ export function MobileHeader({}: MobileHeaderProps) {
                 <span className="ml-3 text-sm text-foreground">Theme</span>
               </div>
               <JapaneseInputModeToggle collapsed={false} />
-              {isAuthenticated ? (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
-                  onClick={() => {
-                    logout();
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <LogOut className="h-5 w-5 flex-shrink-0" />
-                  <span className="font-medium">{t("nav.logout")}</span>
-                </Button>
-              ) : (
-                <Link href="/login">
+              {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+              {isInitialized ? (
+                isAuthenticated ? (
                   <Button
                     variant="ghost"
                     className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
-                    onClick={() => setIsMenuOpen(false)}
+                    onClick={() => {
+                      logout();
+                      setIsMenuOpen(false);
+                    }}
                   >
-                    <User className="h-5 w-5 flex-shrink-0" />
-                    <span className="font-medium">{t("nav.login")}</span>
+                    <LogOut className="h-5 w-5 flex-shrink-0" />
+                    <span className="font-medium">{t("nav.logout")}</span>
                   </Button>
-                </Link>
+                ) : (
+                  <Link href="/login">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="h-5 w-5 flex-shrink-0" />
+                      <span className="font-medium">{t("nav.login")}</span>
+                    </Button>
+                  </Link>
+                )
+              ) : (
+                // Placeholder khi chưa initialized
+                <div className="w-full px-3 py-2">
+                  <div className="w-full h-9 bg-muted rounded-md animate-pulse" />
+                </div>
               )}
             </div>
           </div>

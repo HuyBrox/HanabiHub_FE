@@ -21,7 +21,7 @@ export const useAuth = () => {
   const authState = useSelector((state: RootState) => state.auth);
 
   // Destructure in useMemo để tránh unnecessary re-renders
-  const { user, isAuthenticated, isLoading, error } = useMemo(
+  const { user, isAuthenticated, isLoading, error, isInitialized } = useMemo(
     () => authState,
     [authState]
   );
@@ -98,6 +98,7 @@ export const useAuth = () => {
     isAuthenticated,
     isLoading,
     error,
+    isInitialized,
     login,
     googleLogin,
     logout: handleLogout,

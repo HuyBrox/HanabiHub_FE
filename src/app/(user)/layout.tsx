@@ -25,7 +25,7 @@ function LayoutContent({
   children: React.ReactNode;
   auth: React.ReactNode;
 }>) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
   const { isSearchOpen } = useSearch();
   const pathname = usePathname();
 
@@ -63,7 +63,8 @@ function LayoutContent({
         {children}
       </main>
       {/* Chỉ hiển thị ChatDock khi đã đăng nhập và không phải call page */}
-      {isAuthenticated && !isCallPage && <ChatDock />}
+      {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+      {isInitialized && isAuthenticated && !isCallPage && <ChatDock />}
       {auth}
     </div>
   );

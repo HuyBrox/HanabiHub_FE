@@ -62,7 +62,7 @@ export default function FlashcardPracticePage() {
   const [trackCard] = useTrackCardLearningMutation(); // Re-enabled with proper _id support
 
   // TTS hook
-  const { speak, isSpeaking, currentVoiceId, setVoiceId, voices } =
+  const { speak, isSpeaking, currentVoiceName, setVoiceName, voices } =
     useJapaneseTTS();
 
   const [flashcards, setFlashcards] = useState<PracticeCard[]>([]);
@@ -466,14 +466,14 @@ export default function FlashcardPracticePage() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <label className="text-sm text-muted-foreground">Voice:</label>
-              <Select value={currentVoiceId} onValueChange={setVoiceId}>
+              <Select value={currentVoiceName} onValueChange={setVoiceName}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {voices.map((voice) => (
-                    <SelectItem key={voice.id} value={voice.id}>
-                      {voice.name}
+                    <SelectItem key={voice.name} value={voice.name}>
+                      {voice.name} {voice.lang && `(${voice.lang})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
