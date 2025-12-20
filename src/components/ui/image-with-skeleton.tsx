@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Image from "next/image";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Dùng cho avatar hoặc ảnh nhỏ, không dùng cho ảnh lớn/banner
@@ -12,7 +13,7 @@ export function ImageWithSkeleton({
   src: string;
   alt: string;
   className?: string;
-} & React.ImgHTMLAttributes<HTMLImageElement>) {
+} & Omit<React.ComponentProps<typeof Image>, 'src' | 'alt'>) {
   const [loaded, setLoaded] = React.useState(false);
   return (
     <div
@@ -20,16 +21,18 @@ export function ImageWithSkeleton({
       style={{ position: "relative", overflow: "hidden" }}
     >
       {!loaded && <Skeleton className="absolute inset-0 w-full h-full" />}
-      <img
+      <Image
         src={src}
         alt={alt}
+        fill
         onLoad={() => setLoaded(true)}
         className={
-          "w-full h-full object-cover transition-opacity duration-500 " +
+          "object-cover transition-opacity duration-500 " +
           (loaded ? "opacity-100" : "opacity-0")
         }
         style={{ position: "relative", zIndex: 1 }}
         loading="lazy"
+        unoptimized
         {...props}
       />
     </div>

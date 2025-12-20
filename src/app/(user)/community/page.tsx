@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,7 +52,7 @@ function CommunityPage() {
 
   const handleLike = async (e: React.MouseEvent, postId: string) => {
     e.stopPropagation();
-    
+
     if (!currentUser?.data) {
       toast.error("Vui lòng đăng nhập để thích bài viết");
       router.push("/login");
@@ -174,21 +175,33 @@ function CommunityPage() {
                         {post.images && post.images.length > 0 && (
                           <div className="mb-3">
                             {post.images.length === 1 ? (
-                              <img
-                                src={post.images[0]}
-                                alt="Post"
-                                className="rounded-lg max-w-full h-auto max-h-96 object-cover"
-                              />
+                              <div className="relative w-full" style={{ maxHeight: '384px' }}>
+                                <Image
+                                  src={post.images[0]}
+                                  alt="Post"
+                                  width={800}
+                                  height={600}
+                                  className="rounded-lg max-w-full h-auto max-h-96 object-cover"
+                                  loading="lazy"
+                                  unoptimized
+                                />
+                              </div>
                             ) : (
                               <Carousel className="w-full">
                                 <CarouselContent>
                                   {post.images.map((image, index) => (
                                     <CarouselItem key={index}>
-                                      <img
-                                        src={image}
-                                        alt={`Post ${index + 1}`}
-                                        className="rounded-lg w-full h-auto max-h-96 object-cover"
-                                      />
+                                      <div className="relative w-full" style={{ maxHeight: '384px' }}>
+                                        <Image
+                                          src={image}
+                                          alt={`Post ${index + 1}`}
+                                          width={800}
+                                          height={600}
+                                          className="rounded-lg w-full h-auto max-h-96 object-cover"
+                                          loading="lazy"
+                                          unoptimized
+                                        />
+                                      </div>
                                     </CarouselItem>
                                   ))}
                                 </CarouselContent>

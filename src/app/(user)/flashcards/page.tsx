@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { withAuth } from "@/components/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -656,11 +657,14 @@ function FlashcardsPage() {
                         {set.level}
                       </Badge>
                     </div>
-                    <div className="aspect-video bg-muted rounded-md md:rounded-lg mb-1.5 md:mb-2 overflow-hidden">
-                      <img
+                    <div className="aspect-video bg-muted rounded-md md:rounded-lg mb-1.5 md:mb-2 overflow-hidden relative">
+                      <Image
                         src={set.thumbnail || "/placeholder.svg"}
                         alt={set.type === "flashlist" ? set.title : set.name}
-                        className="w-full h-full object-cover md:group-hover:scale-110 transition-transform duration-500 ease-out"
+                        fill
+                        className="object-cover md:group-hover:scale-110 transition-transform duration-500 ease-out"
+                        loading="lazy"
+                        unoptimized
                       />
                     </div>
                     <CardTitle className="text-xs md:text-sm lg:text-base line-clamp-2 md:group-hover:text-primary transition-colors duration-300 leading-tight">

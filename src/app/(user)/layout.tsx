@@ -1,9 +1,9 @@
 "use client";
 
 import type React from "react";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
 import { AppSidebar } from "@/components/layout";
-import { ChatDock } from "@/components/chat";
 import { MobileHeader } from "@/components/layout";
 import { useAuth } from "@/hooks/useAuth";
 import { SearchProvider, useSearch } from "@/contexts/SearchContext";
@@ -11,6 +11,12 @@ import { JapaneseInputModeProvider } from "@/contexts/JapaneseInputModeContext";
 import { useGlobalJapaneseInput } from "@/hooks/useGlobalJapaneseInput";
 import { SearchComponent } from "@/components/search/SearchComponent";
 import { usePathname } from "next/navigation";
+
+// Lazy load ChatDock - component nặng, không cần thiết ngay khi page load
+const ChatDock = dynamic(() => import("@/components/chat").then(mod => ({ default: mod.ChatDock })), {
+  ssr: false, // Không render trên server
+  loading: () => null, // Không hiển thị loading, render khi ready
+});
 
 function LayoutContent({
   children,

@@ -20,6 +20,7 @@ import {
   MessageCircle,
   Video,
   Search,
+  Settings,
 } from "lucide-react";
 import { ModeToggle, LanguageToggle, JapaneseInputModeToggle } from "@/components/common";
 import { useAuth } from "@/hooks/useAuth";
@@ -142,6 +143,26 @@ export function AppSidebar({}: AppSidebarProps) {
             </Link>
           );
         })}
+
+        {/* Admin Management Button - Only show for admin users */}
+        {isAuthenticated && user?.isAdmin && (
+          <Link href="/admin/dashboard">
+            <Button
+              variant={pathname?.startsWith("/admin") ? "default" : "ghost"}
+              className={cn(
+                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                pathname?.startsWith("/admin") &&
+                  "bg-primary text-primary-foreground hover:bg-primary/90",
+                (isCollapsed || isSearchOpen) && "px-2 justify-center"
+              )}
+            >
+              <Settings className="h-5 w-5 flex-shrink-0" />
+              {!isCollapsed && !isSearchOpen && (
+                <span className="font-medium">{t("nav.admin") || "Quản lý"}</span>
+              )}
+            </Button>
+          </Link>
+        )}
 
         {/* Search Button */}
         <Button

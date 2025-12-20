@@ -20,6 +20,7 @@ import {
   MessageCircle,
   Video,
   Search,
+  Settings,
 } from "lucide-react";
 import { ModeToggle, LanguageToggle, JapaneseInputModeToggle } from "@/components/common";
 import { useLanguage } from "@/lib/language-context";
@@ -84,11 +85,16 @@ export function MobileHeader({}: MobileHeaderProps) {
 
         <div className="flex items-center gap-3">
           {isAuthenticated && user?.avatar ? (
-            <img
-              src={user.avatar || "/images/placeholders/placeholder.svg"}
-              alt={user.fullname || user.username || "User"}
-              className="w-8 h-8 rounded-full object-cover"
-            />
+            <div className="relative w-8 h-8 rounded-full overflow-hidden">
+              <Image
+                src={user.avatar || "/images/placeholders/placeholder.svg"}
+                alt={user.fullname || user.username || "User"}
+                fill
+                className="object-cover"
+                loading="lazy"
+                unoptimized
+              />
+            </div>
           ) : (
             <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
               <User className="h-4 w-4 text-muted-foreground" />
@@ -168,6 +174,23 @@ export function MobileHeader({}: MobileHeaderProps) {
                   </Link>
                 );
               })}
+
+              {/* Admin Management Button - Only show for admin users */}
+              {isAuthenticated && user?.isAdmin && (
+                <Link href="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
+                  <Button
+                    variant={pathname?.startsWith("/admin") ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2",
+                      pathname?.startsWith("/admin") &&
+                        "bg-primary text-primary-foreground hover:bg-primary/90"
+                    )}
+                  >
+                    <Settings className="h-5 w-5 flex-shrink-0" />
+                    <span className="font-medium">{t("nav.admin") || "Quản lý"}</span>
+                  </Button>
+                </Link>
+              )}
 
               {/* Search Button */}
               <Button

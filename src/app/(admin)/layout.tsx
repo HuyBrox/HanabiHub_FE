@@ -1,6 +1,7 @@
 import type React from "react";
 import { AdminSidebar, AdminFooter, AdminMobileFooter } from "@/components/layout/admin";
 import { NotificationProvider } from "@/components/notification/NotificationProvider";
+import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 
 export default function AdminLayout({
   children,
@@ -9,8 +10,9 @@ export default function AdminLayout({
 }) {
 
   return (
-    <NotificationProvider>
-      <div className="min-h-screen bg-slate-50">
+    <AdminProtectedRoute>
+      <NotificationProvider>
+        <div className="min-h-screen bg-slate-50">
         {/* Desktop Layout */}
         <div className="hidden lg:flex h-screen">
           <AdminSidebar />
@@ -32,6 +34,7 @@ export default function AdminLayout({
           <AdminMobileFooter />
         </div>
       </div>
-    </NotificationProvider>
+      </NotificationProvider>
+    </AdminProtectedRoute>
   );
 }

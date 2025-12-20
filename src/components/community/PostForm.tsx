@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -92,15 +93,18 @@ export default function PostForm() {
           {imagePreviews.length > 0 && (
             <div className="grid grid-cols-2 gap-2 mt-3">
               {imagePreviews.map((preview, index) => (
-                <div key={index} className="relative group">
-                  <img
+                <div key={index} className="relative group h-32">
+                  <Image
                     src={preview}
                     alt={`Preview ${index + 1}`}
-                    className="w-full h-32 object-cover rounded-lg"
+                    fill
+                    className="object-cover rounded-lg"
+                    loading="lazy"
+                    unoptimized
                   />
                   <button
                     onClick={() => removeImage(index)}
-                    className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   >
                     <X className="h-4 w-4 text-white" />
                   </button>
@@ -116,7 +120,7 @@ export default function PostForm() {
               disabled={images.length >= 10}
             >
               <ImageIcon className="h-4 w-4 mr-2" />
-              Hình ảnh 
+              Hình ảnh
             </Button>
             <input
               ref={fileInputRef}

@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { withAuth } from "@/components/auth";
 import { useState, useMemo, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -904,14 +905,19 @@ function ProfilePage() {
                       >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-4">
-                            <img
-                              src={
-                                course.image ||
-                                "/images/placeholders/placeholder.svg"
-                              }
-                              alt={course.title}
-                              className="w-16 h-16 rounded-lg object-cover"
-                            />
+                            <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                              <Image
+                                src={
+                                  course.image ||
+                                  "/images/placeholders/placeholder.svg"
+                                }
+                                alt={course.title}
+                                fill
+                                className="object-cover"
+                                loading="lazy"
+                                unoptimized
+                              />
+                            </div>
                             <div className="flex-1">
                               <h3 className="font-semibold mb-2">
                                 {course.title}

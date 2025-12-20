@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { withAuth } from "@/components/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +15,22 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Clock, Users, Star, BookOpen, Filter, Play } from "lucide-react";
+import {
+  Search,
+  Clock,
+  Users,
+  Star,
+  BookOpen,
+  Filter,
+  Play,
+} from "lucide-react";
 import { useGetAllCoursesQuery } from "@/store/services/courseApi";
 import { LoadingSpinner } from "@/components/loading";
 
 // Helper function để format giá
 const formatPrice = (price: number) => {
   if (price === 0) return "Miễn phí";
-  return `${price.toLocaleString('vi-VN')} VNĐ`;
+  return `${price.toLocaleString("vi-VN")} VNĐ`;
 };
 
 // Helper function để format thời gian học dự kiến
@@ -105,7 +114,8 @@ function CoursesPage() {
               Khám phá khóa học tiếng Nhật
             </h1>
             <p className="text-sm md:text-xl lg:text-2xl mb-4 md:mb-8 opacity-90 px-2">
-              Từ cơ bản đến nâng cao, tìm khóa học hoàn hảo cho hành trình học tiếng Nhật của bạn
+              Từ cơ bản đến nâng cao, tìm khóa học hoàn hảo cho hành trình học
+              tiếng Nhật của bạn
             </p>
 
             {/* Search Bar */}
@@ -175,7 +185,8 @@ function CoursesPage() {
         {/* Results Count */}
         <div className="mb-4 md:mb-6">
           <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-            Hiển thị {filteredCourses.length} trong {coursesData?.data?.length || 0} khóa học
+            Hiển thị {filteredCourses.length} trong{" "}
+            {coursesData?.data?.length || 0} khóa học
           </p>
         </div>
 
@@ -186,13 +197,17 @@ function CoursesPage() {
               key={course._id}
               className="group md:hover:shadow-lg transition-all duration-300 md:hover:-translate-y-1 overflow-hidden flex flex-col"
             >
-              <div className="relative">
-                <img
+              <div className="relative h-28 sm:h-32 md:h-36 lg:h-40">
+                <Image
                   src={course.thumbnail || "/placeholder.svg"}
                   alt={course.title}
-                  className="w-full h-28 sm:h-32 md:h-36 lg:h-40 object-cover md:group-hover:scale-105 transition-transform duration-300"
+                  fill
+                  className="object-cover md:group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                  unoptimized
                 />
-                {(course.studentCount || course.students?.length || 0) > 100 && (
+                {(course.studentCount || course.students?.length || 0) >
+                  100 && (
                   <Badge className="absolute top-1.5 left-1.5 md:top-2 md:left-2 bg-orange-500 hover:bg-orange-600 text-[10px] md:text-xs px-1.5 py-0.5">
                     Phổ biến
                   </Badge>
@@ -217,7 +232,13 @@ function CoursesPage() {
                 <div className="flex items-center gap-2 md:gap-3 text-[10px] md:text-xs text-gray-500 mt-2 md:mt-3">
                   <div className="flex items-center gap-0.5 md:gap-1">
                     <Users className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                    <span>{(course.studentCount || course.students?.length || 0).toLocaleString()}</span>
+                    <span>
+                      {(
+                        course.studentCount ||
+                        course.students?.length ||
+                        0
+                      ).toLocaleString()}
+                    </span>
                   </div>
                   <div className="flex items-center gap-0.5 md:gap-1">
                     <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
@@ -228,7 +249,12 @@ function CoursesPage() {
 
               <CardContent className="p-3 md:p-4 pt-0 pb-2">
                 <div className="flex items-center justify-between mb-2">
-                  <Badge variant="secondary" className="text-[10px] md:text-xs px-1.5 py-0.5">{course.level}</Badge>
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] md:text-xs px-1.5 py-0.5"
+                  >
+                    {course.level}
+                  </Badge>
                   <div className="flex items-center gap-0.5 md:gap-1 text-[10px] md:text-xs text-gray-500">
                     <BookOpen className="h-2.5 w-2.5 md:h-3 md:w-3" />
                     <span>{course.lessons?.length || 0} bài</span>
@@ -236,14 +262,20 @@ function CoursesPage() {
                 </div>
 
                 <p className="text-[10px] md:text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
-                  {course.instructor?.fullname || 'Chưa xác định'}
+                  {course.instructor?.fullname || "Chưa xác định"}
                 </p>
               </CardContent>
 
               <CardFooter className="p-3 md:p-4 pt-2">
                 <div className="flex gap-1.5 md:gap-2 w-full">
-                  <Link href={`/courses/${course._id}/detail`} className="flex-1">
-                    <Button variant="outline" className="w-full text-[10px] md:text-xs h-7 md:h-8 px-2">
+                  <Link
+                    href={`/courses/${course._id}/detail`}
+                    className="flex-1"
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full text-[10px] md:text-xs h-7 md:h-8 px-2"
+                    >
                       <BookOpen className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
                       Chi tiết
                     </Button>

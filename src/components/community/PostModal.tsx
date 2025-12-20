@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -131,11 +132,17 @@ export default function PostModal({ post, open, onOpenChange }: PostModalProps) 
                 <CarouselContent>
                   {displayPost.images.map((image, index) => (
                     <CarouselItem key={index} className="flex justify-center">
-                      <img
-                        src={image}
-                        alt={`Post image ${index + 1}`}
-                        className="max-h-[60vh] w-full object-contain"
-                      />
+                      <div className="relative w-full" style={{ maxHeight: '60vh' }}>
+                        <Image
+                          src={image}
+                          alt={`Post image ${index + 1}`}
+                          width={800}
+                          height={600}
+                          className="max-h-[60vh] w-full object-contain"
+                          loading="lazy"
+                          unoptimized
+                        />
+                      </div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>

@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import React, { useMemo } from "react";
+import React, { useMemo, Suspense } from "react";
 import { useGetAllCoursesQuery } from "@/store/services/courseApi";
 import { LoadingSpinner } from "@/components/loading";
 import { CountUpNumber } from "@/components/home/CountUpNumber";
@@ -39,18 +39,23 @@ import styles from "./hero-animations.module.css";
 import { Poppins } from "next/font/google";
 
 // Font đẹp cho hero section - Poppins (modern, clean, friendly)
+// Tối ưu: chỉ load weights cần thiết và display swap
 const poppins = Poppins({
   subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700"], // Giảm số weights để load nhanh hơn
   variable: "--font-hero-poppins",
-  display: "swap",
+  display: "swap", // Không block render
+  preload: false, // Không preload font này vì chỉ dùng cho hero section
 });
 
 export default function HomePage() {
-  // Fetch popular courses
+  // Fetch popular courses - tối ưu: chỉ fetch khi cần
   const coursesQueryParams = useMemo(() => ({ limit: 6 }), []);
   const { data: coursesData, isLoading: coursesLoading } =
-    useGetAllCoursesQuery(coursesQueryParams);
+    useGetAllCoursesQuery(coursesQueryParams, {
+      // Tối ưu: không refetch khi mount lại nếu đã có data
+      refetchOnMountOrArgChange: false,
+    });
 
   const popularCourses = coursesData?.data?.slice(0, 3) || [];
 
