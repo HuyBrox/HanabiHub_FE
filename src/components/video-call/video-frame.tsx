@@ -111,15 +111,28 @@ export function VideoFrame({
         </div>
       )}
 
-      {/* Connection Status */}
-      {!isConnected && !isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-800/80 backdrop-blur-sm">
-          <div className="text-center">
-            <div className="w-3 h-3 bg-gray-400 rounded-full mx-auto mb-2 animate-pulse" />
-            <p className="text-gray-400 text-sm">
-              {isLocal ? "Camera ready" : "Waiting for connection..."}
+      {/* Connection Status - Light overlay, only for remote video */}
+      {!isConnected && !isLoading && !isLocal && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+          <div className="text-center bg-black/60 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/10">
+            <div className="w-3 h-3 bg-blue-400 rounded-full mx-auto mb-2 animate-pulse" />
+            <p className="text-white text-sm font-medium">
+              Waiting for connection...
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Local video status badge - only show badge, don't cover video */}
+      {!isConnected && !isLoading && isLocal && (
+        <div className="absolute bottom-3 left-3">
+          <Badge
+            variant="secondary"
+            className="bg-blue-500/80 text-white border-0 backdrop-blur-sm"
+          >
+            <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
+            Camera ready
+          </Badge>
         </div>
       )}
     </Card>

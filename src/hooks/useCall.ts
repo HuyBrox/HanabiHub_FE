@@ -94,10 +94,17 @@ export function useCall(): UseCallApi {
 
       // 1. Mở popup trước để tạo real peer ID
       const callUrl = `/call/caller?receiverId=${receiverId}&callType=${callType}`;
+
+      // Calculate center position for popup
+      const width = 1200;
+      const height = 800;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+
       const callWindow = window.open(
         callUrl,
         "call-window",
-        "width=800,height=600,resizable=yes,scrollbars=no,menubar=no,toolbar=no"
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,menubar=no,toolbar=no`
       );
 
       if (!callWindow) {
@@ -127,10 +134,17 @@ export function useCall(): UseCallApi {
 
     // 2. Mở popup để nhận cuộc gọi
     const callUrl = `/call/receiver?callerId=${callData.callerId}&callType=${callData.callType}&otherPeerId=${callData.peerId}`;
+
+    // Calculate center position for popup
+    const width = 1200;
+    const height = 800;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+
     const callWindow = window.open(
       callUrl,
       "call-window",
-      "width=800,height=600,resizable=yes,scrollbars=no,menubar=no,toolbar=no"
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,menubar=no,toolbar=no`
     );
 
     if (!callWindow) {
