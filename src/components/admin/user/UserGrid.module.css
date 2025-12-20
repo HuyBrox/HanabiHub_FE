@@ -1,0 +1,307 @@
+/* ================================
+   GRID WRAPPER – max 3 cột
+================================ */
+.grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* màn rất to vẫn giữ 3 cột */
+@media (min-width: 1536px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ================================
+   CARD – pastel glass
+================================ */
+.card {
+  position: relative;
+  border-radius: 20px;
+  padding: 18px 18px 16px;
+  border: 1px solid rgba(226, 232, 240, 0.55);
+
+  background:
+    radial-gradient(circle at top left, rgba(248, 250, 252, 0.95), transparent 60%),
+    radial-gradient(circle at bottom right, rgba(240, 246, 255, 0.95), transparent 55%),
+    #ffffff;
+
+  box-shadow:
+    0 10px 28px rgba(15, 23, 42, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+
+  /* cao hơn để ra layout 3×4 nhìn cân */
+  min-height: 260px;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(148, 163, 184, 0.85);
+  box-shadow:
+    0 16px 38px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+}
+
+/* ================================
+   HEADER
+================================ */
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.flexGrow {
+  min-width: 0;
+  flex: 1;
+}
+
+/* tên – mềm, không quá đậm */
+.name {
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* email – xám nhạt */
+.email {
+  font-size: 13px;
+  color: #64748b;
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* nút 3 chấm */
+.kebab {
+  margin-left: auto;
+  height: 32px;
+  width: 32px;
+  border-radius: 999px;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.14s ease,
+    color 0.14s ease,
+    transform 0.08s ease,
+    box-shadow 0.14s ease;
+}
+
+.kebab:hover {
+  background: #f8fafc;
+  color: #475569;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+/* ================================
+   AVATAR – pastel gradient
+================================ */
+.avatar {
+  height: 46px;
+  width: 46px;
+  border-radius: 999px;
+  color: #4a044e;
+  font-weight: 600;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background-size: 180% 180%;
+  animation: avatarShift 7s ease-in-out infinite;
+
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset,
+    0 4px 12px rgba(15, 23, 42, 0.1);
+}
+
+@keyframes avatarShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* admin – đỏ pastel */
+.av_admin {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+}
+
+/* user – xanh pastel */
+.av_user {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+}
+
+/* ================================
+   META GRID (VAI TRÒ / TRẠNG THÁI)
+================================ */
+.metaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* label – nhẹ, tinh tế */
+.metaLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: #9ca3af;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* ================================
+   BADGES
+================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.06);
+}
+
+/* ROLE badge */
+.role_admin {
+  background: linear-gradient(135deg, #fee2e2, #ffe4e6);
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.role_user {
+  background: linear-gradient(135deg, #e0f2fe, #e5f0ff);
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+/* ONLINE / OFFLINE badge */
+.state_online {
+  background: linear-gradient(135deg, #dcfce7, #e0f2f1);
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.state_offline {
+  background: linear-gradient(135deg, #f8fafc, #e5e7eb);
+  color: #4b5563;
+  border-color: #e5e7eb;
+}
+
+/* DOT */
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dotOn {
+  background: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.dotOff {
+  background: #9ca3af;
+}
+
+/* ================================
+   LAST LOGIN
+================================ */
+.lastRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.95);
+}
+
+.clock {
+  font-size: 14px;
+}
+
+.lastStrong {
+  font-weight: 600;
+  color: #374151;
+}
+
+/* ================================
+   ACTIONS
+================================ */
+.actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.12s ease, transform 0.08s ease, opacity 0.1s ease;
+}
+
+/* Sửa */
+.linkEdit {
+  color: #7c3aed;
+}
+
+.linkEdit:hover {
+  color: #6d28d9;
+  transform: translateY(-1px);
+}
+
+/* Xóa */
+.linkDel {
+  color: #f97373;
+}
+
+.linkDel:hover {
+  color: #e11d48;
+  transform: translateY(-1px);
+}
