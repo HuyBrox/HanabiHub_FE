@@ -1,6 +1,6 @@
 import type React from "react";
 import { AdminSidebar, AdminFooter, AdminMobileFooter } from "@/components/layout/admin";
-import { ExtensionCleanup } from "@/components/common/ExtensionCleanup";
+import { ExtensionCleanup } from "@/components/common";
 
 export default function AdminLayout({
   children,

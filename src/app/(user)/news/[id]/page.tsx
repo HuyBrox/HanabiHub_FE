@@ -9,6 +9,7 @@ interface NewsDetail {
   _id: string;
   title: string;
   content: string;
+  image?: string;
   author: {
     _id: string;
     fullname: string;
@@ -108,85 +109,100 @@ export default function NewsDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-background py-8">
+      <div className="max-w-3xl mx-auto px-4">
         {/* Back Button */}
         <button
           onClick={() => router.push("/news")}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Quay lại danh sách tin tức</span>
         </button>
 
         {/* Article */}
-        <article className="bg-white rounded-lg shadow-sm p-8">
-          {/* Title */}
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">
-            {news.title}
-          </h1>
+        <article className="bg-card rounded-xl shadow-sm overflow-hidden">
+          <div className="p-8 md:p-12">
+            {/* Title (text-first) */}
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4 leading-tight">
+              {news.title}
+            </h1>
 
-          {/* Meta Info */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-6 pb-6 border-b">
-            <div className="flex items-center gap-2">
-              {news.author?.avatar ? (
-                <img
-                  src={news.author.avatar}
-                  alt={news.author.fullname}
-                  className="w-8 h-8 rounded-full"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <User className="w-4 h-4 text-blue-600" />
-                </div>
-              )}
-              <span className="font-medium text-gray-700">
-                {news.author?.fullname || "Admin"}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              <span>{formatDate(news.publishedAt || news.createdAt)}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Eye className="w-4 h-4" />
-              <span>{news.views} lượt xem</span>
-            </div>
-          </div>
+            {/* Short lede */}
+            <p className="text-lg text-muted-foreground mb-4">{news.content ? news.content.replace(/<[^>]*>/g, '').slice(0, 220).trim() + (news.content.length > 220 ? '...' : '') : ''}</p>
 
-          {/* Tags */}
-          {news.tags && news.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-8">
-              {news.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
-                >
-                  <Tag className="w-3 h-3" />
-                  {tag}
+            {/* Meta Info */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
+              <div className="flex items-center gap-2">
+                {news.author?.avatar ? (
+                  <img
+                    src={news.author.avatar}
+                    alt={news.author.fullname}
+                    className="w-10 h-10 rounded-full"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                )}
+                <span className="font-medium text-foreground">
+                  {news.author?.fullname || "Admin"}
                 </span>
-              ))}
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                <span>{formatDate(news.publishedAt || news.createdAt)}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Eye className="w-4 h-4" />
+                <span>{news.views} lượt xem</span>
+              </div>
             </div>
-          )}
 
-          {/* Content */}
-          <div
-            className="prose prose-lg max-w-none
-              prose-headings:text-gray-900
-              prose-p:text-gray-700
-              prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
-              prose-strong:text-gray-900
-              prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-              prose-pre:bg-gray-900 prose-pre:text-gray-100
-              prose-img:rounded-lg prose-img:shadow-md
-              prose-blockquote:border-l-blue-600 prose-blockquote:bg-blue-50 prose-blockquote:py-2 prose-blockquote:px-4
-              prose-ul:list-disc prose-ol:list-decimal
-              prose-li:text-gray-700
-            "
-            dangerouslySetInnerHTML={{ __html: news.content }}
-          />
+            {/* Featured Image (aspect 16:9, max-height) */}
+            {news.image && (
+              <div className="w-full aspect-video max-h-[60vh] overflow-hidden bg-muted rounded-lg mb-8">
+                <img
+                  src={news.image}
+                  alt={news.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            {/* Tags */}
+            {news.tags && news.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-8">
+                {news.tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 px-4 py-2 bg-primary/5 text-primary rounded-full text-sm font-medium"
+                  >
+                    <Tag className="w-4 h-4" />
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Content - Render TinyMCE HTML content properly */}
+            <div
+              className={`prose prose-lg dark:prose-invert prose-img:rounded-xl prose-img:shadow-lg prose-img:my-8 prose-img:w-full`}
+              dangerouslySetInnerHTML={{ __html: news.content }}
+            />
+          </div>
         </article>
 
+        {/* Related Actions */}
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => router.push("/news")}
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-95 transition font-medium"
+          >
+            Xem thêm tin tức khác
+          </button>
+        </div>
+      </div>
         {/* Related Actions */}
         <div className="mt-8 text-center">
           <button

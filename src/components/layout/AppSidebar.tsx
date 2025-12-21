@@ -63,6 +63,7 @@ const navigation: NavigationItem[] = [
 export function AppSidebar({}: AppSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [prevCollapsed, setPrevCollapsed] = useState<boolean | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
   const { t } = useLanguage();
@@ -112,18 +113,30 @@ export function AppSidebar({}: AppSidebarProps) {
     };
   }, [socket, connected, isAuthenticated]);
 
-  // Reset unread count when panel opens
+  // Reset unread count when panel opens and collapse sidebar to icons-only
   const handleOpenPanel = () => {
+    // Save previous collapse state so we can restore it when panel closes
+    setPrevCollapsed(isCollapsed);
+    setIsCollapsed(true);
     setIsNotificationPanelOpen(true);
     // Optionally reset count when opening panel
     // setUnreadCount(0);
   };
 
+  // Close panel and restore previous sidebar state
+  const handleClosePanel = () => {
+    setIsNotificationPanelOpen(false);
+    if (prevCollapsed !== null) {
+      setIsCollapsed(prevCollapsed);
+      setPrevCollapsed(null);
+    }
+  };
+
   return (
     <div
       className={cn(
-        "hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+        "hidden lg:flex flex-col h-screen bg-sidebar transition-all duration-300",
+        isCollapsed ? "w-16" : "w-64 border-r border-sidebar-border"
       )}
     >
       {/* Header with Logo and Toggle */}
@@ -185,7 +198,7 @@ export function AppSidebar({}: AppSidebarProps) {
           <div className="relative">
             <Button
               variant="ghost"
-              onClick={handleOpenPanel}
+              onClick={() => (isNotificationPanelOpen ? handleClosePanel() : handleOpenPanel())}
               className={cn(
                 "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent",
                 isNotificationPanelOpen && "bg-accent",
@@ -322,7 +335,8 @@ export function AppSidebar({}: AppSidebarProps) {
       {/* Notification Panel - Tách riêng component */}
       <NotificationPanel
         isOpen={isNotificationPanelOpen}
-        onClose={() => setIsNotificationPanelOpen(false)}
+        onClose={handleClosePanel}
+        sidebarCollapsed={isCollapsed}
       />
     </div>
   );

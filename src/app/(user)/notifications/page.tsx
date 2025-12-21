@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { buildApiUrl } from "@/utils/api-helper";
+import LatestNewsPreview from '@/components/news/LatestNewsPreview';
+import NewsDetail from '@/components/news/NewsDetail';
 
 interface Notification {
   _id: string;
@@ -41,6 +43,7 @@ export default function NotificationsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
+  const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [contentType, setContentType] = useState<ContentType>("notifications");
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -97,6 +100,17 @@ export default function NotificationsPage() {
     return null;
   };
 
+  // Select a news by id and load its full content
+  const handleSelectNews = async (newsId: string) => {
+    setSelectedNewsId(newsId);
+    const fullNews = await fetchNewsById(newsId);
+    if (fullNews) {
+      setSelectedNews(fullNews);
+      setContentType('news');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const fetchNews = async () => {
     try {
       setLoading(true);
@@ -147,6 +161,36 @@ export default function NotificationsPage() {
       fetchNews();
     }
   }, [page, filter, contentType]);
+
+  // Recent articles state & fetch (show 3-5 latest published articles under a news detail)
+  const [recentNews, setRecentNews] = useState<NewsItem[]>([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+
+  const fetchRecentNews = async () => {
+    try {
+      setRecentLoading(true);
+      const response = await fetch(buildApiUrl(`/news/public?page=1&limit=5&status=published`), { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch recent news");
+      const data = await response.json();
+      if (data.success && data.data?.items) {
+        setRecentNews(data.data.items);
+      } else {
+        setRecentNews([]);
+      }
+    } catch (err) {
+      console.error("Error fetching recent news:", err);
+      setRecentNews([]);
+    } finally {
+      setRecentLoading(false);
+    }
+  };
+
+  // Keep the recent list fresh (load when entering the News tab)
+  useEffect(() => {
+    if (contentType === 'news') {
+      fetchRecentNews();
+    }
+  }, [contentType]);
 
   // If a query parameter 'openId' is present, open that notification by id
   useEffect(() => {
@@ -299,6 +343,7 @@ export default function NotificationsPage() {
                 setContentType("notifications");
                 setSelectedNotification(null);
                 setSelectedNews(null);
+                setSelectedNewsId(null);
                 setSearchQuery(""); // Reset search
                 setPage(1);
               }}
@@ -313,6 +358,7 @@ export default function NotificationsPage() {
                 setContentType("news");
                 setSelectedNotification(null);
                 setSelectedNews(null);
+                setSelectedNewsId(null);
                 setSearchQuery(""); // Reset search
                 setPage(1);
               }}
@@ -396,14 +442,8 @@ export default function NotificationsPage() {
                       // If notification references a news, open that news instead
                       const newsId = (notification as any).metadata?.newsId || (notification as any).newsId;
                       if (newsId) {
-                        const fullNews = await fetchNewsById(newsId);
-                        if (fullNews) {
-                          setSelectedNews(fullNews);
-                          setContentType("news");
-                        } else {
-                          // fallback to showing notification content
-                          setSelectedNotification(notification);
-                        }
+                        // Use unified handler so selectedNewsId is set consistently
+                        await handleSelectNews(newsId);
                       } else {
                         setSelectedNotification(notification);
                       }
@@ -464,45 +504,53 @@ export default function NotificationsPage() {
               filteredNews.map((newsItem) => (
                 <div
                   key={newsItem._id}
-                  onClick={() => setSelectedNews(newsItem)}
-                  className={`p-3 mb-2 rounded-lg cursor-pointer transition-all ${
+                  onClick={() => handleSelectNews(newsItem._id)}
+                  className={`p-4 mb-3 rounded-xl cursor-pointer transition-all border ${
                     selectedNews?._id === newsItem._id
-                      ? "bg-accent"
-                      : "hover:bg-accent/50"
+                      ? "bg-accent border-primary shadow-md"
+                      : "bg-card border-border hover:border-primary/50 hover:shadow-sm"
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    {/* News Thumbnail */}
+                    {/* News Thumbnail - Larger and better styled */}
                     {newsItem.image ? (
                       <div className="flex-shrink-0">
                         <img
                           src={newsItem.image}
                           alt={newsItem.title}
-                          className="w-12 h-12 rounded object-cover border border-border"
+                          className="w-16 h-16 rounded-lg object-cover border border-border shadow-sm"
                         />
                       </div>
                     ) : (
-                      <div className="flex-shrink-0 w-12 h-12 rounded bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                        <Bell className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                      <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900 dark:to-orange-800 flex items-center justify-center border border-orange-200 dark:border-orange-700">
+                        <Bell className="w-8 h-8 text-orange-600 dark:text-orange-400" />
                       </div>
                     )}
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-sm line-clamp-1">
+                      <h3 className="font-semibold text-sm line-clamp-2 mb-2 text-foreground">
                         {newsItem.title}
                       </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {newsItem.content.replace(/<[^>]*>/g, '').substring(0, 100)}...
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs text-muted-foreground">
+                      {/* Better excerpt with HTML stripping */}
+                      <div 
+                        className="text-xs text-muted-foreground line-clamp-2 mb-2 prose prose-xs max-w-none
+                          prose-p:text-muted-foreground prose-p:mb-1
+                          prose-headings:hidden
+                          prose-img:hidden
+                          prose-a:text-primary prose-a:no-underline"
+                        dangerouslySetInnerHTML={{ 
+                          __html: newsItem.content.replace(/<[^>]*>/g, '').substring(0, 120) + '...' 
+                        }}
+                      />
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground font-medium">
                           {formatTime(newsItem.publishedAt || newsItem.createdAt)}
                         </span>
-                        <Badge variant="secondary" className="h-4 text-xs px-1">
+                        <Badge variant="secondary" className="h-5 text-xs px-2 bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
                           📰 Tin tức
                         </Badge>
                         {newsItem.views > 0 && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
                             👁️ {newsItem.views}
                           </span>
                         )}
@@ -533,49 +581,13 @@ export default function NotificationsPage() {
       </div>
 
       {/* Right Side - Content Detail */}
-      <div className="flex-1 flex flex-col">
-        {selectedNews ? (
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-3xl mx-auto">
-              {/* News Header */}
-              <div className="mb-6">
-                <h1 className="text-3xl font-bold mb-4">{selectedNews.title}</h1>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
-                  <span>{formatTime(selectedNews.publishedAt || selectedNews.createdAt)}</span>
-                  <Badge variant="secondary">📰 Tin tức</Badge>
-                  {selectedNews.views > 0 && (
-                    <span>👁️ {selectedNews.views} lượt xem</span>
-                  )}
-                </div>
-                {selectedNews.tags && selectedNews.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {selectedNews.tags.map((tag, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        🏷️ {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Featured Image */}
-              {selectedNews.image && (
-                <div className="mb-6">
-                  <img
-                    src={selectedNews.image}
-                    alt={selectedNews.title}
-                    className="w-full max-h-96 object-contain rounded-lg border border-border shadow-md"
-                  />
-                </div>
-              )}
-
-              {/* News Content */}
-              <div
-                className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: selectedNews.content }}
-              />
-            </div>
-          </div>
+      <div className="flex-1 flex flex-col bg-background">
+        {contentType === 'news' ? (
+          selectedNews ? (
+            <NewsDetail news={selectedNews} />
+          ) : (
+            <LatestNewsPreview recentNews={recentNews} loading={recentLoading} onSelect={handleSelectNews} maxItems={5} />
+          )
         ) : selectedNotification ? (
           <div className="flex-1 overflow-y-auto p-6">
             <div className="max-w-3xl mx-auto">

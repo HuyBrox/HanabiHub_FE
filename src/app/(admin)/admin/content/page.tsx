@@ -222,6 +222,14 @@ export default function AdminContentAndNotificationsPage() {
     status: newsStatusFilter !== "all" ? newsStatusFilter : undefined,
   });
   const news = newsData?.data || [];
+
+  // Recent news (for detail view sidebar) - latest 5 published
+  const { data: recentNewsData, isLoading: recentNewsLoading } = useGetNewsListQuery({
+    page: 1,
+    limit: 5,
+    status: 'published',
+  });
+  const recentNews = recentNewsData?.data || [];
   
   // Reports - Auto fetch when params change
   const { data: reportsData, isLoading: reportsLoading } = useGetReportsListQuery({
@@ -993,6 +1001,8 @@ export default function AdminContentAndNotificationsPage() {
                     value={notificationMessage}
                     onChange={(e) => setNotificationMessage(e.target.value)}
                     rows={4}
+                    className="bg-white text-black placeholder:text-gray-500 border-gray-300"
+
                   />
                   {showVariableHelper && (
                     <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md text-xs">
@@ -1203,6 +1213,8 @@ export default function AdminContentAndNotificationsPage() {
                     value={notificationMessage}
                     onChange={(e) => setNotificationMessage(e.target.value)}
                     rows={4}
+                    className="bg-white text-black placeholder:text-gray-500 border-gray-300"
+
                   />
                 </div>
                 <Button 
@@ -1286,6 +1298,8 @@ export default function AdminContentAndNotificationsPage() {
                     value={scheduleContent}
                     onChange={(e) => setScheduleContent(e.target.value)}
                     rows={3}
+                    className="bg-white text-black placeholder:text-gray-500 border-gray-300"
+
                   />
                 </div>
 
@@ -1450,7 +1464,7 @@ export default function AdminContentAndNotificationsPage() {
         </TabsContent>
 
         {/* News Tab */}
-        <TabsContent value="news" className="mt-6">
+        <TabsContent value="news" className="mt-6 text-black">
           {/* News Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <Card className="bg-white border border-gray-200 shadow-sm">
@@ -1527,7 +1541,7 @@ export default function AdminContentAndNotificationsPage() {
                     value={newsContent}
                     onChange={(e) => setNewsContent(e.target.value)}
                     rows={8}
-                    className="mt-1"
+                    className="mt-1 bg-white text-black placeholder:text-gray-500 border-gray-300"
                   />
                 </div>
 
@@ -1672,37 +1686,37 @@ export default function AdminContentAndNotificationsPage() {
                   ) : (
                     <>
                       {news.map((newsItem) => (
-                        <div key={newsItem._id} className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg">
+                        <div key={newsItem._id} className="flex items-start gap-4 p-4 border border-border rounded-lg">
                           {/* News Thumbnail */}
                           {newsItem.image && (
-                            <div className="flex-shrink-0">
+                            <div className="w-24 aspect-square shrink-0 rounded-md overflow-hidden bg-muted border border-border">
                               <img
                                 src={newsItem.image}
                                 alt={newsItem.title}
-                                className="w-24 h-24 object-cover rounded-lg border border-gray-300"
+                                className="w-full h-full object-cover object-center"
                               />
                             </div>
                           )}
                           <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{newsItem.title}</h3>
+                            <h3 className="font-semibold text-black">{newsItem.title}</h3>
                             <p className="text-sm text-gray-700 line-clamp-2 mt-1">{newsItem.content}</p>
                             <div className="flex items-center gap-4 mt-2 text-xs text-gray-700">
-                              <span className="font-semibold text-gray-900">Tác giả: {typeof newsItem.author === 'object' ? newsItem.author?.fullname || 'Unknown' : newsItem.author}</span>
-                              <span className="font-semibold text-gray-900">Lượt xem: {newsItem.views || 0}</span>
-                              <span className="font-semibold text-gray-900">Thích: {newsItem.likes || 0}</span>
-                              <span className="font-semibold text-gray-900">Bình luận: {newsItem.comments || 0}</span>
-                              <Badge className="bg-blue-100 text-blue-800 text-xs font-medium">{newsItem.category || 'General'}</Badge>
-                              <span className="font-semibold text-gray-900">Cập nhật: {formatTimeAgo(newsItem.updatedAt)}</span>
+                              <span className="font-semibold text-black">Tác giả: {typeof newsItem.author === 'object' ? newsItem.author?.fullname || 'Unknown' : newsItem.author}</span>
+                              <span className="font-semibold text-black">Lượt xem: {newsItem.views || 0}</span>
+                              <span className="font-semibold text-black">Thích: {newsItem.likes || 0}</span>
+                              <span className="font-semibold text-black">Bình luận: {newsItem.comments || 0}</span>
+                              <Badge className="bg-primary/10 text-primary text-xs font-medium">{newsItem.category || 'General'}</Badge>
+                              <span className="font-semibold text-black">Cập nhật: {formatTimeAgo(newsItem.updatedAt)}</span>
                             </div>
                             <div className="flex gap-1 mt-2">
                               {newsItem.tags && newsItem.tags.length > 0 ? (
                                 newsItem.tags.map((tag, index) => (
-                                  <Badge key={index} variant="outline" className="text-xs text-gray-800 border-gray-400">
+                                  <Badge key={index} variant="outline" className="text-xs text-gray-700 border-border">
                                     #{tag}
                                   </Badge>
                                 ))
                               ) : (
-                                <span className="text-xs text-gray-500">Chưa có tags</span>
+                                <span className="text-xs text-gray-700">Chưa có tags</span>
                               )}
                             </div>
                           </div>
@@ -2176,7 +2190,7 @@ export default function AdminContentAndNotificationsPage() {
                             <h3 className="font-bold !text-black" style={{ color: '#000000' }}>{notification.title}</h3>
                             <p className="text-sm !text-gray-700 line-clamp-2" style={{ color: '#374151' }}>{notification.content}</p>
                             <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs text-black">
                                 {notification.isSystem ? "🌐 Hệ thống" : "👤 Cá nhân"}
                               </Badge>
                               <span className="flex items-center gap-1">
@@ -2355,6 +2369,8 @@ export default function AdminContentAndNotificationsPage() {
                     value={templateMessage}
                     onChange={(e) => setTemplateMessage(e.target.value)}
                     rows={6}
+                    className="bg-white text-black placeholder:text-gray-500 border-gray-300"
+
                   />
                 </div>
                 <Button 
@@ -2615,7 +2631,7 @@ export default function AdminContentAndNotificationsPage() {
                   value={editingTemplate.message}
                   onChange={(e) => setEditingTemplate({...editingTemplate, message: e.target.value})}
                   rows={6}
-                  className="mt-1"
+                  className="mt-1 bg-white text-black placeholder:text-gray-500 border-gray-300"
                 />
               </div>
             </div>
@@ -2668,7 +2684,7 @@ export default function AdminContentAndNotificationsPage() {
                   value={editingNews.content}
                   onChange={(e) => setEditingNews({...editingNews, content: e.target.value})}
                   rows={8}
-                  className="mt-1"
+                  className="mt-1 bg-white text-black placeholder:text-gray-500 border-gray-300"
                 />
               </div>
 
@@ -2763,45 +2779,78 @@ export default function AdminContentAndNotificationsPage() {
           </DialogHeader>
           
           {viewingNews && (
-            <div className="space-y-6">
-              {/* News Header */}
-              <div className="border-b border-gray-200 pb-4">
-                <h1 className="text-3xl font-bold text-black mb-2">{viewingNews.title}</h1>
-                <div className="flex items-center gap-4 text-sm text-gray-800">
-                  <span className="font-semibold">Tác giả: {typeof viewingNews.author === 'object' ? (viewingNews.author?.fullname || viewingNews.author?.username || 'Unknown') : viewingNews.author}</span>
-                  <span className="font-semibold">Lượt xem: {viewingNews.views}</span>
-                  <span className="font-semibold">Thích: {viewingNews.likes}</span>
-                  <span className="font-semibold">Bình luận: {viewingNews.comments}</span>
-                  <Badge className={viewingNews.status === "published" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                    {viewingNews.status === "published" ? "Đã xuất bản" : "Bản nháp"}
-                  </Badge>
-                </div>
-                <div className="flex gap-1 mt-2">
-                  {viewingNews?.tags?.map((tag: string, index: number) => (
-                    <Badge key={index} variant="outline" className="text-xs text-gray-800 border-gray-400">
-                      #{tag}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left: Full article */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* News Header */}
+                <div className="border-b border-gray-200 pb-4">
+                  <h1 className="text-3xl font-bold text-black mb-2">{viewingNews.title}</h1>
+                  <div className="flex items-center gap-4 text-sm text-gray-800">
+                    <span className="font-semibold">Tác giả: {typeof viewingNews.author === 'object' ? (viewingNews.author?.fullname || viewingNews.author?.username || 'Unknown') : viewingNews.author}</span>
+                    <span className="font-semibold">Lượt xem: {viewingNews.views}</span>
+                    <span className="font-semibold">Thích: {viewingNews.likes}</span>
+                    <span className="font-semibold">Bình luận: {viewingNews.comments}</span>
+                    <Badge className={viewingNews.status === "published" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                      {viewingNews.status === "published" ? "Đã xuất bản" : "Bản nháp"}
                     </Badge>
-                  ))}
+                  </div>
+                  <div className="flex gap-1 mt-2">
+                    {viewingNews?.tags?.map((tag: string, index: number) => (
+                      <Badge key={index} variant="outline" className="text-xs text-gray-800 border-gray-400">
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Featured Image */}
+                {viewingNews.image && (
+                  <div className="my-6">
+                    <img
+                      src={viewingNews.image}
+                      alt={viewingNews.title}
+                      className="w-full max-h-96 object-contain rounded-lg border border-gray-300 shadow-md"
+                    />
+                  </div>
+                )}
+
+                {/* News Content */}
+                <div className="prose prose-gray max-w-none">
+                  <div className="whitespace-pre-wrap text-black leading-relaxed font-semibold text-lg">
+                    {viewingNews.content}
+                  </div>
                 </div>
               </div>
 
-              {/* Featured Image */}
-              {viewingNews.image && (
-                <div className="my-6">
-                  <img
-                    src={viewingNews.image}
-                    alt={viewingNews.title}
-                    className="w-full max-h-96 object-contain rounded-lg border border-gray-300 shadow-md"
-                  />
-                </div>
-              )}
-              
-              {/* News Content */}
-              <div className="prose prose-gray max-w-none">
-                <div className="whitespace-pre-wrap text-black leading-relaxed font-semibold text-lg">
-                  {viewingNews.content}
-                </div>
-              </div>
+              {/* Right: Recent articles */}
+              <aside className="lg:col-span-1 bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-4">Bài viết mới</h3>
+
+                {recentNewsLoading ? (
+                  <div className="text-sm text-gray-500">Đang tải...</div>
+                ) : recentNews && recentNews.length ? (
+                  <ul className="space-y-3">
+                    {recentNews
+                      .filter((item: any) => item._id !== viewingNews._id)
+                      .slice(0, 5)
+                      .map((item: any) => (
+                        <li key={item._id} className="flex gap-3 items-start cursor-pointer hover:bg-gray-100 rounded p-2" onClick={() => { setViewingNews(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                          {item.image ? (
+                            <img src={item.image} alt={item.title} className="w-16 h-12 object-cover rounded" />
+                          ) : (
+                            <div className="w-16 h-12 bg-gray-200 rounded" />
+                          )}
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-black">{item.title}</div>
+                            <div className="text-xs text-gray-600">{new Date(item.publishedAt || item.createdAt).toLocaleDateString()}</div>
+                          </div>
+                        </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-600">Không có bài viết mới</p>
+                )}
+              </aside>
             </div>
           )}
           
@@ -2904,7 +2953,7 @@ export default function AdminContentAndNotificationsPage() {
                   onChange={(e) => setAdminNote(e.target.value)}
                   placeholder="Nhập ghi chú của bạn..."
                   rows={4}
-                  className="mt-1"
+                  className="mt-1 bg-white text-black placeholder:text-gray-500 border-gray-300"
                 />
               </div>
             </div>
@@ -2949,7 +2998,7 @@ export default function AdminContentAndNotificationsPage() {
                   id="edit-notification-title"
                   value={editingNotification.title}
                   onChange={(e) => setEditingNotification({...editingNotification, title: e.target.value})}
-                  className="mt-1"
+                  className="mt-1 bg-white text-black placeholder:text-gray-500 border-gray-300"
                 />
               </div>
               
@@ -2960,7 +3009,7 @@ export default function AdminContentAndNotificationsPage() {
                   value={editingNotification.content}
                   onChange={(e) => setEditingNotification({...editingNotification, content: e.target.value})}
                   rows={6}
-                  className="mt-1"
+                  className="mt-1 bg-white text-black placeholder:text-gray-500 border-gray-300"
                 />
               </div>
             </div>

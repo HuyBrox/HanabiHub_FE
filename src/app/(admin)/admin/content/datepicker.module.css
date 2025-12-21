@@ -5,31 +5,31 @@
 .dateInput,
 .timeInput,
 .datetimeInput {
-  background-color: white !important;
-  color: #111827 !important;
-  border: 1px solid #d1d5db !important;
+  background-color: var(--color-input);
+  color: var(--color-foreground);
+  border: 1px solid var(--color-border);
   border-radius: 0.375rem;
   padding: 0.5rem 0.75rem;
   width: 100%;
   font-size: 0.875rem;
   font-weight: 500;
-  -webkit-text-fill-color: #111827 !important; /* Safari fix */
+  -webkit-text-fill-color: var(--color-foreground);
 }
 
 .dateInput:focus,
 .timeInput:focus,
 .datetimeInput:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-ring);
   outline-offset: 2px;
-  border-color: #3b82f6;
-  background-color: white !important;
-  color: #111827 !important;
+  border-color: var(--color-ring);
+  background-color: var(--color-input);
+  color: var(--color-foreground);
 }
 
 .dateInput::placeholder,
 .timeInput::placeholder,
 .datetimeInput::placeholder {
-  color: #9ca3af !important;
+  color: var(--color-muted-foreground);
 }
 
 

@@ -14,6 +14,7 @@ import { buildApiUrl } from "@/utils/api-helper";
 interface NotificationPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  sidebarCollapsed?: boolean;
 }
 
 interface Notification {
@@ -64,13 +65,16 @@ const formatTime = (dateString: string) => {
   return date.toLocaleDateString("vi-VN", { month: "short", day: "numeric" });
 };
 
-export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
+export function NotificationPanel({ isOpen, onClose, sidebarCollapsed = true }: NotificationPanelProps) {
   const { t } = useLanguage();
   const { socket, connected } = useSocketContext();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"thisMonth" | "previous">("thisMonth");
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Adjust left position to match sidebar width (collapsed: 4rem, expanded: 16rem)
+  const leftValue = sidebarCollapsed ? "4rem" : "16rem";
 
   // ✅ Fetch notifications từ API
   const fetchNotifications = async () => {
@@ -88,7 +92,31 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
 
       const data = await response.json();
       if (data.success && data.data?.items) {
-        setNotifications(data.data.items);
+        const items = data.data.items;
+        setNotifications(items);
+
+        // Auto-expand "news test 2" for demo: fetch its news data if available
+        try {
+          const demoNotif = items.find((n: any) => String(n.title || '').toLowerCase().includes('news test 2'));
+          if (demoNotif && demoNotif.newsId) {
+            (async () => {
+              try {
+                const res = await fetch(buildApiUrl(`/news/${demoNotif.newsId}`), { credentials: 'include' });
+                const json = await res.json();
+                if (json.success && json.data) {
+                  setNotifications((prev) => prev.map((n) => n._id === demoNotif._id ? { ...n, _expanded: true, newsData: json.data } : n));
+                } else {
+                  setNotifications((prev) => prev.map((n) => n._id === demoNotif._id ? { ...n, _expanded: true } : n));
+                }
+              } catch (err) {
+                console.error('Failed to fetch news for demo inline preview', err);
+                setNotifications((prev) => prev.map((n) => n._id === demoNotif._id ? { ...n, _expanded: true } : n));
+              }
+            })();
+          }
+        } catch (err) {
+          console.error('Demo auto-expand error', err);
+        }
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -198,7 +226,10 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
   const currentNotifications = activeTab === "thisMonth" ? thisMonthNotifications : previousNotifications;
 
   return (
-    <div className={cn(styles.notificationPanel, !isOpen && styles.closed)}>
+    <div
+      className={cn(styles.notificationPanel, !isOpen && styles.closed)}
+      style={{ left: leftValue }}
+    >
       <div className={styles.notificationPanelContent}>
         {/* Header */}
         <div className={styles.panelHeader}>
@@ -240,69 +271,122 @@ export function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
           ) : (
             <div className="p-4 space-y-4">
               {currentNotifications.map((notification) => (
-                <div
-                  key={notification._id}
-                  className="flex items-start gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                  onClick={() => {
-                    // mark as read
-                    if (!notification.isRead) handleMarkAsRead(notification._id);
-                    // If this notification links to a news, navigate to the news detail page
-                    if (notification.newsId) {
-                      router.push(`/news/${notification.newsId}`);
-                      // Close panel
-                      onClose();
-                      return;
-                    }
+                <div key={notification._id} className="space-y-2">
+                  <div
+                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                    onClick={async () => {
+                      // mark as read
+                      if (!notification.isRead) handleMarkAsRead(notification._id);
 
-                    // For non-news notifications, open the notifications page and highlight the notification
-                    router.push(`/notifications?openId=${notification._id}`);
-                    onClose();
-                  }}
-                >
-                  <div className="relative">
-                    {notification.image ? (
-                      // Show image thumbnail for news notifications
-                      <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-gray-300">
-                        <img
-                          src={notification.image}
-                          alt={notification.title}
-                          className="h-full w-full object-cover"
-                          style={{ width: "40px", height: "40px", display: "block" }}
-                          onError={(e) => {
-                            console.warn(`❌ Image failed to load for notification ${notification._id}`);
-                            console.warn(`   Image URL (first 100 chars): ${String(notification.image).substring(0, 100)}`);
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                          onLoad={() => {
-                            console.log(`✅ Image loaded successfully for notification ${notification._id}`);
-                            console.log(`   Image size: ${(notification.image?.length || 0) / 1024}KB`);
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      // Fallback to avatar
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage
-                          src={notification.sender?.avatar || "/placeholder.svg"}
-                          alt={notification.sender?.fullname || notification.title || "System"}
-                        />
-                        <AvatarFallback>
-                          {notification.sender?.fullname?.slice(0, 2).toUpperCase() || "SY"}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
+                      // If this notification links to a news, toggle inline preview instead of navigating
+                      if (notification.newsId) {
+                        const isExpanded = !!(notification as any)._expanded;
+                        // Toggle expansion flag on the notification in state
+                        setNotifications((prev) => prev.map((n) => n._id === notification._id ? { ...n, _expanded: !isExpanded } : n));
+
+                        // If expanding and we don't have news data yet, fetch it
+                        if (!isExpanded && !(notification as any).newsData) {
+                          try {
+                            const res = await fetch(buildApiUrl(`/news/${notification.newsId}`), { credentials: 'include' });
+                            const json = await res.json();
+                            if (json.success && json.data) {
+                              setNotifications((prev) => prev.map((n) => n._id === notification._id ? { ...n, newsData: json.data } : n));
+                            }
+                          } catch (err) {
+                            console.error('Failed to fetch news for inline preview', err);
+                          }
+                        }
+
+                        // Do not navigate away or close panel
+                        return;
+                      }
+
+                      // For non-news notifications, open the notifications page and highlight the notification
+                      router.push(`/notifications?openId=${notification._id}`);
+                      onClose();
+                    }}
+                  >
+                    <div className="relative">
+                      {notification.image ? (
+                        // Show image thumbnail for news notifications
+                        <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-muted flex-shrink-0 border border-gray-300">
+                          <img
+                            src={notification.image}
+                            alt={notification.title}
+                            className="h-full w-full object-cover"
+                            style={{ width: "40px", height: "40px", display: "block" }}
+                            onError={(e) => {
+                              console.warn(`❌ Image failed to load for notification ${notification._id}`);
+                              console.warn(`   Image URL (first 100 chars): ${String(notification.image).substring(0, 100)}`);
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        // Fallback to avatar (use notification title for alt/fallback initials, do NOT show sender name)
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage
+                            src={notification.sender?.avatar || "/placeholder.svg"}
+                            alt={notification.title || "System"}
+                          />
+                          <AvatarFallback>
+                            {(notification.title ? notification.title.slice(0, 2).toUpperCase() : "NT")}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                     <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-1">
                       {getNotificationIcon(notification.type)}
                     </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">
+                        <span className="font-semibold">{notification.title || 'Thông báo'}</span>
+                      </p>
+                      {notification.content && (
+                        <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{notification.content}</div>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">{formatTime(notification.createdAt)}</p>
+                    </div>
+                    {!notification.isRead && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2" />}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm">
-                      <span className="font-semibold">{notification.sender?.fullname || notification.title}</span>{" "}
-                      <span className="text-muted-foreground">{notification.content}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">{formatTime(notification.createdAt)}</p>
-                  </div>
-                  {!notification.isRead && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2" />}
+
+                  {/* Inline preview for news notifications */}
+                  {(notification as any)._expanded && (
+                    <div className="mx-3 p-4 rounded-md bg-card border border-border shadow-sm">
+                      <div className="flex items-start gap-4">
+                        {((notification as any).newsData?.image || notification.image) && (
+                          <div className="w-40 overflow-hidden rounded-md flex-shrink-0 bg-muted">
+                            <img
+                              src={(notification as any).newsData?.image || notification.image}
+                              alt={notification.title}
+                              className="w-full h-24 object-cover aspect-[16/9]"
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-foreground text-sm md:text-base mb-1">{(notification as any).newsData?.title || notification.title}</h4>
+                          <div className="text-sm text-muted-foreground mb-2 line-clamp-4">
+                            {((notification as any).newsData?.content && ((notification as any).newsData?.content.length > 200))
+                              ? ((notification as any).newsData?.content.slice(0, 200) + '...')
+                              : ((notification as any).newsData?.content || notification.content)}
+                          </div>
+                          <div className="text-xs text-muted-foreground mb-2">
+                            {((notification as any).newsData?.author && ((notification as any).newsData.author.fullname || notification.newsData.author.username)) ?
+                              `${(notification as any).newsData.author.fullname || (notification as any).newsData.author.username} • ` : ''}
+                            {(notification as any).newsData?.publishedAt ? new Date((notification as any).newsData?.publishedAt).toLocaleDateString('vi-VN') : ''}
+                          </div>
+                          <div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); router.push(`/news/${notification.newsId}`); onClose(); }}
+                              className="text-sm text-primary font-medium hover:underline"
+                            >
+                              Xem chi tiết
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
