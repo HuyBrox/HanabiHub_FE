@@ -1,14 +1,11 @@
-import type React from "react";
+﻿import type React from "react";
 import { AdminSidebar, AdminFooter, AdminMobileFooter } from "@/components/layout/admin";
-import { ExtensionCleanup } from "@/components/common";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-<<<<<<< HEAD
-=======
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -22,33 +19,16 @@ export default function AdminLayout({
           <AdminFooter />
         </div>
       </div>
->>>>>>> origin/main
 
-  return (
-    <>
-      <ExtensionCleanup />
-      <div className="min-h-screen bg-slate-50">
-        {/* Desktop Layout */}
-        <div className="hidden lg:flex h-screen">
-          <AdminSidebar />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <main className="flex-1 overflow-auto p-6">
-              {children}
-            </main>
-            <AdminFooter />
-          </div>
+      {/* Mobile Layout */}
+      <div className="lg:hidden">
+        <div className="min-h-screen pb-16">
+          <main className="p-4">
+            {children}
+          </main>
         </div>
-
-        {/* Mobile Layout */}
-        <div className="lg:hidden">
-          <div className="min-h-screen pb-16">
-            <main className="p-4">
-              {children}
-            </main>
-          </div>
-          <AdminMobileFooter />
-        </div>
+        <AdminMobileFooter />
       </div>
-    </>
+    </div>
   );
 }

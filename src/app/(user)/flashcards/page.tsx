@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
@@ -35,24 +35,24 @@ import {
 import { AddNewModal } from "@/components/flashcard/AddNewModal";
 import Link from "next/link";
 
-// Helper function để format thời gian
+// Helper function ─æß╗â format thß╗¥i gian
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   const now = new Date();
   const diffInMs = now.getTime() - date.getTime();
   const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
 
-  if (diffInDays === 0) return "Hôm nay";
-  if (diffInDays === 1) return "Hôm qua";
-  if (diffInDays < 7) return `${diffInDays} ngày trước`;
-  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} tuần trước`;
+  if (diffInDays === 0) return "H├┤m nay";
+  if (diffInDays === 1) return "H├┤m qua";
+  if (diffInDays < 7) return `${diffInDays} ng├áy tr╞░ß╗¢c`;
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} tuß║ºn tr╞░ß╗¢c`;
   return date.toLocaleDateString("vi-VN");
 };
 
-// Helper function để tính thời gian học dự kiến
+// Helper function ─æß╗â t├¡nh thß╗¥i gian hß╗ìc dß╗▒ kiß║┐n
 const estimateStudyTime = (cardCount: number) => {
-  const minutes = Math.ceil(cardCount * 0.3); // Giả sử mỗi card mất ~18 giây
-  if (minutes < 60) return `${minutes} phút`;
+  const minutes = Math.ceil(cardCount * 0.3); // Giß║ú sß╗¡ mß╗ùi card mß║Ñt ~18 gi├óy
+  if (minutes < 60) return `${minutes} ph├║t`;
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
@@ -60,12 +60,12 @@ const estimateStudyTime = (cardCount: number) => {
 
 const categoryConfig = {
   others: {
-    label: "Cộng đồng",
+    label: "Cß╗Öng ─æß╗ông",
     icon: Users,
     color: "bg-green-100 text-green-800 border-green-200",
   },
   mine: {
-    label: "Của tôi",
+    label: "Cß╗ºa t├┤i",
     icon: User,
     color: "bg-orange-100 text-orange-800 border-orange-200",
   },
@@ -82,18 +82,18 @@ function FlashcardsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 20;
 
-  // Ref để scroll to top
+  // Ref ─æß╗â scroll to top
   const contentTopRef = useRef<HTMLDivElement>(null);
 
-  // Debounce search query - chỉ gọi API sau 500ms người dùng dừng gõ
+  // Debounce search query - chß╗ë gß╗ìi API sau 500ms ng╞░ß╗¥i d├╣ng dß╗½ng g├╡
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  // Kiểm tra xem có đang search không - ổn định với useMemo
+  // Kiß╗âm tra xem c├│ ─æang search kh├┤ng - ß╗òn ─æß╗ïnh vß╗¢i useMemo
   const isSearching = useMemo(() => {
     return debouncedSearchQuery.trim().length > 0;
   }, [debouncedSearchQuery]);
 
-  // Map selectedCategory sang format BE (select) - ổn định với useMemo
+  // Map selectedCategory sang format BE (select) - ß╗òn ─æß╗ïnh vß╗¢i useMemo
   const selectParam = useMemo(() => {
     return selectedCategory === "mine"
       ? "me"
@@ -114,7 +114,7 @@ function FlashcardsPage() {
       limit,
     },
     {
-      skip: isSearching || selectedType === "flashcard", // Skip nếu đang search hoặc đang xem flashcard
+      skip: isSearching || selectedType === "flashcard", // Skip nß║┐u ─æang search hoß║╖c ─æang xem flashcard
     }
   );
 
@@ -132,7 +132,7 @@ function FlashcardsPage() {
       limit,
     },
     {
-      skip: !isSearching || selectedType === "flashcard", // Chỉ gọi nếu có search query và đang xem flashlist
+      skip: !isSearching || selectedType === "flashcard", // Chß╗ë gß╗ìi nß║┐u c├│ search query v├á ─æang xem flashlist
     }
   );
 
@@ -148,7 +148,7 @@ function FlashcardsPage() {
       limit,
     },
     {
-      skip: isSearching || selectedType === "flashlist", // Skip nếu đang search hoặc đang xem flashlist
+      skip: isSearching || selectedType === "flashlist", // Skip nß║┐u ─æang search hoß║╖c ─æang xem flashlist
     }
   );
 
@@ -166,11 +166,11 @@ function FlashcardsPage() {
       limit,
     },
     {
-      skip: !isSearching || selectedType === "flashlist", // Chỉ gọi nếu có search query và đang xem flashcard
+      skip: !isSearching || selectedType === "flashlist", // Chß╗ë gß╗ìi nß║┐u c├│ search query v├á ─æang xem flashcard
     }
   );
 
-  // Chọn data từ API nào đang active - ổn định với useMemo
+  // Chß╗ìn data tß╗½ API n├áo ─æang active - ß╗òn ─æß╗ïnh vß╗¢i useMemo
   const { data, isLoading, isError, refetch } = useMemo(() => {
     if (selectedType === "flashlist") {
       if (isSearching) {
@@ -225,7 +225,7 @@ function FlashcardsPage() {
     refetchAllCard,
   ]);
 
-  // Scroll to top khi đổi trang hoặc khi bắt đầu search
+  // Scroll to top khi ─æß╗òi trang hoß║╖c khi bß║»t ─æß║ºu search
   useEffect(() => {
     if (contentTopRef.current) {
       contentTopRef.current.scrollIntoView({
@@ -235,29 +235,29 @@ function FlashcardsPage() {
     }
   }, [currentPage]);
 
-  // Reset trang về 1 khi thay đổi bộ lọc hoặc search - chỉ khi thực sự cần
+  // Reset trang vß╗ü 1 khi thay ─æß╗òi bß╗Ö lß╗ìc hoß║╖c search - chß╗ë khi thß╗▒c sß╗▒ cß║ºn
   useEffect(() => {
-    // Chỉ reset khi search query thay đổi (không phải khi đang typing)
-    if (debouncedSearchQuery !== searchQuery) return; // Đang debounce, chưa reset
+    // Chß╗ë reset khi search query thay ─æß╗òi (kh├┤ng phß║úi khi ─æang typing)
+    if (debouncedSearchQuery !== searchQuery) return; // ─Éang debounce, ch╞░a reset
 
     setCurrentPage(1);
   }, [debouncedSearchQuery, selectedCategory, selectedLevel]);
 
-  // Reset category khi chuyển đổi giữa FlashList và FlashCard
+  // Reset category khi chuyß╗ân ─æß╗òi giß╗»a FlashList v├á FlashCard
   useEffect(() => {
     if (selectedType === "flashcard" && selectedCategory === "others") {
-      setSelectedCategory("all"); // FlashCard không có "others"
+      setSelectedCategory("all"); // FlashCard kh├┤ng c├│ "others"
     }
   }, [selectedType, selectedCategory]);
 
-  // Thêm state để track việc đang typing
+  // Th├¬m state ─æß╗â track viß╗çc ─æang typing
   const isTyping = searchQuery !== debouncedSearchQuery;
 
-  // Transform API data sang format UI - hỗ trợ cả FlashList và FlashCard
+  // Transform API data sang format UI - hß╗ù trß╗ú cß║ú FlashList v├á FlashCard
   const allItems = useMemo(() => {
     if (!data?.data) return [];
 
-    // Nếu đang search, data.results là mảng kết quả
+    // Nß║┐u ─æang search, data.results l├á mß║úng kß║┐t quß║ú
     if (isSearching && "results" in data.data) {
       const results = data.data.results as (IFlashList | IFlashCard)[];
       return results.map((item) => {
@@ -280,18 +280,18 @@ function FlashcardsPage() {
           const card = item as IFlashCard;
           return {
             ...card,
-            category: "mine" as const, // FlashCard chỉ có của user
+            category: "mine" as const, // FlashCard chß╗ë c├│ cß╗ºa user
             type: "flashcard" as const,
             cardCount: Array.isArray(card.cards) ? card.cards.length : 0,
-            author: "Bạn",
+            author: "Bß║ín",
           };
         }
       });
     }
 
-    // Nếu không search
+    // Nß║┐u kh├┤ng search
     if (selectedType === "flashlist") {
-      // FlashList data có publicLists và myLists
+      // FlashList data c├│ publicLists v├á myLists
       if ("publicLists" in data.data && "myLists" in data.data) {
         const { publicLists, myLists } = data.data;
 
@@ -315,21 +315,21 @@ function FlashcardsPage() {
           cardCount: Array.isArray(list.flashcards)
             ? list.flashcards.length
             : 0,
-          author: "Bạn",
+          author: "Bß║ín",
         }));
 
         return [...transformedMyLists, ...transformedPublicLists];
       }
     } else {
-      // FlashCard data có flashCards
+      // FlashCard data c├│ flashCards
       if ("flashCards" in data.data) {
         const { flashCards } = data.data;
         return flashCards.map((card) => ({
           ...card,
-          category: "mine" as const, // FlashCard chỉ có của user
+          category: "mine" as const, // FlashCard chß╗ë c├│ cß╗ºa user
           type: "flashcard" as const,
           cardCount: Array.isArray(card.cards) ? card.cards.length : 0,
-          author: "Bạn",
+          author: "Bß║ín",
         }));
       }
     }
@@ -337,15 +337,15 @@ function FlashcardsPage() {
     return [];
   }, [data, isSearching, selectedCategory, selectedType]);
 
-  // Nếu đang search, không cần filter client-side vì BE đã filter
-  // Nếu không search, vẫn filter theo category và level
+  // Nß║┐u ─æang search, kh├┤ng cß║ºn filter client-side v├¼ BE ─æ├ú filter
+  // Nß║┐u kh├┤ng search, vß║½n filter theo category v├á level
   const filteredSets = useMemo(() => {
     if (isSearching) {
-      // BE đã filter, chỉ cần filter theo type
+      // BE ─æ├ú filter, chß╗ë cß║ºn filter theo type
       return allItems.filter((item) => item.type === selectedType);
     }
 
-    // Client-side filter khi không search
+    // Client-side filter khi kh├┤ng search
     return allItems.filter((item) => {
       const matchesCategory =
         selectedCategory === "all" || item.category === selectedCategory;
@@ -363,12 +363,12 @@ function FlashcardsPage() {
 
     const pagination = data.data.pagination;
 
-    // Nếu đang search, lấy từ search response
+    // Nß║┐u ─æang search, lß║Ñy tß╗½ search response
     if (isSearching) {
       return "totalPages" in pagination ? pagination.totalPages : 0;
     }
 
-    // Nếu không search, lấy max của publicPages và myPages
+    // Nß║┐u kh├┤ng search, lß║Ñy max cß╗ºa publicPages v├á myPages
     if ("totalPublicPages" in pagination && "totalMyPages" in pagination) {
       return Math.max(
         pagination.totalPublicPages || 0,
@@ -385,19 +385,19 @@ function FlashcardsPage() {
     const maxVisiblePages = 5;
 
     if (totalPages <= maxVisiblePages) {
-      // Hiển thị tất cả pages nếu ít hơn maxVisiblePages
+      // Hiß╗ân thß╗ï tß║Ñt cß║ú pages nß║┐u ├¡t h╞ín maxVisiblePages
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Luôn hiển thị trang đầu
+      // Lu├┤n hiß╗ân thß╗ï trang ─æß║ºu
       pages.push(1);
 
       if (currentPage > 3) {
         pages.push("ellipsis");
       }
 
-      // Hiển thị các trang xung quanh trang hiện tại
+      // Hiß╗ân thß╗ï c├íc trang xung quanh trang hiß╗çn tß║íi
       const startPage = Math.max(2, currentPage - 1);
       const endPage = Math.min(totalPages - 1, currentPage + 1);
 
@@ -409,7 +409,7 @@ function FlashcardsPage() {
         pages.push("ellipsis");
       }
 
-      // Luôn hiển thị trang cuối
+      // Lu├┤n hiß╗ân thß╗ï trang cuß╗æi
       if (totalPages > 1) {
         pages.push(totalPages);
       }
@@ -451,11 +451,11 @@ function FlashcardsPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Có lỗi xảy ra</h3>
+          <h3 className="text-lg font-semibold mb-2">C├│ lß╗ùi xß║úy ra</h3>
           <p className="text-muted-foreground mb-4">
-            Không thể tải dữ liệu. Vui lòng thử lại.
+            Kh├┤ng thß╗â tß║úi dß╗» liß╗çu. Vui l├▓ng thß╗¡ lß║íi.
           </p>
-          <Button onClick={() => refetch()}>Thử lại</Button>
+          <Button onClick={() => refetch()}>Thß╗¡ lß║íi</Button>
         </div>
       </div>
     );
@@ -465,7 +465,7 @@ function FlashcardsPage() {
     <div className="min-h-screen bg-background relative">
       {/* Scroll anchor */}
       <div ref={contentTopRef} className="absolute top-0" />
-      {/* Thanh switcher bên phải */}
+      {/* Thanh switcher b├¬n phß║úi */}
       <div className="fixed top-1/2 right-[15px] -translate-y-1/2 z-50 flex flex-col">
         <button
           onClick={() => setSelectedType("flashcard")}
@@ -500,13 +500,13 @@ function FlashcardsPage() {
         <div className="max-w-6xl mx-auto flex flex-col gap-4">
           <h1 className="text-2xl font-bold">Flashcards & Sets</h1>
           <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
-            {/* Nút tạo mới */}
+            {/* N├║t tß║ío mß╗¢i */}
             <Button
               variant="outline"
               className="border-2 border-dashed border-primary text-primary w-full lg:w-auto"
               onClick={() => setOpenModal(true)}
             >
-              + Tạo mới
+              + Tß║ío mß╗¢i
             </Button>
             <AddNewModal open={openModal} onClose={() => setOpenModal(false)} />
 
@@ -514,12 +514,12 @@ function FlashcardsPage() {
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm flashcard..."
+                placeholder="T├¼m kiß║┐m flashcard..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
-              {/* Loading indicator khi đang debounce */}
+              {/* Loading indicator khi ─æang debounce */}
               {isTyping && (
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
@@ -527,19 +527,19 @@ function FlashcardsPage() {
               )}
             </div>
 
-            {/* Bộ lọc */}
+            {/* Bß╗Ö lß╗ìc */}
             <Select
               value={selectedCategory}
               onValueChange={setSelectedCategory}
             >
               <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Bộ lọc" />
+                <SelectValue placeholder="Bß╗Ö lß╗ìc" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="mine">Của tôi</SelectItem>
+                <SelectItem value="all">Tß║Ñt cß║ú</SelectItem>
+                <SelectItem value="mine">Cß╗ºa t├┤i</SelectItem>
                 {selectedType === "flashlist" && (
-                  <SelectItem value="others">Cộng đồng</SelectItem>
+                  <SelectItem value="others">Cß╗Öng ─æß╗ông</SelectItem>
                 )}
               </SelectContent>
             </Select>
@@ -550,7 +550,7 @@ function FlashcardsPage() {
                 <SelectValue placeholder="Level" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Cấp độ</SelectItem>
+                <SelectItem value="all">Cß║Ñp ─æß╗Ö</SelectItem>
                 <SelectItem value="N5">N5</SelectItem>
                 <SelectItem value="N4">N4</SelectItem>
                 <SelectItem value="N3">N3</SelectItem>
@@ -571,13 +571,13 @@ function FlashcardsPage() {
             </h2>
             {isSearching && !isTyping && (
               <p className="text-xs text-muted-foreground mt-1">
-                Kết quả tìm kiếm cho &quot;{debouncedSearchQuery}&quot;
+                Kß║┐t quß║ú t├¼m kiß║┐m cho &quot;{debouncedSearchQuery}&quot;
               </p>
             )}
           </div>
           <span className="text-sm text-muted-foreground">
             {filteredSets.length}{" "}
-            {selectedType === "flashcard" ? "cards" : "sets"} tìm thấy
+            {selectedType === "flashcard" ? "cards" : "sets"} t├¼m thß║Ñy
           </span>
         </div>
         <div className="max-w-6xl mx-auto">
@@ -586,21 +586,21 @@ function FlashcardsPage() {
               <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">
                 {isSearching
-                  ? "Không tìm thấy kết quả"
-                  : "Chưa có flashcard nào"}
+                  ? "Kh├┤ng t├¼m thß║Ñy kß║┐t quß║ú"
+                  : "Ch╞░a c├│ flashcard n├áo"}
               </h3>
               <p className="text-muted-foreground">
                 {isSearching
-                  ? "Thử thay đổi từ khoá hoặc bộ lọc"
-                  : "Hãy tạo flashcard đầu tiên của bạn"}
+                  ? "Thß╗¡ thay ─æß╗òi tß╗½ kho├í hoß║╖c bß╗Ö lß╗ìc"
+                  : "H├úy tß║ío flashcard ─æß║ºu ti├¬n cß╗ºa bß║ín"}
               </p>
             </div>
           ) : filteredSets.length === 0 && isTyping ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <h3 className="text-lg font-semibold mb-2">Đang tìm kiếm...</h3>
+              <h3 className="text-lg font-semibold mb-2">─Éang t├¼m kiß║┐m...</h3>
               <p className="text-muted-foreground">
-                Vui lòng chờ trong giây lát
+                Vui l├▓ng chß╗¥ trong gi├óy l├ít
               </p>
             </div>
           ) : (
@@ -647,7 +647,7 @@ function FlashcardsPage() {
                   </CardHeader>
                   <CardContent className="pt-0 p-2 sm:p-3 md:p-4 md:pt-0">
                     <p className="text-[10px] sm:text-xs text-muted-foreground mb-2 line-clamp-2">
-                      {set.description || "Chưa có mô tả"}
+                      {set.description || "Ch╞░a c├│ m├┤ tß║ú"}
                     </p>
 
                     <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground mb-2">
@@ -676,7 +676,7 @@ function FlashcardsPage() {
                     <div className="flex items-center justify-between">
                       <div className="text-[9px] sm:text-[10px] text-muted-foreground">
                         <p className="truncate max-w-[70px] sm:max-w-none">
-                          Tạo bởi {set.author}
+                          Tß║ío bß╗ƒi {set.author}
                         </p>
                         <p className="hidden md:block">
                           {formatDate(set.updatedAt)}
@@ -686,11 +686,7 @@ function FlashcardsPage() {
                         href={
                           set.type === "flashlist"
                             ? `/flashcards/flashlist/${set._id}`
-<<<<<<< HEAD
-                            : `/flashcards/${set._id}`
-=======
                             : `/flashcards/practice/${set._id}`
->>>>>>> origin/main
                         }
                       >
                         <Button
@@ -698,8 +694,8 @@ function FlashcardsPage() {
                           className="bg-primary hover:bg-primary/90 h-6 sm:h-7 md:h-8 text-[10px] sm:text-xs px-1.5 sm:px-2 group-hover:scale-105 group-hover:shadow-md transition-all duration-300 ease-out"
                         >
                           <Play className="h-2 w-2 sm:h-2.5 sm:w-2.5 mr-0.5" />
-                          <span className="hidden sm:inline">Học</span>
-                          <span className="sm:hidden">Học</span>
+                          <span className="hidden sm:inline">Hß╗ìc</span>
+                          <span className="sm:hidden">Hß╗ìc</span>
                         </Button>
                       </Link>
                     </div>
@@ -727,7 +723,7 @@ function FlashcardsPage() {
                         : "hover:bg-accent"
                     }`}
                   >
-                    <span>Trước</span>
+                    <span>Tr╞░ß╗¢c</span>
                   </PaginationPrevious>
                 </PaginationItem>
 

@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { withAuth } from "@/components/auth";
 import { Button } from "@/components/ui/button";
@@ -14,21 +14,104 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, Clock, Users, Star, BookOpen, Filter, Play } from "lucide-react";
-import { useGetAllCoursesQuery } from "@/store/services/courseApi";
-import { LoadingSpinner } from "@/components/loading";
+import { Search, Clock, Users, Star, BookOpen, Filter } from "lucide-react";
 
-// Helper function để format giá
-const formatPrice = (price: number) => {
-  if (price === 0) return "Miễn phí";
-  return `${price.toLocaleString('vi-VN')} VNĐ`;
-};
-
-// Helper function để format thời gian học dự kiến
-const estimateDuration = (lessonCount: number) => {
-  const weeks = Math.ceil(lessonCount / 3); // Giả sử 3 bài/tuần
-  return `${weeks} tuần`;
-};
+const courses = [
+  {
+    id: 1,
+    title: "Hiragana Mastery",
+    description:
+      "Master all 46 hiragana characters with interactive exercises and mnemonics",
+    image: "/japanese-hiragana-characters-colorful-illustration.png",
+    level: "Beginner",
+    duration: "2 weeks",
+    students: 1234,
+    rating: 4.8,
+    price: "Free",
+    category: "Writing System",
+    instructor: "Tanaka Sensei",
+    lessons: 12,
+    isPopular: true,
+  },
+  {
+    id: 2,
+    title: "Katakana Essentials",
+    description:
+      "Learn katakana characters used for foreign words and modern Japanese",
+    image: "/japanese-katakana-characters-modern-design.png",
+    level: "Beginner",
+    duration: "2 weeks",
+    students: 987,
+    rating: 4.7,
+    price: "$29",
+    category: "Writing System",
+    instructor: "Sato Sensei",
+    lessons: 10,
+    isPopular: false,
+  },
+  {
+    id: 3,
+    title: "Essential Kanji",
+    description: "Start your kanji journey with the most common 100 characters",
+    image: "/japanese-kanji-characters-traditional-calligraphy.png",
+    level: "Intermediate",
+    duration: "4 weeks",
+    students: 756,
+    rating: 4.9,
+    price: "$49",
+    category: "Writing System",
+    instructor: "Yamamoto Sensei",
+    lessons: 20,
+    isPopular: true,
+  },
+  {
+    id: 4,
+    title: "JLPT N5 Grammar",
+    description:
+      "Complete grammar course for JLPT N5 level with practice tests",
+    image: "/japanese-grammar-book-illustration.png",
+    level: "Beginner",
+    duration: "6 weeks",
+    students: 2341,
+    rating: 4.6,
+    price: "$79",
+    category: "Grammar",
+    instructor: "Suzuki Sensei",
+    lessons: 25,
+    isPopular: true,
+  },
+  {
+    id: 5,
+    title: "Business Japanese",
+    description:
+      "Professional Japanese for workplace communication and meetings",
+    image: "/japanese-business-meeting.png",
+    level: "Advanced",
+    duration: "8 weeks",
+    students: 432,
+    rating: 4.8,
+    price: "$129",
+    category: "Business",
+    instructor: "Watanabe Sensei",
+    lessons: 30,
+    isPopular: false,
+  },
+  {
+    id: 6,
+    title: "Japanese Conversation",
+    description: "Practice speaking with native speakers and build confidence",
+    image: "/japanese-conversation-practice.png",
+    level: "Intermediate",
+    duration: "5 weeks",
+    students: 1876,
+    rating: 4.7,
+    price: "$89",
+    category: "Speaking",
+    instructor: "Kobayashi Sensei",
+    lessons: 18,
+    isPopular: true,
+  },
+];
 
 const categories = [
   "All",
@@ -45,52 +128,17 @@ function CoursesPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedLevel, setSelectedLevel] = useState("All");
 
-  // Fetch courses từ API
-  const {
-    data: coursesData,
-    isLoading,
-    isError,
-    refetch,
-  } = useGetAllCoursesQuery({ limit: 50 });
+  const filteredCourses = courses.filter((course) => {
+    const matchesSearch =
+      course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      course.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "All" || course.category === selectedCategory;
+    const matchesLevel =
+      selectedLevel === "All" || course.level === selectedLevel;
 
-  // Transform và filter courses
-  const filteredCourses = useMemo(() => {
-    if (!coursesData?.data) return [];
-
-    return coursesData.data.filter((course) => {
-      const matchesSearch =
-        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesLevel =
-        selectedLevel === "All" || course.level === selectedLevel;
-
-      return matchesSearch && matchesLevel;
-    });
-  }, [coursesData, searchTerm, selectedLevel]);
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
-  // Error state
-  if (isError) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Có lỗi xảy ra</h3>
-          <p className="text-muted-foreground mb-4">
-            Không thể tải danh sách khóa học. Vui lòng thử lại.
-          </p>
-          <Button onClick={() => refetch()}>Thử lại</Button>
-        </div>
-      </div>
-    );
-  }
+    return matchesSearch && matchesCategory && matchesLevel;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -99,10 +147,11 @@ function CoursesPage() {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Khám phá khóa học tiếng Nhật
+              Discover Japanese Courses
             </h1>
             <p className="text-xl md:text-2xl mb-8 opacity-90">
-              Từ cơ bản đến nâng cao, tìm khóa học hoàn hảo cho hành trình học tiếng Nhật của bạn
+              From beginner to advanced, find the perfect course for your
+              Japanese learning journey
             </p>
 
             {/* Search Bar */}
@@ -110,7 +159,7 @@ function CoursesPage() {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <Input
                 type="text"
-                placeholder="Tìm kiếm khóa học..."
+                placeholder="Search courses..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-12 pr-4 py-4 text-lg rounded-full border-0 shadow-lg"
@@ -126,7 +175,7 @@ function CoursesPage() {
           <div className="flex items-center gap-2">
             <Filter className="h-5 w-5 text-gray-600" />
             <span className="font-medium text-gray-700 dark:text-gray-300">
-              Bộ lọc:
+              Filters:
             </span>
           </div>
 
@@ -172,7 +221,7 @@ function CoursesPage() {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-gray-600 dark:text-gray-400">
-            Hiển thị {filteredCourses.length} trong {coursesData?.data?.length || 0} khóa học
+            Showing {filteredCourses.length} of {courses.length} courses
           </p>
         </div>
 
@@ -180,22 +229,22 @@ function CoursesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredCourses.map((course) => (
             <Card
-              key={course._id}
+              key={course.id}
               className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden"
             >
               <div className="relative">
                 <img
-                  src={course.thumbnail || "/placeholder.svg"}
+                  src={course.image || "/placeholder.svg"}
                   alt={course.title}
                   className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-                {(course.studentCount || course.students?.length || 0) > 100 && (
+                {course.isPopular && (
                   <Badge className="absolute top-4 left-4 bg-orange-500 hover:bg-orange-600">
-                    Phổ biến
+                    Popular
                   </Badge>
                 )}
                 <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 text-sm font-medium">
-                  {formatPrice(course.price)}
+                  {course.price}
                 </div>
               </div>
 
@@ -213,12 +262,16 @@ function CoursesPage() {
 
                 <div className="flex items-center gap-4 text-sm text-gray-500 mt-4">
                   <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span>{course.rating}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
-                    <span>{(course.studentCount || course.students?.length || 0).toLocaleString()}</span>
+                    <span>{course.students.toLocaleString()}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    <span>{estimateDuration(course.lessons?.length || 0)}</span>
+                    <span>{course.duration}</span>
                   </div>
                 </div>
               </CardHeader>
@@ -228,30 +281,21 @@ function CoursesPage() {
                   <Badge variant="secondary">{course.level}</Badge>
                   <div className="flex items-center gap-1 text-sm text-gray-500">
                     <BookOpen className="h-4 w-4" />
-                    <span>{course.lessons?.length || 0} bài học</span>
+                    <span>{course.lessons} lessons</span>
                   </div>
                 </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Giảng viên: {course.instructor?.fullname || 'Chưa xác định'}
+                  Instructor: {course.instructor}
                 </p>
               </CardContent>
 
               <CardFooter>
-                <div className="flex gap-2 w-full">
-                  <Link href={`/courses/${course._id}/detail`} className="flex-1">
-                    <Button variant="outline" className="w-full">
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Chi tiết
-                    </Button>
-                  </Link>
-                  <Link href={`/courses/${course._id}`} className="flex-1">
-                    <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
-                      <Play className="h-4 w-4 mr-2" />
-                      Học ngay
-                    </Button>
-                  </Link>
-                </div>
+                <Link href={`/courses/${course.id}/preview`} className="w-full">
+                  <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
+                    View Course
+                  </Button>
+                </Link>
               </CardFooter>
             </Card>
           ))}
@@ -263,10 +307,10 @@ function CoursesPage() {
               <BookOpen className="h-16 w-16 mx-auto" />
             </div>
             <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
-              Không tìm thấy khóa học
+              No courses found
             </h3>
             <p className="text-gray-500">
-              Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc
+              Try adjusting your search or filter criteria
             </p>
           </div>
         )}
@@ -276,7 +320,3 @@ function CoursesPage() {
 }
 
 export default withAuth(CoursesPage);
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main

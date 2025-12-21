@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ const posts = [
       level: "N4",
     },
     content:
-      "Just passed my first JLPT practice test! The kanji flashcards really helped. 頑張って！ Anyone else preparing for December?",
+      "Just passed my first JLPT practice test! The kanji flashcards really helped. Θáæσ╝╡πüúπüª∩╝ü Anyone else preparing for December?",
     image: null,
     likes: 24,
     comments: 8,
@@ -56,7 +56,7 @@ const posts = [
       level: "N5",
     },
     content:
-      "Finally memorized all hiragana! The spaced repetition system here is amazing. Moving on to katakana next week. ありがとうございます！",
+      "Finally memorized all hiragana! The spaced repetition system here is amazing. Moving on to katakana next week. πüéπéèπüîπü¿πüåπüöπüûπüäπü╛πüÖ∩╝ü",
     image: null,
     likes: 18,
     comments: 6,
@@ -71,7 +71,7 @@ const posts = [
       level: "N1",
     },
     content:
-      "Today I learned that 雨 (rain) + 雲 (cloud) doesn't make a compound word, but 雨雲 (rain cloud) does exist! Japanese is fascinating. What's your favorite kanji discovery?",
+      "Today I learned that Θ¢¿ (rain) + Θ¢▓ (cloud) doesn't make a compound word, but Θ¢¿Θ¢▓ (rain cloud) does exist! Japanese is fascinating. What's your favorite kanji discovery?",
     image: null,
     likes: 31,
     comments: 12,
@@ -86,7 +86,7 @@ const posts = [
       level: "N3",
     },
     content:
-      "Started learning Kansai dialect and it's so different from standard Japanese! だんだん instead of ありがとう is my new favorite. Anyone else studying dialects?",
+      "Started learning Kansai dialect and it's so different from standard Japanese! πüáπéôπüáπéô instead of πüéπéèπüîπü¿πüå is my new favorite. Anyone else studying dialects?",
     image: "/osaka-street-scene.png",
     likes: 27,
     comments: 9,
@@ -204,7 +204,7 @@ function CommunityPage() {
                       <Badge variant="outline" className="text-xs">
                         {post.user.level} Level
                       </Badge>
-                      <span className="text-sm text-muted-foreground">•</span>
+                      <span className="text-sm text-muted-foreground">ΓÇó</span>
                       <span className="text-sm text-muted-foreground">
                         {post.timeAgo}
                       </span>
@@ -339,7 +339,7 @@ function CommunityPage() {
             <div className="p-3 border border-border rounded-lg">
               <p className="font-medium text-sm">JLPT N3 Study Group</p>
               <p className="text-xs text-muted-foreground">
-                124 members • Daily practice
+                124 members ΓÇó Daily practice
               </p>
               <Button
                 variant="outline"
@@ -352,7 +352,7 @@ function CommunityPage() {
             <div className="p-3 border border-border rounded-lg">
               <p className="font-medium text-sm">Kanji Masters</p>
               <p className="text-xs text-muted-foreground">
-                89 members • Advanced learners
+                89 members ΓÇó Advanced learners
               </p>
               <Button
                 variant="outline"
@@ -365,7 +365,7 @@ function CommunityPage() {
             <div className="p-3 border border-border rounded-lg">
               <p className="font-medium text-sm">Anime Japanese Club</p>
               <p className="text-xs text-muted-foreground">
-                256 members • Learn through anime
+                256 members ΓÇó Learn through anime
               </p>
               <Button
                 variant="outline"
@@ -383,7 +383,3 @@ function CommunityPage() {
 }
 
 export default withAuth(CommunityPage);
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
