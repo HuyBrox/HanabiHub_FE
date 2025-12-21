@@ -58,10 +58,15 @@
     "next-themes": "latest",
     "peerjs": "^1.5.2",
     "react": "^19.2.0",
+<<<<<<< HEAD
     "react-datepicker": "^8.7.0",
     "react-day-picker": "9.9.0",
     "react-dom": "^19.2.0",
     "react-dropzone": "^14.3.8",
+=======
+    "react-day-picker": "9.9.0",
+    "react-dom": "^19.2.0",
+>>>>>>> origin/main
     "react-hook-form": "7.62.0",
     "react-redux": "9.2.0",
     "react-resizable-panels": "3.0.5",

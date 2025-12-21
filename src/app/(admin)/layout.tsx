@@ -7,6 +7,22 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+<<<<<<< HEAD
+=======
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex h-screen">
+        <AdminSidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <main className="flex-1 overflow-auto p-6">
+            {children}
+          </main>
+          <AdminFooter />
+        </div>
+      </div>
+>>>>>>> origin/main
 
   return (
     <>

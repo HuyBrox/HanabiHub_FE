@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* Card Animation Styles */
 .cardAnimation {
   animation: 2s gradientAngle infinite linear;
@@ -68,3 +69,75 @@
   background-size: 200% 200%;
   animation: gradient 3s ease infinite;
 }
+=======
+/* Card Animation Styles */
+.cardAnimation {
+  animation: 2s gradientAngle infinite linear;
+  border: 4px solid transparent;
+  background: var(--card-content-bg) padding-box,
+    conic-gradient(
+        from var(--gradient-angle),
+        #f97316 0%,
+        #ffffff 25%,
+        #f97316 50%,
+        #ffffff 75%,
+        #f97316 100%
+      )
+      border-box;
+}
+
+@keyframes gradientAngle {
+  to {
+    --gradient-angle: 1turn;
+  }
+}
+
+/* Scrollbar Hide */
+.scrollbarHide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbarHide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom animations */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+  }
+}
+
+/* Custom gradient animations */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animateGradient {
+  background-size: 200% 200%;
+  animation: gradient 3s ease infinite;
+}
+>>>>>>> origin/main

@@ -29,8 +29,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const notifiedRef = useRef(false);
 
   useEffect(() => {
+<<<<<<< HEAD
     // Chỉ xử lý redirect sau khi auth đã được khởi tạo
     if (!isInitialized || isLoading) return;
+=======
+    if (isLoading) return;
+>>>>>>> origin/main
 
     if (!isAuthenticated && !hasRedirected) {
       // Tránh thông báo lặp do StrictMode/multiple mounts
@@ -48,7 +52,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       setHasRedirected(true);
       router.push(redirectTo);
     }
+<<<<<<< HEAD
   }, [isAuthenticated, isLoading, isInitialized, router, redirectTo, warning, hasRedirected]);
+=======
+  }, [isAuthenticated, isLoading, router, redirectTo, warning, hasRedirected]);
+>>>>>>> origin/main
 
   // Hiển thị loading nếu đang khởi tạo auth hoặc đang loading
   if (!isInitialized || isLoading) {

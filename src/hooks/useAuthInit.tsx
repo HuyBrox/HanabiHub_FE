@@ -3,7 +3,11 @@
 import React, { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useGetCurrentUserQuery } from "../store/services/authApi";
+<<<<<<< HEAD
 import { loginStart, loginSuccess, logoutThunk } from "../store/slices/authSlice";
+=======
+import { loginStart, loginSuccess, logout } from "../store/slices/authSlice";
+>>>>>>> origin/main
 import { RootState } from "../store";
 import { authApi } from "../store/services/authApi";
 // Update the import path to the correct relative location
@@ -36,12 +40,20 @@ export const useAuthInit = () => {
       const errorStatus = (error as any)?.status;
       if (errorStatus === 401 || errorStatus === 403) {
         console.log("🔓 Session expired, logging out...");
+<<<<<<< HEAD
         dispatch(logoutThunk() as any);
+=======
+        dispatch(logout());
+>>>>>>> origin/main
       } else {
         console.log(
           "❌ No valid session found - token may be expired or invalid"
         );
+<<<<<<< HEAD
         dispatch(logoutThunk() as any);
+=======
+        dispatch(logout());
+>>>>>>> origin/main
       }
     }
   }, [isSuccess, isError, data, dispatch, error]);

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 "use client";
 
 import { useState, useEffect } from "react";
@@ -181,3 +182,15 @@ export default function Dashboard() {
     </div>
   );
 }
+=======
+const AdminDashboard = () => {
+    return (
+        <div>
+            <h1>Admin Dashboard</h1>
+            <p>Trang tổng quan admin</p>
+        </div>
+    );
+};
+
+export default AdminDashboard;
+>>>>>>> origin/main

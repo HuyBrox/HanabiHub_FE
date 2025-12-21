@@ -1,6 +1,15 @@
+<<<<<<< HEAD
 /* Global CSS for custom property */
 @property --gradient-angle {
   syntax: "<angle>";
   initial-value: 0deg;
   inherits: false;
 }
+=======
+/* Global CSS for custom property */
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+>>>>>>> origin/main

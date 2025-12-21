@@ -4,6 +4,7 @@ import { userApi } from "./services/userApi";
 import { authApi } from "./services/authApi";
 import { messageApi } from "./services/messageApi";
 import { flashcardApi } from "./services/flashcardApi";
+<<<<<<< HEAD
 import { courseApi } from "./services/courseApi";
 import { activityApi } from "./services/activityApi";
 import { learningInsightsApi } from "./services/learningInsightsApi";
@@ -12,6 +13,8 @@ import { notificationApi } from "./services/notificationApi";
 import { scheduledNotificationApi } from "./services/scheduledNotificationApi";
 import { templateApi } from "./services/templateApi";
 import { reportApi } from "./services/reportApi";
+=======
+>>>>>>> origin/main
 import authReducer from "./slices/authSlice";
 import {
   authMiddleware, // để tự động refresh token
@@ -25,6 +28,7 @@ export const store = configureStore({
     [authApi.reducerPath]: authApi.reducer,
     [messageApi.reducerPath]: messageApi.reducer,
     [flashcardApi.reducerPath]: flashcardApi.reducer,
+<<<<<<< HEAD
     [courseApi.reducerPath]: courseApi.reducer,
     [activityApi.reducerPath]: activityApi.reducer,
     [learningInsightsApi.reducerPath]: learningInsightsApi.reducer,
@@ -33,6 +37,8 @@ export const store = configureStore({
     [scheduledNotificationApi.reducerPath]: scheduledNotificationApi.reducer,
     [templateApi.reducerPath]: templateApi.reducer,
     [reportApi.reducerPath]: reportApi.reducer,
+=======
+>>>>>>> origin/main
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
@@ -40,6 +46,7 @@ export const store = configureStore({
       .concat(authApi.middleware)
       .concat(messageApi.middleware)
       .concat(flashcardApi.middleware)
+<<<<<<< HEAD
       .concat(courseApi.middleware)
       .concat(activityApi.middleware)
       .concat(learningInsightsApi.middleware)
@@ -48,6 +55,8 @@ export const store = configureStore({
       .concat(scheduledNotificationApi.middleware)
       .concat(templateApi.middleware)
       .concat(reportApi.middleware)
+=======
+>>>>>>> origin/main
       .concat(authMiddleware)
       .prepend(authListenerMiddleware.middleware),
 });

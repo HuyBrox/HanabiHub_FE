@@ -28,11 +28,14 @@ import {
   PieChart,
   ChevronLeft,
   ChevronRight,
+<<<<<<< HEAD
   RefreshCw,
   AlertCircle,
   TrendingDown,
   Calendar,
   Activity,
+=======
+>>>>>>> origin/main
 } from "lucide-react";
 import {
   LineChart,
@@ -51,6 +54,7 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
+<<<<<<< HEAD
   BarChart,
   Bar,
   Area,
@@ -68,6 +72,9 @@ import {
 } from "@/store/services/learningInsightsApi";
 import { LoadingSpinner } from "@/components/loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+=======
+} from "recharts";
+>>>>>>> origin/main
 
 export default function AIPracticePage() {
   const [messages, setMessages] = useState([
@@ -83,6 +90,7 @@ export default function AIPracticePage() {
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isChatbotOpen, setIsChatbotOpen] = useState(true);
+<<<<<<< HEAD
   const [timeRange, setTimeRange] = useState<7 | 30>(7);
 
   // Fetch data from BE
@@ -101,6 +109,8 @@ export default function AIPracticePage() {
 
   const [forceUpdate, { isLoading: isUpdating }] =
     useForceUpdateInsightsMutation();
+=======
+>>>>>>> origin/main
 
   const handleSendMessage = () => {
     if (!inputMessage.trim()) return;
@@ -121,6 +131,7 @@ export default function AIPracticePage() {
     setInputMessage("");
   };
 
+<<<<<<< HEAD
   const handleForceUpdate = async () => {
     try {
       await forceUpdate().unwrap();
@@ -191,10 +202,36 @@ export default function AIPracticePage() {
       value: analysis.flashcardMastery.difficultCards,
       color: "#f97316",
     },
+=======
+  const weeklyProgressData = [
+    { day: "T2", hours: 2.5, accuracy: 75 },
+    { day: "T3", hours: 3.2, accuracy: 78 },
+    { day: "T4", hours: 1.8, accuracy: 72 },
+    { day: "T5", hours: 4.1, accuracy: 85 },
+    { day: "T6", hours: 3.5, accuracy: 82 },
+    { day: "T7", hours: 2.9, accuracy: 80 },
+    { day: "CN", hours: 5.2, accuracy: 88 },
+  ];
+
+  const skillRadarData = [
+    { skill: "Ngữ pháp", value: 78 },
+    { skill: "Từ vựng", value: 85 },
+    { skill: "Kanji", value: 65 },
+    { skill: "Nghe", value: 72 },
+    { skill: "Đọc", value: 80 },
+    { skill: "Viết", value: 70 },
+  ];
+
+  const flashcardDistribution = [
+    { name: "Thành thạo", value: 156, color: "#22c55e" },
+    { name: "Đang học", value: 89, color: "#3b82f6" },
+    { name: "Khó nhớ", value: 23, color: "#f97316" },
+>>>>>>> origin/main
   ];
 
   const COLORS = ["#22c55e", "#3b82f6", "#f97316"];
 
+<<<<<<< HEAD
   // Map overall level to display text
   const getLevelDisplay = (level: string) => {
     const levelMap = {
@@ -232,6 +269,8 @@ export default function AIPracticePage() {
   // Get detailed performance
   const detailedPerf = detailedPerfData?.data;
 
+=======
+>>>>>>> origin/main
   return (
     <div className="h-full flex flex-col lg:flex-row gap-4 p-2 sm:p-4 bg-background">
       {/* Left Column - Analytics Dashboard */}
@@ -240,6 +279,7 @@ export default function AIPracticePage() {
           isChatbotOpen ? "lg:flex-[3]" : "lg:flex-1"
         }`}
       >
+<<<<<<< HEAD
         {/* Header with Refresh Button */}
         <div className="flex justify-between items-center">
           <div>
@@ -262,6 +302,9 @@ export default function AIPracticePage() {
         </div>
 
         {/* Overview Cards with real data */}
+=======
+        {/* Overview Cards with animation */}
+>>>>>>> origin/main
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
             <CardHeader className="pb-3">
@@ -272,11 +315,17 @@ export default function AIPracticePage() {
             </CardHeader>
             <CardContent>
               <div className="text-xl sm:text-2xl font-bold text-primary">
+<<<<<<< HEAD
                 {getLevelDisplay(performance.overallLevel)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {performance.overallLevel}
               </p>
+=======
+                N4
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Trung cấp</p>
+>>>>>>> origin/main
             </CardContent>
           </Card>
 
@@ -288,6 +337,7 @@ export default function AIPracticePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+<<<<<<< HEAD
               <div className="text-xl sm:text-2xl font-bold">
                 {performance.weeklyProgress >= 0 ? "+" : ""}
                 {Math.round(performance.weeklyProgress)}%
@@ -296,6 +346,10 @@ export default function AIPracticePage() {
                 value={Math.min(Math.abs(performance.weeklyProgress), 100)}
                 className="mt-2 h-2"
               />
+=======
+              <div className="text-xl sm:text-2xl font-bold">+12%</div>
+              <Progress value={75} className="mt-2 h-2" />
+>>>>>>> origin/main
             </CardContent>
           </Card>
 
@@ -307,10 +361,15 @@ export default function AIPracticePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+<<<<<<< HEAD
               <div className="text-xl sm:text-2xl font-bold">
                 {Math.round(performance.consistency)}%
               </div>
               <Progress value={performance.consistency} className="mt-2 h-2" />
+=======
+              <div className="text-xl sm:text-2xl font-bold">85%</div>
+              <Progress value={85} className="mt-2 h-2" />
+>>>>>>> origin/main
             </CardContent>
           </Card>
 
@@ -322,14 +381,20 @@ export default function AIPracticePage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+<<<<<<< HEAD
               <div className="text-xl sm:text-2xl font-bold">
                 {Math.round(performance.retention)}%
               </div>
               <Progress value={performance.retention} className="mt-2 h-2" />
+=======
+              <div className="text-xl sm:text-2xl font-bold">78%</div>
+              <Progress value={78} className="mt-2 h-2" />
+>>>>>>> origin/main
             </CardContent>
           </Card>
         </div>
 
+<<<<<<< HEAD
         {/* Weak Areas Alert */}
         {weakAreas?.hasWeakAreas && (
           <Alert variant="destructive" className="border-orange-500 bg-orange-50 dark:bg-orange-950/30 animate-in fade-in slide-in-from-bottom-4">
@@ -589,6 +654,74 @@ export default function AIPracticePage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={350}>
+=======
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-300">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Tiến độ tuần này
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Thời gian học và độ chính xác theo ngày
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={weeklyProgressData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="day" className="text-xs" />
+                <YAxis yAxisId="left" className="text-xs" />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  className="text-xs"
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--background))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                />
+                <Legend />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="hours"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  name="Giờ học"
+                  dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="accuracy"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  name="Độ chính xác (%)"
+                  dot={{ fill: "#22c55e", r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-400">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Target className="h-5 w-5 text-primary" />
+              Phân tích kỹ năng
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Đánh giá toàn diện các kỹ năng tiếng Nhật
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+>>>>>>> origin/main
               <RadarChart data={skillRadarData}>
                 <PolarGrid className="stroke-muted" />
                 <PolarAngleAxis dataKey="skill" className="text-xs" />
@@ -613,6 +746,7 @@ export default function AIPracticePage() {
                 />
               </RadarChart>
             </ResponsiveContainer>
+<<<<<<< HEAD
 
             {/* Skill Details */}
             <div className="grid grid-cols-2 gap-4 mt-4">
@@ -648,17 +782,24 @@ export default function AIPracticePage() {
                 </div>
               ))}
             </div>
+=======
+>>>>>>> origin/main
           </CardContent>
         </Card>
 
         {/* Course Progress */}
+<<<<<<< HEAD
         <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-400">
+=======
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-500">
+>>>>>>> origin/main
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <BarChart3 className="h-5 w-5 text-primary" />
               Tiến độ khóa học
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
+<<<<<<< HEAD
               {analysis.courseProgress.coursesInProgress} khóa đang học
             </CardDescription>
           </CardHeader>
@@ -698,11 +839,64 @@ export default function AIPracticePage() {
                 ))}
               </div>
             )}
+=======
+              Các khóa học đang học và mức độ hoàn thành
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 group hover:bg-muted/50 p-3 rounded-lg transition-colors">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Hiragana cơ bản</span>
+                <span className="text-muted-foreground">95%</span>
+              </div>
+              <Progress
+                value={95}
+                className="h-2 transition-all duration-500"
+              />
+              <p className="text-xs text-muted-foreground">
+                Thời gian trung bình: 2.5 giờ/tuần
+              </p>
+            </div>
+
+            <div className="space-y-2 group hover:bg-muted/50 p-3 rounded-lg transition-colors">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Katakana nâng cao</span>
+                <span className="text-muted-foreground">67%</span>
+              </div>
+              <Progress
+                value={67}
+                className="h-2 transition-all duration-500"
+              />
+              <p className="text-xs text-muted-foreground">
+                Thời gian trung bình: 1.8 giờ/tuần
+              </p>
+            </div>
+
+            <div className="space-y-2 group hover:bg-muted/50 p-3 rounded-lg transition-colors">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium text-orange-600">
+                  Kanji cơ bản
+                </span>
+                <span className="text-orange-600">32%</span>
+              </div>
+              <Progress
+                value={32}
+                className="h-2 bg-orange-100 transition-all duration-500"
+              />
+              <p className="text-xs text-orange-600">
+                ⚠️ Đang gặp khó khăn - Cần ôn tập thêm
+              </p>
+            </div>
+>>>>>>> origin/main
           </CardContent>
         </Card>
 
         {/* Lesson Analysis */}
+<<<<<<< HEAD
         <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-500">
+=======
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-600">
+>>>>>>> origin/main
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <BookOpen className="h-5 w-5 text-primary" />
@@ -732,7 +926,11 @@ export default function AIPracticePage() {
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
+<<<<<<< HEAD
                       {analysis.lessonMastery.videoLessons.completionRate}%
+=======
+                      89%
+>>>>>>> origin/main
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Tỷ lệ xem hết
@@ -740,7 +938,11 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
+<<<<<<< HEAD
                       {analysis.lessonMastery.videoLessons.averageWatchTime} phút
+=======
+                      12 phút
+>>>>>>> origin/main
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Thời lượng TB
@@ -748,7 +950,11 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
+<<<<<<< HEAD
                       {analysis.lessonMastery.videoLessons.rewatch} lần
+=======
+                      2.3 lần
+>>>>>>> origin/main
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Số lần xem lại
@@ -761,7 +967,11 @@ export default function AIPracticePage() {
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-green-600">
+<<<<<<< HEAD
                       {analysis.lessonMastery.taskLessons.averageScore}%
+=======
+                      8.2/10
+>>>>>>> origin/main
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Điểm TB
@@ -769,15 +979,24 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-blue-600">
+<<<<<<< HEAD
                       {analysis.lessonMastery.taskLessons.averageAttempts} lần
+=======
+                      1.5 lần
+>>>>>>> origin/main
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Làm lại
                     </p>
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+<<<<<<< HEAD
                     <div className="text-base sm:text-lg font-bold text-orange-600">
                       {analysis.lessonMastery.taskLessons.commonMistakes.length}
+=======
+                    <div className="text-xl sm:text-2xl font-bold text-orange-600">
+                      Ngữ pháp
+>>>>>>> origin/main
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Lỗi thường
@@ -789,8 +1008,12 @@ export default function AIPracticePage() {
           </CardContent>
         </Card>
 
+<<<<<<< HEAD
         {/* Flashcard Statistics */}
         <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-600">
+=======
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-700">
+>>>>>>> origin/main
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <PieChart className="h-5 w-5 text-primary" />
@@ -856,12 +1079,19 @@ export default function AIPracticePage() {
                 <span className="text-sm font-medium">
                   Tỷ lệ đúng (24h gần nhất)
                 </span>
+<<<<<<< HEAD
                 <span className="text-lg font-bold text-primary">
                   {analysis.flashcardMastery.dailyRetention}%
                 </span>
               </div>
               <Progress
                 value={analysis.flashcardMastery.dailyRetention}
+=======
+                <span className="text-lg font-bold text-primary">82%</span>
+              </div>
+              <Progress
+                value={82}
+>>>>>>> origin/main
                 className="mt-2 h-2 transition-all duration-500"
               />
             </div>
@@ -869,7 +1099,11 @@ export default function AIPracticePage() {
         </Card>
 
         {/* Study Patterns */}
+<<<<<<< HEAD
         <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-700">
+=======
+        <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4 delay-800">
+>>>>>>> origin/main
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Clock className="h-5 w-5 text-primary" />
@@ -882,55 +1116,86 @@ export default function AIPracticePage() {
                 <p className="text-xs text-muted-foreground">
                   Khung giờ học tốt nhất
                 </p>
+<<<<<<< HEAD
                 <p className="text-base sm:text-lg font-bold mt-1 capitalize">
                   {patterns.bestStudyTime}
+=======
+                <p className="text-base sm:text-lg font-bold mt-1">
+                  19:00 - 21:00
+>>>>>>> origin/main
                 </p>
               </div>
               <div className="p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted hover:scale-105 transition-all">
                 <p className="text-xs text-muted-foreground">
                   Độ dài phiên học TB
                 </p>
+<<<<<<< HEAD
                 <p className="text-base sm:text-lg font-bold mt-1">
                   {patterns.averageSessionLength} phút
                 </p>
+=======
+                <p className="text-base sm:text-lg font-bold mt-1">45 phút</p>
+>>>>>>> origin/main
               </div>
               <div className="p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted hover:scale-105 transition-all">
                 <p className="text-xs text-muted-foreground">Chuỗi ngày học</p>
                 <p className="text-base sm:text-lg font-bold mt-1">
+<<<<<<< HEAD
                   {patterns.currentStreak} ngày 🔥
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Dài nhất: {patterns.longestStreak} ngày
+=======
+                  12 ngày 🔥
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Dài nhất: 28 ngày
+>>>>>>> origin/main
                 </p>
               </div>
               <div className="p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted hover:scale-105 transition-all">
                 <p className="text-xs text-muted-foreground">
                   Nội dung yêu thích
                 </p>
+<<<<<<< HEAD
                 <p className="text-base sm:text-lg font-bold mt-1 capitalize">
                   {patterns.preferredContent === "video"
                     ? "Video"
                     : patterns.preferredContent === "task"
                     ? "Bài tập"
                     : "Flashcards"}
+=======
+                <p className="text-base sm:text-lg font-bold mt-1">
+                  Flashcards
+>>>>>>> origin/main
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
+<<<<<<< HEAD
         {/* System Suggestions (Rule-based, not AI) */}
         <Card className="shadow-sm border-primary/30 animate-in fade-in slide-in-from-bottom-4 delay-800">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Sparkles className="h-5 w-5 text-primary" />
               Gợi ý từ hệ thống
+=======
+        {/* AI Suggestions */}
+        <Card className="shadow-sm border-primary/30 animate-in fade-in slide-in-from-bottom-4 delay-900">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Gợi ý từ AI
+>>>>>>> origin/main
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
               Dựa trên phân tích học tập của bạn
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+<<<<<<< HEAD
             {/* Dynamic suggestions based on data */}
             {analysis.flashcardMastery.difficultCards > 5 && (
               <div className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer">
@@ -1009,11 +1274,60 @@ export default function AIPracticePage() {
                 </div>
               </div>
             )}
+=======
+            <div className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer">
+              <div className="flex items-start gap-3">
+                <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium text-xs sm:text-sm">
+                    Ôn lại flashcard N5 về thời gian
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Bạn đã không ôn phần này trong 3 ngày. Tỷ lệ ghi nhớ có thể
+                    giảm.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer">
+              <div className="flex items-start gap-3">
+                <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium text-xs sm:text-sm">
+                    Làm bài luyện ngữ pháp N4
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Điểm ngữ pháp của bạn đang thấp hơn trung bình. Hãy luyện
+                    tập thêm!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 hover:scale-105 transition-all cursor-pointer">
+              <div className="flex items-start gap-3">
+                <Zap className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-medium text-xs sm:text-sm">
+                    Thử học Kanji theo chủ đề
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Bạn học tốt hơn khi Kanji được nhóm theo chủ đề thay vì theo
+                    thứ tự.
+                  </p>
+                </div>
+              </div>
+            </div>
+>>>>>>> origin/main
           </CardContent>
         </Card>
       </div>
 
+<<<<<<< HEAD
       {/* Right Column - AI Chatbot (placeholder) */}
+=======
+>>>>>>> origin/main
       <div
         className={`flex flex-col transition-all duration-300 ${
           isChatbotOpen ? "flex-[2] lg:flex-[2]" : "w-12"

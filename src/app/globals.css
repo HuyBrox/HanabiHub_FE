@@ -144,6 +144,7 @@
     @apply bg-background text-foreground;
   }
 
+<<<<<<< HEAD
   /* 🔧 FIX: Date/Time input visibility in dark theme */
   input[type="date"],
   input[type="time"],
@@ -161,6 +162,8 @@
     cursor: pointer;
   }
 
+=======
+>>>>>>> origin/main
   /* Custom scrollbar styles */
   * {
     scrollbar-width: thin;
@@ -220,6 +223,7 @@
   animation: fadeIn 0.25s ease-out;
 }
 
+<<<<<<< HEAD
 /* ==================== React DatePicker Global Styles ==================== */
 /* ✅ Moved from datepicker.module.css to fix CSS module "pure selector" error */
 .react-datepicker {
@@ -378,6 +382,8 @@
   color: var(--color-muted-foreground) !important;
 }
 
+=======
+>>>>>>> origin/main
 /* Notification animations */
 @keyframes slideIn {
   from {

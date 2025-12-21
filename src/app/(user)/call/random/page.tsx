@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import Peer, { MediaConnection } from "peerjs";
 import { useNotification } from "@/components/notification/NotificationProvider";
 
+<<<<<<< HEAD
 const SERVER_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
 
 function RandomCallPage() {
@@ -37,6 +38,11 @@ function RandomCallPage() {
     partnerName?: string;
   } | null>(null);
   const [queueSize, setQueueSize] = useState(0);
+=======
+function RandomCallPage() {
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+>>>>>>> origin/main
   const [callDuration, setCallDuration] = useState(0);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);

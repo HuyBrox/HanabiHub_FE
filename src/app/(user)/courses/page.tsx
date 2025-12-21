@@ -276,4 +276,7 @@ function CoursesPage() {
 }
 
 export default withAuth(CoursesPage);
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
