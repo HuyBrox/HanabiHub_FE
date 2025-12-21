@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/pagination";
 import { AddNewModal } from "@/components/flashcard/AddNewModal";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 // Helper function để format thời gian
 const formatDate = (dateString: string) => {
@@ -73,6 +74,7 @@ const categoryConfig = {
 };
 
 function FlashcardsPage() {
+  const { user: currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
@@ -297,16 +299,21 @@ function FlashcardsPage() {
         const { publicLists, myLists } = data.data;
 
         // Map public lists
-        const transformedPublicLists = publicLists.map((list) => ({
-          ...list,
-          category: "others" as const,
-          type: "flashlist" as const,
-          cardCount: Array.isArray(list.flashcards)
-            ? list.flashcards.length
-            : 0,
-          author:
-            typeof list.user === "object" ? list.user.fullname : "Unknown",
-        }));
+        const transformedPublicLists = publicLists.map((list) => {
+          // Đảm bảo category là "others" cho public lists
+          return {
+            ...list,
+            category: "others" as const,
+            type: "flashlist" as const,
+            cardCount: Array.isArray(list.flashcards)
+              ? list.flashcards.length
+              : 0,
+            author:
+              typeof list.user === "object" && list.user !== null
+                ? list.user.fullname || list.user.username || "Unknown"
+                : "Unknown",
+          };
+        });
 
         // Map my lists
         const transformedMyLists = myLists.map((list) => ({
@@ -325,18 +332,30 @@ function FlashcardsPage() {
       // FlashCard data có flashCards
       if ("flashCards" in data.data) {
         const { flashCards } = data.data;
-        return flashCards.map((card) => ({
-          ...card,
-          category: "mine" as const, // FlashCard chỉ có của user
-          type: "flashcard" as const,
-          cardCount: Array.isArray(card.cards) ? card.cards.length : 0,
-          author: "Bạn",
-        }));
+        return flashCards.map((card) => {
+          // Xác định card có phải của user hiện tại không
+          const cardUserId = typeof card.user === "object" && card.user !== null
+            ? card.user._id || card.user.id
+            : card.user;
+          const isOwner = currentUser && cardUserId === currentUser._id;
+
+          return {
+            ...card,
+            category: isOwner ? ("mine" as const) : ("others" as const),
+            type: "flashcard" as const,
+            cardCount: Array.isArray(card.cards) ? card.cards.length : 0,
+            author: isOwner
+              ? "Bạn"
+              : typeof card.user === "object" && card.user !== null
+              ? card.user.fullname || card.user.username || "Unknown"
+              : "Unknown",
+          };
+        });
       }
     }
 
     return [];
-  }, [data, isSearching, selectedCategory, selectedType]);
+  }, [data, isSearching, selectedCategory, selectedType, currentUser]);
 
   // Nếu đang search, không cần filter client-side vì BE đã filter
   // Nếu không search, vẫn filter theo category và level

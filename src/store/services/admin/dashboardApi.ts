@@ -54,6 +54,20 @@ export const dashboardApi = createApi({
       transformResponse: (response: any) => response.data,
       invalidatesTags: ["Admin", "Dashboard"],
     }),
+
+    // 📊 Thống kê khóa học
+    getCourseStats: builder.query<any, void>({
+      query: () => "/admin/course-stats",
+      transformResponse: (response: any) => response.data,
+      providesTags: ["Dashboard"],
+    }),
+
+    // 📈 Thống kê tăng trưởng khóa học
+    getCourseGrowth: builder.query<any, void>({
+      query: () => "/admin/course-growth",
+      transformResponse: (response: any) => response.data,
+      providesTags: ["Dashboard"],
+    }),
   }),
 });
 
@@ -62,5 +76,7 @@ export const {
   useGetPopularCoursesQuery,
   useGetRecentActivitiesQuery,
   useCreateAdminMutation,
+  useGetCourseStatsQuery,
+  useGetCourseGrowthQuery,
 } = dashboardApi;
 

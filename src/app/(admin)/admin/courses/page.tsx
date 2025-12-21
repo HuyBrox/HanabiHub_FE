@@ -14,36 +14,39 @@ import {
   CreateCourseModal,
   CourseTable,
 } from "@/components/admin/course";
-
-// Mock data
-const mockStats = {
-  totalCourses: 24,
-  totalLessons: 156,
-  activeStudents: 342,
-  completionRate: 87,
-};
-
-const mockChartData = {
-  courses: [
-    { month: "T1", value: 8 },
-    { month: "T2", value: 12 },
-    { month: "T3", value: 15 },
-    { month: "T4", value: 18 },
-    { month: "T5", value: 20 },
-    { month: "T6", value: 24 },
-  ],
-  lessons: [
-    { month: "T1", value: 45 },
-    { month: "T2", value: 68 },
-    { month: "T3", value: 92 },
-    { month: "T4", value: 115 },
-    { month: "T5", value: 138 },
-    { month: "T6", value: 156 },
-  ],
-};
+import {
+  useGetCourseStatsQuery,
+  useGetCourseGrowthQuery,
+} from "@/store/services/admin/dashboardApi";
 
 const CourseManagement = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Fetch course statistics
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useGetCourseStatsQuery();
+
+  // Fetch course growth data
+  const {
+    data: growthData,
+    isLoading: growthLoading,
+    error: growthError,
+  } = useGetCourseGrowthQuery();
+
+  const stats = statsData || {
+    totalCourses: 0,
+    totalLessons: 0,
+    activeStudents: 0,
+    completionRate: 0,
+  };
+
+  const chartData = growthData || {
+    courses: [],
+    lessons: [],
+  };
 
   const handleCreateSuccess = () => {
     // TODO: Refresh course list after creating
@@ -99,7 +102,7 @@ const CourseManagement = () => {
                 Tổng Khóa Học
               </p>
               <p className="text-4xl font-bold text-white">
-                {mockStats.totalCourses}
+                {statsLoading ? "..." : stats.totalCourses}
               </p>
             </div>
           </div>
@@ -120,7 +123,7 @@ const CourseManagement = () => {
                 Tổng Bài Học
               </p>
               <p className="text-4xl font-bold text-white">
-                {mockStats.totalLessons}
+                {statsLoading ? "..." : stats.totalLessons}
               </p>
             </div>
           </div>
@@ -141,7 +144,7 @@ const CourseManagement = () => {
                 Học Viên Hoạt Động
               </p>
               <p className="text-4xl font-bold text-white">
-                {mockStats.activeStudents}
+                {statsLoading ? "..." : stats.activeStudents}
               </p>
             </div>
           </div>
@@ -162,7 +165,7 @@ const CourseManagement = () => {
                 Tỷ Lệ Hoàn Thành
               </p>
               <p className="text-4xl font-bold text-white">
-                {mockStats.completionRate}%
+                {statsLoading ? "..." : stats.completionRate}%
               </p>
             </div>
           </div>
@@ -195,9 +198,16 @@ const CourseManagement = () => {
                 <span className="text-sm font-semibold text-slate-800">
                   Khóa học
                 </span>
-                <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-1 rounded-full">
-                  +200% năm nay
-                </span>
+                {chartData.courses.length >= 2 && (
+                  <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-1 rounded-full">
+                    {(() => {
+                      const first = chartData.courses[0]?.value || 0;
+                      const last = chartData.courses[chartData.courses.length - 1]?.value || 0;
+                      const change = first > 0 ? Math.round(((last - first) / first) * 100) : 0;
+                      return change > 0 ? `+${change}%` : `${change}%`;
+                    })()}
+                  </span>
+                )}
               </div>
               <div className="relative h-52 lg:h-64">
                 <svg className="w-full h-full" viewBox="0 0 600 240">
@@ -216,69 +226,89 @@ const CourseManagement = () => {
                   ))}
 
                   {/* Course line path */}
-                  <path
-                    d={mockChartData.courses
-                      .map((item, i) => {
-                        const x = 60 + i * 100;
-                        const y = 200 - (item.value / 30) * 170;
-                        return `${i === 0 ? "M" : "L"} ${x} ${y}`;
-                      })
-                      .join(" ")}
-                    fill="none"
-                    stroke="url(#blueGradient)"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  {chartData.courses.length > 0 && (
+                    <>
+                      <path
+                        d={chartData.courses
+                          .map((item, i) => {
+                            const maxValue = Math.max(...chartData.courses.map((c: any) => c.value), 1);
+                            const x = 60 + (i / (chartData.courses.length - 1 || 1)) * 500;
+                            const y = 200 - (item.value / maxValue) * 170;
+                            return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+                          })
+                          .join(" ")}
+                        fill="none"
+                        stroke="url(#blueGradient)"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
 
-                  {/* Area under curve */}
-                  <path
-                    d={`${mockChartData.courses
-                      .map((item, i) => {
-                        const x = 60 + i * 100;
-                        const y = 200 - (item.value / 30) * 170;
-                        return `${i === 0 ? "M" : "L"} ${x} ${y}`;
-                      })
-                      .join(" ")} L 560 200 L 60 200 Z`}
-                    fill="url(#blueAreaGradient)"
-                    opacity="0.2"
-                  />
+                      {/* Area under curve */}
+                      <path
+                        d={`${chartData.courses
+                          .map((item, i) => {
+                            const maxValue = Math.max(...chartData.courses.map((c: any) => c.value), 1);
+                            const x = 60 + (i / (chartData.courses.length - 1 || 1)) * 500;
+                            const y = 200 - (item.value / maxValue) * 170;
+                            return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+                          })
+                          .join(" ")} L ${60 + ((chartData.courses.length - 1) / (chartData.courses.length - 1 || 1)) * 500} 200 L 60 200 Z`}
+                        fill="url(#blueAreaGradient)"
+                        opacity="0.2"
+                      />
 
-                  {/* Course points */}
-                  {mockChartData.courses.map((item, i) => {
-                    const x = 60 + i * 100;
-                    const y = 200 - (item.value / 30) * 170;
-                    return (
-                      <g key={i}>
-                        <circle cx={x} cy={y} r="8" fill="#3b82f6" opacity="0.2" />
-                        <circle cx={x} cy={y} r="5" fill="#3b82f6" />
-                        <circle cx={x} cy={y} r="2" fill="white" />
-                        <text
-                          x={x}
-                          y={y - 15}
-                          textAnchor="middle"
-                          className="text-xs font-bold"
-                          fill="#1e40af"
-                        >
-                          {item.value}
-                        </text>
-                      </g>
-                    );
-                  })}
+                      {/* Course points */}
+                      {chartData.courses.map((item: any, i: number) => {
+                        const maxValue = Math.max(...chartData.courses.map((c: any) => c.value), 1);
+                        const x = 60 + (i / (chartData.courses.length - 1 || 1)) * 500;
+                        const y = 200 - (item.value / maxValue) * 170;
+                        return (
+                          <g key={i}>
+                            <circle cx={x} cy={y} r="8" fill="#3b82f6" opacity="0.2" />
+                            <circle cx={x} cy={y} r="5" fill="#3b82f6" />
+                            <circle cx={x} cy={y} r="2" fill="white" />
+                            <text
+                              x={x}
+                              y={y - 15}
+                              textAnchor="middle"
+                              className="text-xs font-bold"
+                              fill="#1e40af"
+                            >
+                              {item.value}
+                            </text>
+                          </g>
+                        );
+                      })}
 
-                  {/* Month labels */}
-                  {mockChartData.courses.map((item, i) => (
-                    <text
-                      key={i}
-                      x={60 + i * 100}
-                      y="225"
-                      textAnchor="middle"
-                      className="text-xs font-medium"
-                      fill="#64748b"
-                    >
-                      {item.month}
+                      {/* Month labels */}
+                      {chartData.courses.map((item: any, i: number) => {
+                        const x = 60 + (i / (chartData.courses.length - 1 || 1)) * 500;
+                        return (
+                          <text
+                            key={i}
+                            x={x}
+                            y="225"
+                            textAnchor="middle"
+                            className="text-xs font-medium"
+                            fill="#64748b"
+                          >
+                            {item.month}
+                          </text>
+                        );
+                      })}
+                    </>
+                  )}
+                  {growthLoading && (
+                    <text x="300" y="120" textAnchor="middle" className="text-sm" fill="#64748b">
+                      Đang tải...
                     </text>
-                  ))}
+                  )}
+                  {!growthLoading && chartData.courses.length === 0 && (
+                    <text x="300" y="120" textAnchor="middle" className="text-sm" fill="#64748b">
+                      Chưa có dữ liệu
+                    </text>
+                  )}
 
                   <defs>
                     <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -301,9 +331,16 @@ const CourseManagement = () => {
                 <span className="text-sm font-semibold text-slate-800">
                   Bài học
                 </span>
-                <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-1 rounded-full">
-                  +247% năm nay
-                </span>
+                {chartData.lessons.length >= 2 && (
+                  <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-1 rounded-full">
+                    {(() => {
+                      const first = chartData.lessons[0]?.value || 0;
+                      const last = chartData.lessons[chartData.lessons.length - 1]?.value || 0;
+                      const change = first > 0 ? Math.round(((last - first) / first) * 100) : 0;
+                      return change > 0 ? `+${change}%` : `${change}%`;
+                    })()}
+                  </span>
+                )}
               </div>
               <div className="relative h-52 lg:h-64">
                 <svg className="w-full h-full" viewBox="0 0 600 240">
@@ -322,69 +359,89 @@ const CourseManagement = () => {
                   ))}
 
                   {/* Lesson line path */}
-                  <path
-                    d={mockChartData.lessons
-                      .map((item, i) => {
-                        const x = 60 + i * 100;
-                        const y = 200 - (item.value / 200) * 170;
-                        return `${i === 0 ? "M" : "L"} ${x} ${y}`;
-                      })
-                      .join(" ")}
-                    fill="none"
-                    stroke="url(#purpleGradient)"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  {chartData.lessons.length > 0 && (
+                    <>
+                      <path
+                        d={chartData.lessons
+                          .map((item, i) => {
+                            const maxValue = Math.max(...chartData.lessons.map((l: any) => l.value), 1);
+                            const x = 60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
+                            const y = 200 - (item.value / maxValue) * 170;
+                            return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+                          })
+                          .join(" ")}
+                        fill="none"
+                        stroke="url(#purpleGradient)"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
 
-                  {/* Area under curve */}
-                  <path
-                    d={`${mockChartData.lessons
-                      .map((item, i) => {
-                        const x = 60 + i * 100;
-                        const y = 200 - (item.value / 200) * 170;
-                        return `${i === 0 ? "M" : "L"} ${x} ${y}`;
-                      })
-                      .join(" ")} L 560 200 L 60 200 Z`}
-                    fill="url(#purpleAreaGradient)"
-                    opacity="0.2"
-                  />
+                      {/* Area under curve */}
+                      <path
+                        d={`${chartData.lessons
+                          .map((item, i) => {
+                            const maxValue = Math.max(...chartData.lessons.map((l: any) => l.value), 1);
+                            const x = 60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
+                            const y = 200 - (item.value / maxValue) * 170;
+                            return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+                          })
+                          .join(" ")} L ${60 + ((chartData.lessons.length - 1) / (chartData.lessons.length - 1 || 1)) * 500} 200 L 60 200 Z`}
+                        fill="url(#purpleAreaGradient)"
+                        opacity="0.2"
+                      />
 
-                  {/* Lesson points */}
-                  {mockChartData.lessons.map((item, i) => {
-                    const x = 60 + i * 100;
-                    const y = 200 - (item.value / 200) * 170;
-                    return (
-                      <g key={i}>
-                        <circle cx={x} cy={y} r="8" fill="#a855f7" opacity="0.2" />
-                        <circle cx={x} cy={y} r="5" fill="#a855f7" />
-                        <circle cx={x} cy={y} r="2" fill="white" />
-                        <text
-                          x={x}
-                          y={y - 15}
-                          textAnchor="middle"
-                          className="text-xs font-bold"
-                          fill="#7e22ce"
-                        >
-                          {item.value}
-                        </text>
-                      </g>
-                    );
-                  })}
+                      {/* Lesson points */}
+                      {chartData.lessons.map((item: any, i: number) => {
+                        const maxValue = Math.max(...chartData.lessons.map((l: any) => l.value), 1);
+                        const x = 60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
+                        const y = 200 - (item.value / maxValue) * 170;
+                        return (
+                          <g key={i}>
+                            <circle cx={x} cy={y} r="8" fill="#a855f7" opacity="0.2" />
+                            <circle cx={x} cy={y} r="5" fill="#a855f7" />
+                            <circle cx={x} cy={y} r="2" fill="white" />
+                            <text
+                              x={x}
+                              y={y - 15}
+                              textAnchor="middle"
+                              className="text-xs font-bold"
+                              fill="#7e22ce"
+                            >
+                              {item.value}
+                            </text>
+                          </g>
+                        );
+                      })}
 
-                  {/* Month labels */}
-                  {mockChartData.lessons.map((item, i) => (
-                    <text
-                      key={i}
-                      x={60 + i * 100}
-                      y="225"
-                      textAnchor="middle"
-                      className="text-xs font-medium"
-                      fill="#64748b"
-                    >
-                      {item.month}
+                      {/* Month labels */}
+                      {chartData.lessons.map((item: any, i: number) => {
+                        const x = 60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
+                        return (
+                          <text
+                            key={i}
+                            x={x}
+                            y="225"
+                            textAnchor="middle"
+                            className="text-xs font-medium"
+                            fill="#64748b"
+                          >
+                            {item.month}
+                          </text>
+                        );
+                      })}
+                    </>
+                  )}
+                  {growthLoading && (
+                    <text x="300" y="120" textAnchor="middle" className="text-sm" fill="#64748b">
+                      Đang tải...
                     </text>
-                  ))}
+                  )}
+                  {!growthLoading && chartData.lessons.length === 0 && (
+                    <text x="300" y="120" textAnchor="middle" className="text-sm" fill="#64748b">
+                      Chưa có dữ liệu
+                    </text>
+                  )}
 
                   <defs>
                     <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
