@@ -8,14 +8,62 @@ import {
 
 console.log("API_URL:", process.env.NEXT_PUBLIC_API_URL);
 
-const baseQuery = fetchBaseQuery({
+// Custom baseQuery với better error handling và logging
+const baseQueryWithLogging = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
   credentials: "include", // Để gửi cookies
-  prepareHeaders: (headers) => {
+  prepareHeaders: (headers, { endpoint }) => {
     headers.set("Content-Type", "application/json");
+    
+    // Log cookies trong development hoặc khi có lỗi
+    if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+      const cookies = document.cookie;
+      if (cookies) {
+        console.log(`[${endpoint}] Cookies available:`, cookies.split(";").length, "cookies");
+      } else {
+        console.warn(`[${endpoint}] No cookies found`);
+      }
+    }
+    
     return headers;
   },
 });
+
+// Wrap baseQuery để log responses và errors
+const baseQuery = async (args: any, api: any, extraOptions: any) => {
+  const result = await baseQueryWithLogging(args, api, extraOptions);
+  
+  // Log 401 errors với thông tin về cookies
+  if (result.error && (result.error as any).status === 401) {
+    if (typeof window !== "undefined") {
+      const cookies = document.cookie;
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const isCrossOrigin = apiUrl && !apiUrl.includes(window.location.hostname);
+      
+      console.error("[Auth API] 401 Unauthorized:", {
+        endpoint: args?.url || args,
+        hasCookies: !!cookies,
+        cookieCount: cookies ? cookies.split(";").filter(c => c.trim()).length : 0,
+        isCrossOrigin,
+        apiUrl,
+        currentOrigin: window.location.origin,
+        isIncognito: navigator.userAgent.includes("Incognito") || 
+                    (window as any).chrome?.runtime?.onConnect === undefined && 
+                    navigator.userAgent.includes("Chrome"),
+      });
+      
+      // Nếu là cross-origin và không có cookies, có thể là vấn đề với SameSite
+      if (isCrossOrigin && !cookies) {
+        console.error(
+          "[Auth API] ⚠️ Cross-origin request without cookies. " +
+          "Backend must set cookies with SameSite=None; Secure for cross-origin requests."
+        );
+      }
+    }
+  }
+  
+  return result;
+};
 
 export const authApi = createApi({
   reducerPath: "authApi",

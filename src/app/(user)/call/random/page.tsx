@@ -242,8 +242,9 @@ function RandomCallPage() {
             }
           );
 
-          // Dừng tracks từ stream cũ
-          stream.getAudioTracks().forEach((track) => track.stop());
+          // KHÔNG dừng tracks từ stream gốc vì source node trong AudioContext
+          // cần chúng để lấy input. Chỉ dừng khi cleanup (end call).
+          // stream.getAudioTracks().forEach((track) => track.stop());
 
           console.log("[RandomCall] Audio processed with noise reduction");
           localStreamRef.current = processedStream;
