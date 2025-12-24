@@ -233,35 +233,40 @@ export function AppSidebar({}: AppSidebarProps) {
 
         {/* Notification Bell - Opens Panel */}
         {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
-        {isInitialized && isAuthenticated && (
-          <div className="relative">
-            <Button
-              variant="ghost"
-              onClick={() =>
-                isNotificationPanelOpen ? handleClosePanel() : handleOpenPanel()
-              }
-              className={cn(
-                "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
-                isNotificationPanelOpen && "bg-accent",
-                (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
-                  "px-2 justify-center"
-              )}
-            >
-              <Bell className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
-                <span className="font-medium">{t("nav.notifications")}</span>
-              )}
-              {/* Notification badge - Dynamic from API */}
-              {unreadCount > 0 && (
-                <div className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center px-1">
-                  <span className="text-white text-xs font-bold">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                </div>
-              )}
-            </Button>
-          </div>
-        )}
+        {/* Không hiển thị trên trang quản lý */}
+        {isInitialized &&
+          isAuthenticated &&
+          !pathname?.startsWith("/admin") && (
+            <div className="relative">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  isNotificationPanelOpen
+                    ? handleClosePanel()
+                    : handleOpenPanel()
+                }
+                className={cn(
+                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                  isNotificationPanelOpen && "bg-accent",
+                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                    "px-2 justify-center"
+                )}
+              >
+                <Bell className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
+                  <span className="font-medium">{t("nav.notifications")}</span>
+                )}
+                {/* Notification badge - Dynamic from API */}
+                {unreadCount > 0 && (
+                  <div className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center px-1">
+                    <span className="text-white text-xs font-bold">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  </div>
+                )}
+              </Button>
+            </div>
+          )}
 
         {/* Admin Management Button - Only show for admin users */}
         {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
