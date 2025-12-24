@@ -91,7 +91,7 @@ function RandomCallPage() {
 
   // Initialize PeerJS
   const initPeer = useCallback(async (): Promise<string> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       if (peerRef.current) {
         console.log("[RandomCall] Peer already exists:", peerRef.current.id);
         resolve(peerRef.current.id!);
@@ -101,12 +101,22 @@ function RandomCallPage() {
       const url = new URL(SERVER_URL);
       const peerId = `${user?._id || "anon"}-random-${Date.now()}`;
 
+      // Fetch TURN credentials (includes Twilio TURN servers for better connectivity)
+      let iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
+      try {
+        const { getTurnCredentials } = await import("@/lib/webrtc");
+        iceServers = await getTurnCredentials();
+        console.log("[RandomCall] Using TURN servers:", iceServers.length, "servers");
+      } catch (error) {
+        console.warn("[RandomCall] Failed to fetch TURN credentials, using STUN only:", error);
+      }
+
       const peerConfig: any = {
         host: url.hostname,
         secure: url.protocol === "https:",
         path: "/peerjs",
         config: {
-          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+          iceServers,
         },
       };
 

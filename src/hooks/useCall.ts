@@ -2,9 +2,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Peer, { MediaConnection } from "peerjs";
 import { useSocketContext } from "@/providers/SocketProvider";
-import { getSocket } from "@/lib/socketClient";
+import { getSocket, createSocketConnection } from "@/lib/socketClient";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { getTurnCredentials } from "@/lib/webrtc";
 
 export type CallType = "video" | "audio";
 
@@ -240,7 +241,6 @@ export function useCall(): UseCallApi {
         autoGainControl: true,
         sampleRate: 48000, // Tăng sample rate để chất lượng tốt hơn
         channelCount: 1, // Mono để giảm bandwidth
-        latency: 0.01, // Giảm độ trễ
       };
 
       // Thêm các constraints nâng cao của Chrome/Chromium nếu có
@@ -337,7 +337,7 @@ export function useCall(): UseCallApi {
 
   const initPeer = useCallback(
     (customId?: string): Promise<string> => {
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         if (peerRef.current) {
           resolve(peerRef.current.id!);
           return;
@@ -345,6 +345,16 @@ export function useCall(): UseCallApi {
 
         const url = new URL(SERVER_URL);
         const peerId = customId || `${user?._id || "anon"}-call-${Date.now()}`;
+
+        // Fetch TURN credentials (includes Twilio TURN servers for better connectivity)
+        let iceServers: any[] = [{ urls: "stun:stun.l.google.com:19302" }];
+        try {
+          const turnServers = await getTurnCredentials();
+          iceServers = turnServers as any[];
+          console.log("[initPeer] Using TURN servers:", iceServers.length, "servers");
+        } catch (error) {
+          console.warn("[initPeer] Failed to fetch TURN credentials, using STUN only:", error);
+        }
 
         const peer = new Peer(peerId, {
           host: url.hostname,
@@ -356,7 +366,7 @@ export function useCall(): UseCallApi {
             : 80,
           path: "/peerjs",
           config: {
-            iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+            iceServers,
           },
         });
 
