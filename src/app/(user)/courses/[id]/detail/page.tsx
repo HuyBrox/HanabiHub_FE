@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, use } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,6 +43,7 @@ import {
   useGetCourseByIdQuery,
   useGetUserCourseProgressQuery,
   useResetCourseProgressMutation,
+  useRateCourseMutation,
 } from "@/store/services/courseApi";
 import { LoadingSpinner } from "@/components/loading";
 import { withAuth } from "@/components/auth";
@@ -72,10 +75,21 @@ const formatDate = (dateString: string) => {
   });
 };
 
+// Helper function để tính rating trung bình
+const calculateAverageRating = (
+  ratings?: Array<{ user: string | any; rating: number }>
+) => {
+  if (!ratings || ratings.length === 0) return 0;
+  const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+  return sum / ratings.length;
+};
+
 function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [isLiked, setIsLiked] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const router = useRouter();
+  const currentUser = useSelector((state: RootState) => state.auth.user);
 
   // Unwrap params Promise
   const { id } = use(params);
@@ -94,6 +108,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
   const [resetProgress, { isLoading: isResetting }] =
     useResetCourseProgressMutation();
+
+  const [rateCourse, { isLoading: isRating }] = useRateCourseMutation();
 
   // Transform lessons data
   const lessons = useMemo(() => {
@@ -135,11 +151,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   }, [lessons, userProgress, isLessonCompleted]);
 
   const handleStartLearning = () => {
-    if (nextLesson) {
-      router.push(`/courses/${id}/learn/${nextLesson._id}`);
-    } else if (lessons.length > 0) {
-      router.push(`/courses/${id}/learn/${lessons[0]._id}`);
-    }
+    router.push(`/courses/${id}`);
   };
 
   const handleResetProgress = async () => {
@@ -150,6 +162,17 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
       } catch (error) {
         console.error("Failed to reset progress:", error);
       }
+    }
+  };
+
+  const handleRateCourse = async () => {
+    if (!selectedRating) return;
+    try {
+      await rateCourse({ courseId: id, rating: selectedRating }).unwrap();
+      refetch();
+      setSelectedRating(null);
+    } catch (error) {
+      console.error("Failed to rate course:", error);
     }
   };
 
@@ -177,6 +200,17 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     );
   }
 
+  // Tính toán ratings
+  const ratings = course?.ratings || [];
+  const avgRating = calculateAverageRating(ratings);
+  const userRating = currentUser
+    ? ratings.find((r: any) =>
+        typeof r.user === "string"
+          ? r.user === currentUser._id
+          : r.user?._id === currentUser._id
+      )
+    : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
@@ -184,14 +218,22 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
         <div className="container mx-auto px-3 md:px-4 py-3 md:py-4">
           <div className="flex items-center gap-2 md:gap-4">
             <Link href="/courses">
-              <Button variant="ghost" size="sm" className="h-8 md:h-9 text-xs md:text-sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 md:h-9 text-xs md:text-sm"
+              >
                 <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
                 <span className="hidden sm:inline">Quay lại</span>
               </Button>
             </Link>
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg md:text-xl lg:text-2xl font-bold line-clamp-2">{course.title}</h1>
-              <p className="text-xs md:text-sm text-muted-foreground line-clamp-1 mt-0.5">{course.description}</p>
+              <h1 className="text-lg md:text-xl lg:text-2xl font-bold line-clamp-2">
+                {course.title}
+              </h1>
+              <p className="text-xs md:text-sm text-muted-foreground line-clamp-1 mt-0.5">
+                {course.description}
+              </p>
             </div>
             <div className="flex items-center gap-1 md:gap-2">
               <Button
@@ -206,7 +248,11 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                   }`}
                 />
               </Button>
-              <Button variant="ghost" size="sm" className="h-8 w-8 md:h-9 md:w-9 p-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 md:h-9 md:w-9 p-0"
+              >
                 <Share2 className="h-4 w-4" />
               </Button>
             </div>
@@ -232,7 +278,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center text-white">
                       <BookOpen className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 mx-auto mb-2 md:mb-4 opacity-50" />
-                      <h3 className="text-base md:text-lg lg:text-xl font-semibold px-2">{course.title}</h3>
+                      <h3 className="text-base md:text-lg lg:text-xl font-semibold px-2">
+                        {course.title}
+                      </h3>
                     </div>
                   </div>
                 )}
@@ -260,9 +308,13 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       </span>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="text-xs w-fit">{course.level}</Badge>
+                  <Badge variant="secondary" className="text-xs w-fit">
+                    {course.level}
+                  </Badge>
                 </div>
-                <h2 className="text-lg md:text-xl lg:text-2xl font-bold mb-2 md:mb-3 lg:mb-4">{course.title}</h2>
+                <h2 className="text-lg md:text-xl lg:text-2xl font-bold mb-2 md:mb-3 lg:mb-4">
+                  {course.title}
+                </h2>
                 <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-5 lg:mb-6">
                   {course.description}
                 </p>
@@ -291,7 +343,11 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       <span className="sm:hidden">Reset</span>
                     </Button>
                   )}
-                  <Button variant="outline" size="lg" className="text-sm md:text-base h-10 md:h-11">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="text-sm md:text-base h-10 md:h-11"
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Tải tài liệu</span>
                     <span className="sm:hidden">Tải về</span>
@@ -308,10 +364,30 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 className="w-full"
               >
                 <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
-                  <TabsTrigger value="overview" className="text-xs md:text-sm py-2 px-2 md:px-4">Tổng quan</TabsTrigger>
-                  <TabsTrigger value="curriculum" className="text-xs md:text-sm py-2 px-2 md:px-4">Chương trình</TabsTrigger>
-                  <TabsTrigger value="instructor" className="text-xs md:text-sm py-2 px-2 md:px-4">Giảng viên</TabsTrigger>
-                  <TabsTrigger value="reviews" className="text-xs md:text-sm py-2 px-2 md:px-4">Đánh giá</TabsTrigger>
+                  <TabsTrigger
+                    value="overview"
+                    className="text-xs md:text-sm py-2 px-2 md:px-4"
+                  >
+                    Tổng quan
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="curriculum"
+                    className="text-xs md:text-sm py-2 px-2 md:px-4"
+                  >
+                    Chương trình
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="instructor"
+                    className="text-xs md:text-sm py-2 px-2 md:px-4"
+                  >
+                    Giảng viên
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="reviews"
+                    className="text-xs md:text-sm py-2 px-2 md:px-4"
+                  >
+                    Đánh giá
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="p-4 md:p-5 lg:p-6">
@@ -392,7 +468,10 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
                     {lessons.length > 0 && (
                       <div className="mb-3 md:mb-4">
-                        <Progress value={progressPercentage} className="h-1.5 md:h-2" />
+                        <Progress
+                          value={progressPercentage}
+                          className="h-1.5 md:h-2"
+                        />
                       </div>
                     )}
 
@@ -423,11 +502,19 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mb-1">
-                                <Badge variant="outline" className="text-[10px] md:text-xs">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] md:text-xs"
+                                >
                                   Bài {index + 1}
                                 </Badge>
-                                <Badge variant="secondary" className="text-[10px] md:text-xs">
-                                  {lesson.type === "video" ? "Video" : "Bài tập"}
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] md:text-xs"
+                                >
+                                  {lesson.type === "video"
+                                    ? "Video"
+                                    : "Bài tập"}
                                 </Badge>
                                 {isCurrent && (
                                   <Badge
@@ -446,14 +533,18 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                   </Badge>
                                 )}
                               </div>
-                              <h4 className="font-medium text-sm md:text-base mb-1">{lesson.title}</h4>
+                              <h4 className="font-medium text-sm md:text-base mb-1">
+                                {lesson.title}
+                              </h4>
                               <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
                                 {lesson.content}
                               </p>
                             </div>
                             <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-muted-foreground flex-shrink-0">
                               <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                              <span>{formatDuration(lesson.duration || 0)}</span>
+                              <span>
+                                {formatDuration(lesson.duration || 0)}
+                              </span>
                             </div>
                           </div>
                         );
@@ -501,14 +592,136 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 </TabsContent>
 
                 <TabsContent value="reviews" className="p-4 md:p-5 lg:p-6">
-                  <div className="text-center py-6 md:py-8">
-                    <Star className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mx-auto mb-3 md:mb-4" />
-                    <h3 className="text-base md:text-lg font-semibold mb-2">
-                      Chưa có đánh giá
-                    </h3>
-                    <p className="text-sm md:text-base text-muted-foreground">
-                      Hãy là người đầu tiên đánh giá khóa học này
-                    </p>
+                  <div className="space-y-6 md:space-y-8">
+                    {/* Rating Summary */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-3xl md:text-4xl font-bold">
+                            {avgRating > 0 ? avgRating.toFixed(1) : "0.0"}
+                          </div>
+                          <div className="flex items-center">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-5 w-5 md:h-6 md:w-6 ${
+                                  star <= Math.round(avgRating)
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-sm md:text-base text-muted-foreground">
+                          {ratings.length} đánh giá
+                        </p>
+                      </div>
+
+                      {/* Rating Form - Only show if user is logged in */}
+                      {currentUser && (
+                        <div className="w-full sm:w-auto">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() => setSelectedRating(star)}
+                                  className="focus:outline-none"
+                                >
+                                  <Star
+                                    className={`h-6 w-6 md:h-7 md:w-7 transition-colors ${
+                                      selectedRating
+                                        ? star <= selectedRating
+                                          ? "fill-yellow-400 text-yellow-400"
+                                          : "text-gray-300"
+                                        : star <= (userRating?.rating || 0)
+                                        ? "fill-yellow-400 text-yellow-400"
+                                        : "text-gray-300"
+                                    } hover:text-yellow-400 cursor-pointer`}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                            {(selectedRating || userRating) && (
+                              <Button
+                                onClick={handleRateCourse}
+                                disabled={isRating || !selectedRating}
+                                size="sm"
+                                className="w-full sm:w-auto"
+                              >
+                                {userRating
+                                  ? "Cập nhật đánh giá"
+                                  : "Gửi đánh giá"}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Ratings List */}
+                    {ratings.length > 0 ? (
+                      <div className="space-y-4 md:space-y-5">
+                        {ratings.map((rating: any, index: number) => {
+                          const ratingUser =
+                            typeof rating.user === "string"
+                              ? null
+                              : rating.user;
+                          return (
+                            <div
+                              key={index}
+                              className="flex gap-3 md:gap-4 pb-4 border-b last:border-0"
+                            >
+                              <Avatar className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0">
+                                <AvatarImage
+                                  src={ratingUser?.avatar}
+                                  alt={ratingUser?.fullname || "User"}
+                                />
+                                <AvatarFallback>
+                                  {ratingUser?.fullname?.charAt(0) || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-semibold text-sm md:text-base">
+                                    {ratingUser?.fullname || "Người dùng"}
+                                  </h4>
+                                  <div className="flex items-center">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`h-3 w-3 md:h-4 md:w-4 ${
+                                          star <= rating.rating
+                                            ? "fill-yellow-400 text-yellow-400"
+                                            : "text-gray-300"
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <p className="text-xs md:text-sm text-muted-foreground">
+                                  Đánh giá {rating.rating} sao
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 md:py-12">
+                        <Star className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mx-auto mb-3 md:mb-4" />
+                        <h3 className="text-base md:text-lg font-semibold mb-2">
+                          Chưa có đánh giá
+                        </h3>
+                        <p className="text-sm md:text-base text-muted-foreground">
+                          {currentUser
+                            ? "Hãy là người đầu tiên đánh giá khóa học này"
+                            : "Đăng nhập để đánh giá khóa học này"}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
@@ -553,7 +766,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
             {/* Course Stats */}
             <Card>
               <CardHeader className="p-4 md:p-5 lg:p-6 pb-3 md:pb-4">
-                <CardTitle className="text-base md:text-lg">Thống kê khóa học</CardTitle>
+                <CardTitle className="text-base md:text-lg">
+                  Thống kê khóa học
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-4 md:p-5 lg:p-6 pt-0 space-y-3 md:space-y-4">
                 <div className="flex items-center justify-between text-sm md:text-base">
@@ -578,7 +793,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 </div>
                 <div className="flex items-center justify-between text-sm md:text-base">
                   <span className="text-muted-foreground">Cấp độ</span>
-                  <Badge variant="secondary" className="text-xs">{course.level}</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {course.level}
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between text-sm md:text-base">
                   <span className="text-muted-foreground">Ngôn ngữ</span>
@@ -607,7 +824,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
             {lessons.length > 0 && (
               <Card>
                 <CardHeader className="p-4 md:p-5 lg:p-6 pb-3 md:pb-4">
-                  <CardTitle className="text-base md:text-lg">Tiến độ học tập</CardTitle>
+                  <CardTitle className="text-base md:text-lg">
+                    Tiến độ học tập
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 md:p-5 lg:p-6 pt-0 space-y-3 md:space-y-4">
                   <div>
@@ -617,11 +836,16 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                         {Math.round(progressPercentage)}%
                       </span>
                     </div>
-                    <Progress value={progressPercentage} className="h-2 md:h-3" />
+                    <Progress
+                      value={progressPercentage}
+                      className="h-2 md:h-3"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
                     <div>
-                      <p className="text-muted-foreground mb-1">Đã hoàn thành</p>
+                      <p className="text-muted-foreground mb-1">
+                        Đã hoàn thành
+                      </p>
                       <p className="font-semibold text-primary text-base md:text-lg">
                         {completedLessons}
                       </p>

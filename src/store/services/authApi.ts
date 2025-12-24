@@ -14,7 +14,7 @@ const baseQueryWithLogging = fetchBaseQuery({
   credentials: "include", // Để gửi cookies
   prepareHeaders: (headers, { endpoint }) => {
     headers.set("Content-Type", "application/json");
-    
+
     // Log cookies trong development hoặc khi có lỗi
     if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
       const cookies = document.cookie;
@@ -24,7 +24,7 @@ const baseQueryWithLogging = fetchBaseQuery({
         console.warn(`[${endpoint}] No cookies found`);
       }
     }
-    
+
     return headers;
   },
 });
@@ -32,14 +32,14 @@ const baseQueryWithLogging = fetchBaseQuery({
 // Wrap baseQuery để log responses và errors
 const baseQuery = async (args: any, api: any, extraOptions: any) => {
   const result = await baseQueryWithLogging(args, api, extraOptions);
-  
+
   // Log 401 errors với thông tin về cookies
   if (result.error && (result.error as any).status === 401) {
     if (typeof window !== "undefined") {
       const cookies = document.cookie;
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const isCrossOrigin = apiUrl && !apiUrl.includes(window.location.hostname);
-      
+
       console.error("[Auth API] 401 Unauthorized:", {
         endpoint: args?.url || args,
         hasCookies: !!cookies,
@@ -47,11 +47,11 @@ const baseQuery = async (args: any, api: any, extraOptions: any) => {
         isCrossOrigin,
         apiUrl,
         currentOrigin: window.location.origin,
-        isIncognito: navigator.userAgent.includes("Incognito") || 
-                    (window as any).chrome?.runtime?.onConnect === undefined && 
+        isIncognito: navigator.userAgent.includes("Incognito") ||
+                    (window as any).chrome?.runtime?.onConnect === undefined &&
                     navigator.userAgent.includes("Chrome"),
       });
-      
+
       // Nếu là cross-origin và không có cookies, có thể là vấn đề với SameSite
       if (isCrossOrigin && !cookies) {
         console.error(
@@ -61,7 +61,7 @@ const baseQuery = async (args: any, api: any, extraOptions: any) => {
       }
     }
   }
-  
+
   return result;
 };
 

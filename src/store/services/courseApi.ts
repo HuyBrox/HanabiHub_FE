@@ -15,11 +15,12 @@ export interface Course {
   description: string;
   thumbnail?: string;
   lessons?: Lesson[];
-  level: string;
+  level?: string;
   instructor?: Instructor;
   students?: string[];
   studentCount?: number;
   price: number;
+  ratings?: Array<{ user: string; rating: number }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -338,6 +339,22 @@ export const courseApi = createApi({
       ],
     }),
 
+    // Đánh giá khóa học
+    rateCourse: builder.mutation<
+      ApiResponse<Course>,
+      { courseId: string; rating: number }
+    >({
+      query: ({ courseId, rating }) => ({
+        url: `/courses/${courseId}/rate`,
+        method: "POST",
+        body: { rating },
+      }),
+      invalidatesTags: (_result, _error, { courseId }) => [
+        { type: "Course", id: courseId },
+        "Course",
+      ],
+    }),
+
   }),
 });
 
@@ -358,4 +375,5 @@ export const {
   useUpdateCurrentLessonMutation,
   useMarkLessonCompleteMutation,
   useResetCourseProgressMutation,
+  useRateCourseMutation,
 } = courseApi;

@@ -24,7 +24,7 @@ Khi deploy lên production, các API calls trả về **401 Unauthorized** trong
    ```javascript
    // ❌ SAI - Cookies sẽ không được gửi trong cross-origin
    res.cookie('accessToken', token, { httpOnly: true, secure: true });
-   
+
    // ✅ ĐÚNG - Cookies sẽ được gửi trong cross-origin
    res.cookie('accessToken', token, {
      httpOnly: true,
@@ -36,45 +36,61 @@ Khi deploy lên production, các API calls trả về **401 Unauthorized** trong
 
 ## Giải pháp
 
-### 1. Backend (BE_Hanabi) - QUAN TRỌNG NHẤT
+### 1. Backend (BE_Hanabi) - ✅ ĐÃ ĐƯỢC CẬP NHẬT
 
-Cần cấu hình cookies đúng cách trong backend:
+Backend đã được cập nhật với helper functions tự động detect production/HTTPS và set cookies đúng cách:
 
+**File mới:** `BE_Hanabi/src/utils/cookie-helper.ts`
+- Tự động detect production environment
+- Tự động detect HTTPS requests (qua X-Forwarded-Proto header)
+- Tự động set `SameSite=None; Secure` khi cần thiết
+
+**Các thay đổi:**
+1. ✅ Tạo helper functions: `setAccessTokenCookie()`, `setRefreshTokenCookie()`, `clearAuthCookies()`
+2. ✅ Cập nhật `auth.controller.ts` để sử dụng helper functions
+3. ✅ Thêm `app.set('trust proxy', 1)` trong `index.ts` để detect HTTPS từ proxy headers
+4. ✅ Thêm logging để debug cookie issues
+
+**Cách sử dụng (đã được áp dụng):**
 ```typescript
-// BE_Hanabi/src/middleware/auth.ts hoặc nơi set cookies
-
-// Khi login thành công
-res.cookie('accessToken', accessToken, {
+// Thay vì:
+res.cookie('token', accessToken, {
   httpOnly: true,
-  secure: true,  // Chỉ gửi qua HTTPS
-  sameSite: 'none',  // Cho phép cross-origin
-  maxAge: 15 * 60 * 1000,  // 15 phút
-  path: '/',
-  // KHÔNG set domain nếu frontend và backend ở domain khác nhau
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  // ...
 });
 
-res.cookie('refreshToken', refreshToken, {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'none',
-  maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 ngày
-  path: '/',
-});
+// Bây giờ dùng:
+import { setAccessTokenCookie, setRefreshTokenCookie } from "../utils/cookie-helper";
+setAccessTokenCookie(res, accessToken, req);
+setRefreshTokenCookie(res, refreshToken, req);
 ```
 
-### 2. CORS Configuration (Backend)
+**Lợi ích:**
+- Tự động detect production/HTTPS, không cần phụ thuộc vào `NODE_ENV`
+- Hoạt động đúng với Render, Vercel, và các hosting platforms khác
+- Logging chi tiết để debug
 
-Backend phải cho phép credentials từ frontend domain:
+### 2. CORS Configuration (Backend) - ✅ ĐÃ ĐÚNG
+
+Backend đã có CORS config đúng với `credentials: true`:
 
 ```typescript
-// BE_Hanabi/src/app.ts hoặc nơi config CORS
-
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://your-frontend-domain.com',
-  credentials: true,  // QUAN TRỌNG: Cho phép cookies
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+// BE_Hanabi/src/index.ts
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Cho phép frontend origin
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || "http://localhost:3000",
+      "https://hanabi-hub.vercel.app",
+    ];
+    // ...
+  },
+  credentials: true, // ✅ Đã có
+  // ...
+};
+app.use(cors(corsOptions));
 ```
 
 ### 3. Frontend (FE_Hanabi) - Đã đúng
@@ -133,12 +149,26 @@ Frontend đã được cập nhật để log thông tin về cookies khi có l�
 
 ## Checklist để fix
 
-- [ ] Backend set cookies với `sameSite: 'none'`
-- [ ] Backend set cookies với `secure: true` (HTTPS only)
-- [ ] Backend CORS cho phép `credentials: true`
-- [ ] Backend CORS cho phép frontend origin
-- [ ] Frontend có `credentials: "include"` (✅ đã có)
-- [ ] Test trong trình duyệt ẩn danh
+- [x] Backend set cookies với `sameSite: 'none'` (✅ tự động detect)
+- [x] Backend set cookies với `secure: true` (✅ tự động detect HTTPS)
+- [x] Backend CORS cho phép `credentials: true` (✅ đã có)
+- [x] Backend CORS cho phép frontend origin (✅ đã có)
+- [x] Frontend có `credentials: "include"` (✅ đã có)
+- [x] Backend trust proxy để detect HTTPS (✅ đã thêm)
+- [ ] **CẦN KIỂM TRA:** `NODE_ENV=production` trên Render
+- [ ] **CẦN KIỂM TRA:** Deploy backend mới và test trong trình duyệt ẩn danh
+
+## Bước tiếp theo
+
+1. **Deploy backend mới** lên Render với các thay đổi trên
+2. **Kiểm tra environment variables trên Render:**
+   - `NODE_ENV=production` (nên set để đảm bảo)
+   - `FRONTEND_URL=https://hanabi-hub.vercel.app` (hoặc domain frontend của bạn)
+3. **Test lại trong trình duyệt ẩn danh:**
+   - Clear cookies cũ (nếu có)
+   - Login lại
+   - Kiểm tra cookies có được set với `SameSite=None; Secure` không
+   - Kiểm tra các API calls có hoạt động không
 
 ## Lưu ý
 
