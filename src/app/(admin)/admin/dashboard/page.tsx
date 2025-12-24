@@ -1,66 +1,68 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  StatsCard, 
-  UserGrowthChart, 
-  PopularCourses, 
-  LevelDistribution, 
-  RecentActivities, 
-  QuickActions 
+import {
+  StatsCard,
+  UserGrowthChart,
+  PopularCourses,
+  LevelDistribution,
+  RecentActivities,
+  QuickActions,
 } from "@/components/admin/admin/dashboard";
 import { Users, UserPlus, Clock, Globe, TrendingUp } from "lucide-react";
-import { 
-  useGetStatsQuery, 
-  useGetPopularCoursesQuery, 
-  useGetRecentActivitiesQuery 
+import {
+  useGetStatsQuery,
+  useGetPopularCoursesQuery,
+  useGetRecentActivitiesQuery,
 } from "@/store/services/admin/dashboardApi";
-
-
-
 
 export default function Dashboard() {
   // 🚀 Sử dụng RTK Query hooks
-  const { 
-    data: statsData, 
-    isLoading: statsLoading, 
-    error: statsError 
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    error: statsError,
   } = useGetStatsQuery();
 
-  const { 
-    data: coursesData, 
-    isLoading: coursesLoading, 
-    error: coursesError 
+  const {
+    data: coursesData,
+    isLoading: coursesLoading,
+    error: coursesError,
   } = useGetPopularCoursesQuery();
 
-  const { 
-    data: activitiesData, 
-    isLoading: activitiesLoading, 
-    error: activitiesError 
+  const {
+    data: activitiesData,
+    isLoading: activitiesLoading,
+    error: activitiesError,
   } = useGetRecentActivitiesQuery();
 
   // 🔹 Tính toán dữ liệu đã format
-  const stats = statsData ? (() => {
-    const levelData = statsData?.levelDistribution || {};
-    const total = Object.values(levelData).reduce((sum: number, count: any) => sum + count, 0);
+  const stats = statsData
+    ? (() => {
+        const levelData = statsData?.levelDistribution || {};
+        const total = Object.values(levelData).reduce(
+          (sum: number, count: any) => sum + count,
+          0
+        );
 
-    const formattedLevels = Object.entries(levelData).map(
-      ([level, count]: [string, any]) => ({
-        level,
-        count,
-        percentage: total ? ((count / total) * 100).toFixed(1) : 0,
-      })
-    );
+        const formattedLevels = Object.entries(levelData).map(
+          ([level, count]: [string, any]) => ({
+            level,
+            count,
+            percentage: total ? ((count / total) * 100).toFixed(1) : 0,
+          })
+        );
 
-    return {
-      ...statsData,
-      formattedLevelDistribution: formattedLevels,
-    };
-  })() : null;
+        return {
+          ...statsData,
+          formattedLevelDistribution: formattedLevels,
+        };
+      })()
+    : null;
 
   const popularCourses = coursesData || [];
   const recentActivities = activitiesData?.activities || [];
-  
+
   const loading = statsLoading || coursesLoading || activitiesLoading;
 
   console.log(popularCourses);
@@ -68,7 +70,7 @@ export default function Dashboard() {
   console.log(recentActivities);
 
   const handleCreateUser = (userData: any) => {
-    console.log('Creating user:', userData);
+    console.log("Creating user:", userData);
     // Thêm logic tạo user ở đây
   };
 
@@ -85,7 +87,7 @@ export default function Dashboard() {
           <p className="text-gray-600 mt-1">Tổng quan hệ thống HanabiHub</p>
         </div>
         <div className="text-sm text-gray-500">
-          Cập nhật lần cuối: {new Date().toLocaleString('vi-VN')}
+          Cập nhật lần cuối: {new Date().toLocaleString("vi-VN")}
         </div>
       </div>
 
@@ -135,11 +137,9 @@ export default function Dashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <QuickActions 
-            onCreateUser={handleCreateUser}
-          />
+          <QuickActions onCreateUser={handleCreateUser} />
         </div>
-        
+
         {/* Additional Stats */}
         <div className="lg:col-span-2">
           <Card>
@@ -156,17 +156,24 @@ export default function Dashboard() {
                   <div className="text-sm text-gray-600">Tháng này</div>
                 </div> */}
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{popularCourses.length}</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {popularCourses.length}
+                  </div>
                   <div className="text-sm text-gray-600">Khóa học</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">
-                    {stats?.formattedLevelDistribution?.reduce((sum: number, level: any) => sum + (level.count || 0), 0) || 0}
+                    {stats?.formattedLevelDistribution?.reduce(
+                      (sum: number, level: any) => sum + (level.count || 0),
+                      0
+                    ) || 0}
                   </div>
                   <div className="text-sm text-gray-600">Tổng cấp độ</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">{ stats?.RecentActivities?.length ?? 0}</div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {stats?.RecentActivities?.length ?? 0}
+                  </div>
                   <div className="text-sm text-gray-600">Hoạt động</div>
                 </div>
               </div>

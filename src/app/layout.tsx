@@ -10,6 +10,7 @@ import { AuthInitializer } from "@/hooks/useAuthInit"; // để khởi tạo aut
 import RtkProvider from "./providers";
 import { NotificationProvider } from "@/components/notification";
 import IncomingCallPopup from "@/components/IncomingCallPopup";
+import { InitialPageLoader } from "@/components/loading";
 
 export const metadata: Metadata = {
   title: "HanabiHub - Nền tảng học tiếng Nhật thông minh",
@@ -82,6 +83,7 @@ export default function RootLayout({
           }}
         />
         <ExtensionCleanup />
+        <InitialPageLoader />
         <RtkProvider>
           <AuthInitializer>
             <ThemeProvider

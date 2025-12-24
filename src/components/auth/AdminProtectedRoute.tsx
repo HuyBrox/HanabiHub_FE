@@ -47,16 +47,28 @@ export const AdminProtectedRoute: React.FC<AdminProtectedRouteProps> = ({
             title: "Yêu cầu đăng nhập",
           });
         } else {
-          error("Bạn không có quyền truy cập trang quản lý. Chỉ admin mới được phép.", {
-            duration: 4000,
-            title: "Không có quyền truy cập",
-          });
+          error(
+            "Bạn không có quyền truy cập trang quản lý. Chỉ admin mới được phép.",
+            {
+              duration: 4000,
+              title: "Không có quyền truy cập",
+            }
+          );
         }
       }
       setHasRedirected(true);
       router.push(redirectTo);
     }
-  }, [isAuthenticated, isLoading, isInitialized, user, router, redirectTo, error, hasRedirected]);
+  }, [
+    isAuthenticated,
+    isLoading,
+    isInitialized,
+    user,
+    router,
+    redirectTo,
+    error,
+    hasRedirected,
+  ]);
 
   // Hiển thị loading nếu đang khởi tạo auth hoặc đang loading
   if (!isInitialized || isLoading) {
@@ -83,4 +95,3 @@ export const AdminProtectedRoute: React.FC<AdminProtectedRouteProps> = ({
 
   return <>{children}</>;
 };
-

@@ -1,7 +1,5 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-
 export function LoadingPage() {
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-background text-foreground z-50">
@@ -10,8 +8,13 @@ export function LoadingPage() {
         {/* Vòng tròn ngoài */}
         <div className="absolute w-full h-full rounded-full border-4 border-muted animate-spin" />
 
-        {/* Vòng tròn trong */}
-        <div className="absolute w-24 h-24 rounded-full border-4 border-primary animate-spin-slow" />
+        {/* Vòng tròn trong - xoay chậm hơn */}
+        <div
+          className="absolute w-24 h-24 rounded-full border-4 border-primary"
+          style={{
+            animation: "spin 4s linear infinite"
+          }}
+        />
 
         {/* Logo ở giữa */}
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary text-primary-foreground text-2xl font-bold shadow-lg">
@@ -24,18 +27,3 @@ export function LoadingPage() {
     </div>
   );
 }
-
-/* CSS bổ sung */
-<style jsx global>{`
-  @keyframes spin-slow {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  .animate-spin-slow {
-    animation: spin-slow 4s linear infinite;
-  }
-`}</style>;

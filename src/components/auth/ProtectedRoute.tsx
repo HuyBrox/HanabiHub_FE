@@ -48,7 +48,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       setHasRedirected(true);
       router.push(redirectTo);
     }
-  }, [isAuthenticated, isLoading, isInitialized, router, redirectTo, warning, hasRedirected]);
+  }, [
+    isAuthenticated,
+    isLoading,
+    isInitialized,
+    router,
+    redirectTo,
+    warning,
+    hasRedirected,
+  ]);
 
   // Hiển thị loading nếu đang khởi tạo auth hoặc đang loading
   if (!isInitialized || isLoading) {
