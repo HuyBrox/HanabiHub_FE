@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useGetUserQuery } from "@/store/services/admin/usersAdminApi";
+import { useGetAdminUserByIdQuery } from "@/store/services/admin/usersAdminApi";
 
 /** Helpers nhỏ để không lệ thuộc file utils */
 function formatDate(input?: string | Date) {
@@ -36,7 +36,7 @@ export default function UserDetailPage() {
   const rawId = (params?.id ?? "") as string | string[];
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
-  const { data, isLoading, isFetching, error } = useGetUserQuery(id, {
+  const { data, isLoading, isFetching, error } = useGetAdminUserByIdQuery(id, {
     skip: !id,
   });
 

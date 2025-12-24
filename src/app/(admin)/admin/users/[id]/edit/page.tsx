@@ -6,17 +6,17 @@ import {
   StatsCards,
 } from "@/components/admin/user";
 import {
-  useGetUserQuery,
-  useUpdateUserMutation,
-  type UserRole,
-  type UserStatus,
+  useGetAdminUserByIdQuery,
+  useUpdateAdminUserMutation,
+  type Role,
+  type Status,
 } from "@/store/services/admin/usersAdminApi";
 
 type FormState = {
   fullname: string;
   email: string;
-  role: UserRole;
-  status: UserStatus;
+  role: Role;
+  status: Status;
 };
 
 export default function EditUserPage() {
@@ -25,10 +25,10 @@ export default function EditUserPage() {
   const rawId = (params?.id ?? "") as string | string[];
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
 
-  const { data, isLoading, isFetching, error } = useGetUserQuery(id, {
+  const { data, isLoading, isFetching, error } = useGetAdminUserByIdQuery(id, {
     skip: !id,
   });
-  const [updateUser, { isLoading: saving }] = useUpdateUserMutation();
+  const [updateUser, { isLoading: saving }] = useUpdateAdminUserMutation();
 
   // Map dữ liệu BE -> form
   const initialForm: FormState | null = useMemo(() => {
@@ -37,8 +37,8 @@ export default function EditUserPage() {
     return {
       fullname: u.fullname || u.name || u.username || "",
       email: u.email || "",
-      role: (u.role as UserRole) ?? ((u as any).isAdmin ? "admin" : "user"),
-      status: (u.status as UserStatus) ?? ((u as any).isActive === false ? "inactive" : "active"),
+      role: (u.role as Role) ?? ((u as any).isAdmin ? "admin" : "user"),
+      status: (u.status as Status) ?? ((u as any).isActive === false ? "inactive" : "active"),
     };
   }, [data]);
 
@@ -62,7 +62,6 @@ export default function EditUserPage() {
         id,
         body: {
           fullname: form.fullname,
-          email: form.email,
           role: form.role,
           status: form.status,
         },
@@ -167,14 +166,14 @@ export default function EditUserPage() {
             />
           </label>
 
-          {/* Email */}
+          {/* Email - Read only */}
           <label className="flex flex-col gap-1">
-            <span className="text-sm text-slate-600">Email</span>
+            <span className="text-sm text-slate-600">Email (không thể chỉnh sửa)</span>
             <input
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-slate-400"
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none cursor-not-allowed"
               type="email"
               value={form.email}
-              onChange={(e) => onChange("email", e.target.value)}
+              disabled
               placeholder="VD: a@example.com"
             />
           </label>
@@ -188,9 +187,7 @@ export default function EditUserPage() {
               onChange={(e) => onChange("role", e.target.value as FormState["role"])}
             >
               <option value="admin">Admin</option>
-              <option value="moderator">Moderator</option>
               <option value="user">User</option>
-              <option value="viewer">Viewer</option>
             </select>
           </label>
 

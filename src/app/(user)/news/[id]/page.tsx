@@ -203,16 +203,6 @@ export default function NewsDetailPage() {
           </button>
         </div>
       </div>
-        {/* Related Actions */}
-        <div className="mt-8 text-center">
-          <button
-            onClick={() => router.push("/news")}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-          >
-            Xem thêm tin tức khác
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

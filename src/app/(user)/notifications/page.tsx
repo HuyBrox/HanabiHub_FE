@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Bell, CheckCheck, Search } from "lucide-react";
 import { useNotification } from "@/components/notification/NotificationProvider";
@@ -37,7 +37,7 @@ interface NewsItem {
 
 type ContentType = "notifications" | "news";
 
-export default function NotificationsPage() {
+function NotificationsPageContent() {
   const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -68,7 +68,7 @@ export default function NotificationsPage() {
       }
 
       const data = await response.json();
-      
+
       if (data.success && data.data?.items) {
         // Filter out notifications that are about news (they have metadata.newsId)
         const filteredItems = data.data.items.filter(
@@ -247,7 +247,7 @@ export default function NotificationsPage() {
     try {
       // Mark all unread notifications as read
       const unreadNotifications = notifications.filter((n) => !n.isRead);
-      
+
       await Promise.all(
         unreadNotifications.map((n) =>
           fetch(buildApiUrl(`/notifications/${n._id}/read`), {
@@ -278,7 +278,7 @@ export default function NotificationsPage() {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ`;
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ngày`;
-    
+
     return date.toLocaleDateString("vi-VN");
   };
 
@@ -532,14 +532,14 @@ export default function NotificationsPage() {
                         {newsItem.title}
                       </h3>
                       {/* Better excerpt with HTML stripping */}
-                      <div 
+                      <div
                         className="text-xs text-muted-foreground line-clamp-2 mb-2 prose prose-xs max-w-none
                           prose-p:text-muted-foreground prose-p:mb-1
                           prose-headings:hidden
                           prose-img:hidden
                           prose-a:text-primary prose-a:no-underline"
-                        dangerouslySetInnerHTML={{ 
-                          __html: newsItem.content.replace(/<[^>]*>/g, '').substring(0, 120) + '...' 
+                        dangerouslySetInnerHTML={{
+                          __html: newsItem.content.replace(/<[^>]*>/g, '').substring(0, 120) + '...'
                         }}
                       />
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -660,6 +660,21 @@ export default function NotificationsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function NotificationsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-full items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Đang tải...</p>
+        </div>
+      </div>
+    }>
+      <NotificationsPageContent />
+    </Suspense>
   );
 }
 
