@@ -23,7 +23,11 @@ import {
   Search,
   Settings,
 } from "lucide-react";
-import { ModeToggle, LanguageToggle, JapaneseInputModeToggle } from "@/components/common";
+import {
+  ModeToggle,
+  LanguageToggle,
+  JapaneseInputModeToggle,
+} from "@/components/common";
 import { useLanguage } from "@/lib/language-context";
 import { useAuth } from "@/hooks/useAuth";
 import { MobileHeaderProps, NavigationItem, LayoutUser } from "@/types/layout";
@@ -195,9 +199,7 @@ export function MobileHeader({}: MobileHeaderProps) {
                     className="object-contain"
                   />
                 </div>
-                <span className="font-semibold text-foreground">
-                  HanabiHub
-                </span>
+                <span className="font-semibold text-foreground">HanabiHub</span>
               </div>
               <Button
                 variant="ghost"
@@ -246,7 +248,9 @@ export function MobileHeader({}: MobileHeaderProps) {
                     className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
                   >
                     <Bell className="h-5 w-5 flex-shrink-0" />
-                    <span className="font-medium">{t("nav.notifications")}</span>
+                    <span className="font-medium">
+                      {t("nav.notifications")}
+                    </span>
                     {/* Notification badge */}
                     {unreadCount > 0 && (
                       <div className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center px-1">
@@ -262,9 +266,14 @@ export function MobileHeader({}: MobileHeaderProps) {
               {/* Admin Management Button - Only show for admin users */}
               {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
               {isInitialized && isAuthenticated && user?.isAdmin && (
-                <Link href="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
+                <Link
+                  href="/admin/dashboard"
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   <Button
-                    variant={pathname?.startsWith("/admin") ? "default" : "ghost"}
+                    variant={
+                      pathname?.startsWith("/admin") ? "default" : "ghost"
+                    }
                     className={cn(
                       "w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2",
                       pathname?.startsWith("/admin") &&
@@ -272,7 +281,9 @@ export function MobileHeader({}: MobileHeaderProps) {
                     )}
                   >
                     <Settings className="h-5 w-5 flex-shrink-0" />
-                    <span className="font-medium">{t("nav.admin") || "Quản lý"}</span>
+                    <span className="font-medium">
+                      {t("nav.admin") || "Quản lý"}
+                    </span>
                   </Button>
                 </Link>
               )}
@@ -287,7 +298,9 @@ export function MobileHeader({}: MobileHeaderProps) {
                 className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
               >
                 <Search className="h-5 w-5 flex-shrink-0" />
-                <span className="font-medium">{t("nav.search") || "Tìm kiếm"}</span>
+                <span className="font-medium">
+                  {t("nav.search") || "Tìm kiếm"}
+                </span>
               </Button>
 
               {/* Profile/User Section */}

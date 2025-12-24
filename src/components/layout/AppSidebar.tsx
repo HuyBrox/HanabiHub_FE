@@ -23,7 +23,11 @@ import {
   Search,
   Settings,
 } from "lucide-react";
-import { ModeToggle, LanguageToggle, JapaneseInputModeToggle } from "@/components/common";
+import {
+  ModeToggle,
+  LanguageToggle,
+  JapaneseInputModeToggle,
+} from "@/components/common";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/lib/language-context";
 import { AppSidebarProps, NavigationItem } from "@/types/layout";
@@ -141,7 +145,11 @@ export function AppSidebar({}: AppSidebarProps) {
     <div
       className={cn(
         "hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
-        isNotificationPanelOpen || isSearchOpen ? "w-16" : isCollapsed ? "w-16" : "w-64"
+        isNotificationPanelOpen || isSearchOpen
+          ? "w-16"
+          : isCollapsed
+          ? "w-16"
+          : "w-64"
       )}
       style={{
         transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -210,11 +218,14 @@ export function AppSidebar({}: AppSidebarProps) {
                   "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                   isActive &&
                     "bg-primary text-primary-foreground hover:bg-primary/90",
-                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) && "px-2 justify-center"
+                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                    "px-2 justify-center"
                 )}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && <span className="font-medium">{t(item.key)}</span>}
+                {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
+                  <span className="font-medium">{t(item.key)}</span>
+                )}
               </Button>
             </Link>
           );
@@ -225,15 +236,20 @@ export function AppSidebar({}: AppSidebarProps) {
           <div className="relative">
             <Button
               variant="ghost"
-              onClick={() => (isNotificationPanelOpen ? handleClosePanel() : handleOpenPanel())}
+              onClick={() =>
+                isNotificationPanelOpen ? handleClosePanel() : handleOpenPanel()
+              }
               className={cn(
                 "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                 isNotificationPanelOpen && "bg-accent",
-                (isCollapsed || isNotificationPanelOpen || isSearchOpen) && "px-2 justify-center"
+                (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                  "px-2 justify-center"
               )}
             >
               <Bell className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && <span className="font-medium">{t("nav.notifications")}</span>}
+              {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
+                <span className="font-medium">{t("nav.notifications")}</span>
+              )}
               {/* Notification badge - Dynamic from API */}
               {unreadCount > 0 && (
                 <div className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center px-1">
@@ -256,12 +272,15 @@ export function AppSidebar({}: AppSidebarProps) {
                 "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                 pathname?.startsWith("/admin") &&
                   "bg-primary text-primary-foreground hover:bg-primary/90",
-                (isCollapsed || isNotificationPanelOpen || isSearchOpen) && "px-2 justify-center"
+                (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                  "px-2 justify-center"
               )}
             >
               <Settings className="h-5 w-5 flex-shrink-0" />
               {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
-                <span className="font-medium">{t("nav.admin") || "Quản lý"}</span>
+                <span className="font-medium">
+                  {t("nav.admin") || "Quản lý"}
+                </span>
               )}
             </Button>
           </Link>
@@ -284,7 +303,8 @@ export function AppSidebar({}: AppSidebarProps) {
             "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
             isSearchOpen &&
               "bg-primary text-primary-foreground hover:bg-primary/90",
-            (isCollapsed || isNotificationPanelOpen || isSearchOpen) && "px-2 justify-center"
+            (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+              "px-2 justify-center"
           )}
         >
           <Search className="h-5 w-5 flex-shrink-0" />
@@ -304,10 +324,11 @@ export function AppSidebar({}: AppSidebarProps) {
                   "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                   pathname === "/profile" &&
                     "bg-primary text-primary-foreground hover:bg-primary/90",
-                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) && "px-2 justify-center"
+                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                    "px-2 justify-center"
                 )}
               >
-                {(isCollapsed || isNotificationPanelOpen || isSearchOpen) ? (
+                {isCollapsed || isNotificationPanelOpen || isSearchOpen ? (
                   <Avatar className="h-6 w-6">
                     <AvatarImage
                       src={user?.avatar || "/placeholder.svg"}
@@ -345,7 +366,8 @@ export function AppSidebar({}: AppSidebarProps) {
                 variant="ghost"
                 className={cn(
                   "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
-                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) && "px-2 justify-center"
+                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                    "px-2 justify-center"
                 )}
               >
                 <User className="h-5 w-5 flex-shrink-0" />
@@ -404,7 +426,9 @@ export function AppSidebar({}: AppSidebarProps) {
                 )}
               >
                 <LogOut className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && <span className="font-medium">{t("nav.logout")}</span>}
+                {!isCollapsed && (
+                  <span className="font-medium">{t("nav.logout")}</span>
+                )}
               </Button>
             ) : (
               <Link href="/login">
@@ -416,7 +440,9 @@ export function AppSidebar({}: AppSidebarProps) {
                   )}
                 >
                   <User className="h-5 w-5 flex-shrink-0" />
-                  {!isCollapsed && <span className="font-medium">{t("nav.login")}</span>}
+                  {!isCollapsed && (
+                    <span className="font-medium">{t("nav.login")}</span>
+                  )}
                 </Button>
               </Link>
             )

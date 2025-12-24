@@ -36,6 +36,7 @@ import { LoadingSpinner } from "@/components/loading";
 import { CountUpNumber } from "@/components/home/CountUpNumber";
 import styles from "./hero-animations.module.css";
 import { Poppins } from "next/font/google";
+import { useLanguage } from "@/lib/language-context";
 
 // Font đẹp cho hero section - Poppins (modern, clean, friendly)
 // Tối ưu: chỉ load weights cần thiết và display swap
@@ -48,6 +49,8 @@ const poppins = Poppins({
 });
 
 export default function HomePage() {
+  const { t } = useLanguage();
+
   // Fetch popular courses - tối ưu: chỉ fetch khi cần
   const coursesQueryParams = useMemo(() => ({ limit: 6 }), []);
   const { data: coursesData, isLoading: coursesLoading } =
