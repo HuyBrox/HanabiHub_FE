@@ -54,7 +54,7 @@
     "input-otp": "1.4.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "0.542.0",
-    "next": "^15.5.2",
+    "next": "^15.5.7",
     "next-themes": "latest",
     "peerjs": "^1.5.2",
     "react": "^19.2.0",
@@ -72,6 +72,7 @@
     "tailwindcss-animate": "1.0.7",
     "tinymce": "^8.3.1",
     "vaul": "1.1.2",
+    "wanakana": "^5.3.1",
     "zod": "4.1.5"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -66,11 +66,16 @@ import {
   useGetProgressTimelineQuery,
   useGetDetailedPerformanceQuery,
 } from "@/store/services/learningInsightsApi";
+import { useSendChatMessageMutation } from "@/store/services/aiChatApi";
 import { LoadingSpinner } from "@/components/loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AIPracticePage() {
-  const [messages, setMessages] = useState([
+  const { user } = useAuth();
+  const [messages, setMessages] = useState<
+    Array<{ role: "user" | "ai"; content: string; source?: string }>
+  >([
     {
       role: "ai",
       content: "Xin chào! Tôi là trợ lý học tập AI của bạn. 👋",
@@ -81,9 +86,10 @@ export default function AIPracticePage() {
         "Dựa trên dữ liệu học tập, hôm nay bạn nên ôn lại phần flashcard về thời gian.",
     },
   ]);
-  const [inputMessage, setInputMessage] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isChatbotOpen, setIsChatbotOpen] = useState(true);
   const [timeRange, setTimeRange] = useState<7 | 30>(7);
+  const [isSending, setIsSending] = useState(false);
 
   // Fetch data from BE
   const {
@@ -93,7 +99,10 @@ export default function AIPracticePage() {
     refetch,
   } = useGetMyLearningInsightsQuery();
 
-  const { data: dailyStatsData } = useGetDailyStatsQuery({ days: timeRange });
+  // Memoize query params to prevent infinite re-fetching
+  const dailyStatsParams = useMemo(() => ({ days: timeRange }), [timeRange]);
+
+  const { data: dailyStatsData } = useGetDailyStatsQuery(dailyStatsParams);
   const { data: timeAnalyticsData } = useGetTimeAnalyticsQuery();
   const { data: weakAreasData } = useGetWeakAreasQuery();
   const { data: timelineData } = useGetProgressTimelineQuery();
@@ -102,33 +111,100 @@ export default function AIPracticePage() {
   const [forceUpdate, { isLoading: isUpdating }] =
     useForceUpdateInsightsMutation();
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+  const [sendChatMessage] = useSendChatMessageMutation();
 
-    setMessages((prev) => [...prev, { role: "user", content: inputMessage }]);
+  // Format date for charts - move before early returns
+  const formatDate = useCallback((dateStr: string) => {
+    const date = new Date(dateStr);
+    return `${date.getDate()}/${date.getMonth() + 1}`;
+  }, []);
 
-    setTimeout(() => {
+  // Prepare daily stats chart data - MUST be before early returns
+  const dailyChartData = useMemo(
+    () =>
+      dailyStatsData?.data?.map((stat) => ({
+        date: formatDate(stat.date),
+        "Thời gian học": stat.studyTime,
+        "Bài đã làm": stat.lessonsCompleted,
+        "Thẻ ôn": stat.cardsReviewed,
+      })) || [],
+    [dailyStatsData, formatDate]
+  );
+
+  // Prepare time distribution data - MUST be before early returns
+  const timeDistribution = useMemo(
+    () => timeAnalyticsData?.data?.byContentType || [],
+    [timeAnalyticsData]
+  );
+
+  // Get weak areas - MUST be before early returns
+  const weakAreas = useMemo(() => weakAreasData?.data, [weakAreasData]);
+
+  // Calculate average daily study time from last 7 days
+  const averageDailyStudyTime = useMemo(() => {
+    if (!dailyStatsData?.data || dailyStatsData.data.length === 0) {
+      return 0;
+    }
+
+    const totalStudyTime = dailyStatsData.data.reduce((sum, stat) => sum + stat.studyTime, 0);
+    return Math.round(totalStudyTime / dailyStatsData.data.length);
+  }, [dailyStatsData]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!inputRef.current || !user?._id) {
+      return;
+    }
+
+    const trimmedMessage = inputRef.current.value.trim();
+
+    if (!trimmedMessage) {
+      return;
+    }
+
+    // Add user message to chat
+    setMessages((prev) => [...prev, { role: "user", content: trimmedMessage }]);
+
+    // Clear input
+    inputRef.current.value = "";
+    setIsSending(true);
+
+    try {
+      const response = await sendChatMessage({
+        user_id: user._id,
+        message: trimmedMessage,
+      }).unwrap();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          content: response.reply,
+          source: response.source,
+        },
+      ]);
+    } catch (error) {
+      console.error("Failed to send message:", error);
       setMessages((prev) => [
         ...prev,
         {
           role: "ai",
           content:
-            "Tôi đã nhận được tin nhắn của bạn. Đây là nơi bạn sẽ kết nối với AI backend để xử lý câu hỏi.",
+            "Xin lỗi, có lỗi xảy ra khi xử lý tin nhắn. Vui lòng thử lại sau.",
         },
       ]);
-    }, 1000);
+    } finally {
+      setIsSending(false);
+    }
+  }, [user, sendChatMessage]);
 
-    setInputMessage("");
-  };
-
-  const handleForceUpdate = async () => {
+  const handleForceUpdate = useCallback(async () => {
     try {
       await forceUpdate().unwrap();
       refetch();
     } catch (error) {
       console.error("Failed to update insights:", error);
     }
-  };
+  }, [forceUpdate, refetch]);
 
   if (isLoading) {
     return (
@@ -205,27 +281,6 @@ export default function AIPracticePage() {
     return levelMap[level as keyof typeof levelMap] || "Sơ cấp";
   };
 
-  // Format date for charts
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return `${date.getDate()}/${date.getMonth() + 1}`;
-  };
-
-  // Prepare daily stats chart data
-  const dailyChartData =
-    dailyStatsData?.data?.map((stat) => ({
-      date: formatDate(stat.date),
-      "Thời gian học": stat.studyTime,
-      "Bài đã làm": stat.lessonsCompleted,
-      "Thẻ ôn": stat.cardsReviewed,
-    })) || [];
-
-  // Prepare time distribution data
-  const timeDistribution = timeAnalyticsData?.data?.byContentType || [];
-
-  // Get weak areas
-  const weakAreas = weakAreasData?.data;
-
   // Get timeline data
   const timeline = timelineData?.data;
 
@@ -233,18 +288,18 @@ export default function AIPracticePage() {
   const detailedPerf = detailedPerfData?.data;
 
   return (
-    <div className="h-full flex flex-col lg:flex-row gap-4 p-2 sm:p-4 bg-background">
+    <div className="h-full flex flex-col lg:flex-row gap-2 md:gap-4 p-2 md:p-3 lg:p-4 bg-background overflow-hidden">
       {/* Left Column - Analytics Dashboard */}
       <div
-        className={`flex-1 overflow-auto space-y-4 pr-0 lg:pr-2 transition-all duration-300 ${
+        className={`flex-1 overflow-auto space-y-3 md:space-y-4 pr-0 lg:pr-2 transition-all duration-300 ${
           isChatbotOpen ? "lg:flex-[3]" : "lg:flex-1"
         }`}
       >
         {/* Header with Refresh Button */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
-            <h2 className="text-2xl font-bold">Phân tích học tập</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-lg md:text-xl lg:text-2xl font-bold">Phân tích học tập</h2>
+            <p className="text-xs md:text-sm text-muted-foreground">
               Cập nhật lần cuối: {new Date(insights.lastUpdated).toLocaleString("vi-VN")}
             </p>
           </div>
@@ -253,79 +308,85 @@ export default function AIPracticePage() {
             size="sm"
             onClick={handleForceUpdate}
             disabled={isUpdating}
+            className="text-xs md:text-sm h-8 md:h-9"
           >
             <RefreshCw
-              className={`h-4 w-4 mr-2 ${isUpdating ? "animate-spin" : ""}`}
+              className={`h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2 ${isUpdating ? "animate-spin" : ""}`}
             />
-            {isUpdating ? "Đang cập nhật..." : "Cập nhật"}
+            <span className="hidden sm:inline">{isUpdating ? "Đang cập nhật..." : "Cập nhật"}</span>
+            <span className="sm:hidden">{isUpdating ? "..." : "Cập nhật"}</span>
           </Button>
         </div>
 
         {/* Overview Cards with real data */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-          <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                <Award className="h-4 w-4 text-primary" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
+          <Card className="border-primary/20 shadow-sm md:hover:shadow-lg md:hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
+            <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                <Award className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                 <span className="hidden sm:inline">Trình độ</span>
+                <span className="sm:hidden">Level</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold text-primary">
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="text-lg md:text-xl lg:text-2xl font-bold text-primary">
                 {getLevelDisplay(performance.overallLevel)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 md:mt-1">
                 {performance.overallLevel}
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-75">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
+          <Card className="border-primary/20 shadow-sm md:hover:shadow-lg md:hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-75">
+            <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-500" />
                 <span className="hidden sm:inline">Tiến bộ</span>
+                <span className="sm:hidden">Prog</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="text-lg md:text-xl lg:text-2xl font-bold">
                 {performance.weeklyProgress >= 0 ? "+" : ""}
                 {Math.round(performance.weeklyProgress)}%
               </div>
               <Progress
                 value={Math.min(Math.abs(performance.weeklyProgress), 100)}
-                className="mt-2 h-2"
+                className="mt-1.5 md:mt-2 h-1.5 md:h-2"
               />
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-150">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                <Target className="h-4 w-4 text-blue-500" />
+          <Card className="border-primary/20 shadow-sm md:hover:shadow-lg md:hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-150">
+            <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                <Target className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-500" />
                 <span className="hidden sm:inline">Duy trì</span>
+                <span className="sm:hidden">Cons</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="text-lg md:text-xl lg:text-2xl font-bold">
                 {Math.round(performance.consistency)}%
               </div>
-              <Progress value={performance.consistency} className="mt-2 h-2" />
+              <Progress value={performance.consistency} className="mt-1.5 md:mt-2 h-1.5 md:h-2" />
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-2">
-                <Brain className="h-4 w-4 text-purple-500" />
+          <Card className="border-primary/20 shadow-sm md:hover:shadow-lg md:hover:scale-105 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 delay-200">
+            <CardHeader className="pb-2 md:pb-3 p-3 md:p-6">
+              <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 md:gap-2">
+                <Brain className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-500" />
                 <span className="hidden sm:inline">Ghi nhớ</span>
+                <span className="sm:hidden">Ret</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-xl sm:text-2xl font-bold">
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="text-lg md:text-xl lg:text-2xl font-bold">
                 {Math.round(performance.retention)}%
               </div>
-              <Progress value={performance.retention} className="mt-2 h-2" />
+              <Progress value={performance.retention} className="mt-1.5 md:mt-2 h-1.5 md:h-2" />
             </CardContent>
           </Card>
         </div>
@@ -333,16 +394,16 @@ export default function AIPracticePage() {
         {/* Weak Areas Alert */}
         {weakAreas?.hasWeakAreas && (
           <Alert variant="destructive" className="border-orange-500 bg-orange-50 dark:bg-orange-950/30 animate-in fade-in slide-in-from-bottom-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Cần cải thiện</AlertTitle>
-            <AlertDescription className="mt-2 space-y-2">
+            <AlertCircle className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <AlertTitle className="text-sm md:text-base">Cần cải thiện</AlertTitle>
+            <AlertDescription className="mt-2 space-y-1.5 md:space-y-2">
               {weakAreas.weakSkills.map((skill, idx) => (
-                <div key={idx} className="text-sm">
+                <div key={idx} className="text-xs md:text-sm">
                   • Kỹ năng <strong>{skill.skill}</strong>: {skill.level}/100 - {skill.suggestion}
                 </div>
               ))}
               {weakAreas.difficultCards.count > 0 && (
-                <div className="text-sm">
+                <div className="text-xs md:text-sm">
                   • <strong>{weakAreas.difficultCards.count}</strong> thẻ flashcard khó - {weakAreas.difficultCards.suggestion}
                 </div>
               )}
@@ -352,22 +413,24 @@ export default function AIPracticePage() {
 
         {/* Daily Learning Activity Chart */}
         <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4">
-          <CardHeader>
-            <div className="flex justify-between items-center">
+          <CardHeader className="p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 md:gap-4">
               <div>
-                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                  <Activity className="h-5 w-5 text-primary" />
-                  Hoạt động học tập hàng ngày
+                <CardTitle className="flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
+                  <Activity className="h-4 w-4 md:h-5 md:w-5 text-primary" />
+                  <span className="hidden sm:inline">Hoạt động học tập hàng ngày</span>
+                  <span className="sm:hidden">Hoạt động</span>
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
+                <CardDescription className="text-xs md:text-sm mt-0.5">
                   Thống kê {timeRange} ngày gần nhất
                 </CardDescription>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 md:gap-2">
                 <Button
                   variant={timeRange === 7 ? "default" : "outline"}
                   size="sm"
                   onClick={() => setTimeRange(7)}
+                  className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3"
                 >
                   7 ngày
                 </Button>
@@ -375,15 +438,16 @@ export default function AIPracticePage() {
                   variant={timeRange === 30 ? "default" : "outline"}
                   size="sm"
                   onClick={() => setTimeRange(30)}
+                  className="h-7 md:h-9 text-xs md:text-sm px-2 md:px-3"
                 >
                   30 ngày
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6 pt-0">
             {dailyChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250} className="md:h-[300px]">
                 <ComposedChart data={dailyChartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="date" className="text-xs" />
@@ -418,7 +482,7 @@ export default function AIPracticePage() {
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+              <div className="h-[250px] md:h-[300px] flex items-center justify-center text-muted-foreground text-xs md:text-sm px-4 text-center">
                 Chưa có dữ liệu học tập trong khoảng thời gian này
               </div>
             )}
@@ -426,7 +490,7 @@ export default function AIPracticePage() {
         </Card>
 
         {/* Time Distribution */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           {/* Time by Content Type */}
           <Card className="shadow-sm animate-in fade-in slide-in-from-bottom-4">
             <CardHeader>
@@ -659,7 +723,7 @@ export default function AIPracticePage() {
               Tiến độ khóa học
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {analysis.courseProgress.coursesInProgress} khóa đang học
+              {analysis.courseProgress.coursesInProgress || 0} khóa đang học
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -667,13 +731,16 @@ export default function AIPracticePage() {
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-muted-foreground">Đang học</p>
                 <p className="text-2xl font-bold text-primary">
-                  {analysis.courseProgress.coursesInProgress}
+                  {analysis.courseProgress.coursesInProgress || 0}
                 </p>
               </div>
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-muted-foreground">Thời gian TB</p>
                 <p className="text-2xl font-bold text-primary">
-                  {analysis.courseProgress.averageCompletionTime} ngày
+                  {averageDailyStudyTime > 0
+                    ? `${averageDailyStudyTime} phút/ngày`
+                    : "0 phút/ngày"
+                  }
                 </p>
               </div>
             </div>
@@ -732,7 +799,7 @@ export default function AIPracticePage() {
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
-                      {analysis.lessonMastery.videoLessons.completionRate}%
+                      {analysis.lessonMastery.videoLessons.completionRate || 0}%
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Tỷ lệ xem hết
@@ -740,7 +807,10 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
-                      {analysis.lessonMastery.videoLessons.averageWatchTime} phút
+                      {analysis.lessonMastery.videoLessons.averageWatchTime
+                        ? `${Math.round(analysis.lessonMastery.videoLessons.averageWatchTime)} phút`
+                        : "0 phút"
+                      }
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Thời lượng TB
@@ -748,7 +818,10 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-primary">
-                      {analysis.lessonMastery.videoLessons.rewatch} lần
+                      {analysis.lessonMastery.videoLessons.rewatch
+                        ? `${analysis.lessonMastery.videoLessons.rewatch.toFixed(1)} lần`
+                        : "0 lần"
+                      }
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Số lần xem lại
@@ -761,7 +834,7 @@ export default function AIPracticePage() {
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-green-600">
-                      {analysis.lessonMastery.taskLessons.averageScore}%
+                      {analysis.lessonMastery.taskLessons.averageScore || 0}%
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Điểm TB
@@ -769,7 +842,10 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-xl sm:text-2xl font-bold text-blue-600">
-                      {analysis.lessonMastery.taskLessons.averageAttempts} lần
+                      {analysis.lessonMastery.taskLessons.averageAttempts
+                        ? `${analysis.lessonMastery.taskLessons.averageAttempts.toFixed(1)} lần`
+                        : "0 lần"
+                      }
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Làm lại
@@ -777,7 +853,7 @@ export default function AIPracticePage() {
                   </div>
                   <div className="text-center p-3 sm:p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                     <div className="text-base sm:text-lg font-bold text-orange-600">
-                      {analysis.lessonMastery.taskLessons.commonMistakes.length}
+                      {analysis.lessonMastery.taskLessons.commonMistakes?.length || 0}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Lỗi thường
@@ -1034,9 +1110,9 @@ export default function AIPracticePage() {
         </Button>
 
         {isChatbotOpen && (
-          <div className="flex-1 flex flex-col pl-4 animate-in slide-in-from-right duration-300">
-            <Card className="flex-1 flex flex-col shadow-lg">
-              <CardHeader className="border-b bg-primary/5">
+          <div className="h-full flex flex-col pl-4 animate-in slide-in-from-right duration-300">
+            <Card className="h-full flex flex-col shadow-lg">
+              <CardHeader className="border-b bg-primary/5 flex-shrink-0">
                 <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                   <Brain className="h-5 w-5 text-primary" />
                   Trợ lý học tập AI 🤖
@@ -1046,7 +1122,7 @@ export default function AIPracticePage() {
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="flex-1 overflow-auto p-4 space-y-4">
+              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                 {messages.map((message, index) => (
                   <div
                     key={index}
@@ -1064,23 +1140,53 @@ export default function AIPracticePage() {
                       <p className="text-xs sm:text-sm whitespace-pre-wrap">
                         {message.content}
                       </p>
+                      {message.source && (
+                        <div className="mt-1 flex items-center gap-1">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                            {message.source === "RAG"
+                              ? "📚 Ngữ pháp"
+                              : message.source === "Translator"
+                              ? "🌐 Dịch thuật"
+                              : "🤖 AI"}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
+                {isSending && (
+                  <div className="flex justify-start animate-in slide-in-from-bottom-2">
+                    <div className="bg-muted rounded-lg px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"></div>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          Đang suy nghĩ...
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
 
-              <div className="p-3 sm:p-4 border-t bg-muted/30">
+              <div className="p-3 sm:p-4 border-t bg-muted/30 flex-shrink-0">
                 <div className="flex gap-2">
                   <Input
+                    ref={inputRef}
                     placeholder="Nhập câu hỏi của bạn..."
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && !isSending && handleSendMessage()
+                    }
+                    disabled={isSending}
                     className="flex-1 text-xs sm:text-sm"
                   />
                   <Button
                     onClick={handleSendMessage}
                     size="icon"
+                    disabled={isSending}
                     className="shrink-0 hover:scale-110 transition-transform"
                   >
                     <Send className="h-4 w-4" />

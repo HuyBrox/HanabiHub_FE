@@ -30,6 +30,8 @@ const translations = {
     "nav.logout": "Logout",
     "nav.theme": "Theme",
     "nav.videoCall": "Hanabi Studio",
+    "nav.admin": "Admin Management",
+    "nav.search": "Search",
 
     // Homepage
     "home.hero.title": "Learn Japanese Easily",
@@ -340,6 +342,8 @@ const translations = {
     "nav.logout": "Đăng xuất",
     "nav.theme": "Chủ đề",
     "nav.videoCall": "Hanabi thoại",
+    "nav.admin": "Quản lý",
+    "nav.search": "Tìm kiếm",
 
     // Homepage
     "home.hero.title": "Học tiếng Nhật dễ dàng",

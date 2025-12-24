@@ -12,10 +12,34 @@ import { NotificationProvider } from "@/components/notification";
 import IncomingCallPopup from "@/components/IncomingCallPopup";
 
 export const metadata: Metadata = {
-  title: "HanabiHub - Learn Japanese Easily",
+  title: "HanabiHub - Nền tảng học tiếng Nhật thông minh",
   description:
-    "Master Japanese with interactive courses, flashcards, and AI practice",
+    "Luyện nói tiếng Nhật cùng AI, theo dõi tiến độ học, và trò chuyện với giáo viên ảo Hanabi.",
   generator: "v0.app",
+  openGraph: {
+    title: "HanabiHub - Nền tảng học tiếng Nhật thông minh",
+    description:
+      "Luyện nói tiếng Nhật cùng AI, theo dõi tiến độ học, và trò chuyện với giáo viên ảo Hanabi.",
+    url: "https://hanabi-hub.vercel.app/",
+    siteName: "HanabiHub",
+    images: [
+      {
+        url: "https://hanabi-hub.vercel.app/images/logos/logohanabi.png",
+        width: 1200,
+        height: 630,
+        alt: "HanabiHub Logo",
+      },
+    ],
+    locale: "vi_VN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "HanabiHub - AI Japanese Learning Platform",
+    description:
+      "Thực hành hội thoại, luyện ngữ pháp, và học cùng AI Hanabi.",
+    images: ["https://hanabi-hub.vercel.app/images/logos/logohanabi.png"],
+  },
 };
 
 export default function RootLayout({

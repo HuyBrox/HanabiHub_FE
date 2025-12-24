@@ -6,24 +6,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, FileText, Download, Plus } from "lucide-react";
+import { UserPlus, Plus } from "lucide-react";
 import { useState } from "react";
-import { createAdmin } from "@/store/services/dashboardApi";
+import { useCreateAdminMutation } from "@/store/services/admin/dashboardApi";
 
 interface QuickActionsProps {
   onCreateUser?: (userData: any) => void;
-  onGenerateReport?: (type: string, format: string) => void;
   className?: string;
 }
 
 export const QuickActions = ({ 
   onCreateUser, 
-  onGenerateReport, 
   className = "" 
 }: QuickActionsProps) => {
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
-  const [isReportOpen, setIsReportOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [userForm, setUserForm] = useState({
     name: '',
     email: '',
@@ -32,13 +28,15 @@ export const QuickActions = ({
     level: 'N5'
   });
 
+  // 🚀 Sử dụng RTK Query mutation
+  const [createAdmin, { isLoading, error }] = useCreateAdminMutation();
+
   const handleCreateUser = async () => {
     if (!userForm.name || !userForm.email || !userForm.username || !userForm.password) {
       alert('Vui lòng điền đầy đủ thông tin');
       return;
     }
 
-    setIsLoading(true);
     try {
       const adminData = {
         fullname: userForm.name,
@@ -46,30 +44,24 @@ export const QuickActions = ({
         username: userForm.username,
         password: userForm.password,
       };
-      
-      const result = await createAdmin(adminData);
+
+      const result = await createAdmin(adminData).unwrap();
       console.log('Admin created successfully:', result);
-      
+
       // Call parent callback if provided
       onCreateUser?.(userForm);
-      
+
       // Reset form and close dialog
       setUserForm({ name: '', email: '', username: '', password: '', level: 'N5' });
       setIsCreateUserOpen(false);
-      
+
       alert('Tạo admin thành công!');
     } catch (error) {
       console.error('Error creating admin:', error);
       alert('Có lỗi xảy ra khi tạo admin. Vui lòng thử lại.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleGenerateReport = (type: string, format: string) => {
-    onGenerateReport?.(type, format);
-    setIsReportOpen(false);
-  };
 
   return (
     <Card className={className}>
@@ -148,79 +140,25 @@ export const QuickActions = ({
                   </Select>
                 </div>
                 <div className="flex space-x-2">
-                  <Button 
-                    onClick={handleCreateUser} 
-                    className="flex-1"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Đang tạo...' : 'Tạo người dùng'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsCreateUserOpen(false)}
-                    disabled={isLoading}
-                  >
-                    Hủy
-                  </Button>
+                      <Button
+                        onClick={handleCreateUser}
+                        className="flex-1"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Đang tạo...' : 'Tạo admin'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreateUserOpen(false)}
+                        disabled={isLoading}
+                      >
+                        Hủy
+                      </Button>
                 </div>
               </div>
             </DialogContent>
           </Dialog>
 
-          {/* Generate Reports */}
-          <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                <FileText className="h-4 w-4 mr-2" />
-                Tạo báo cáo
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Tạo báo cáo</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleGenerateReport('users', 'pdf')}
-                    className="flex flex-col items-center space-y-2 h-20"
-                  >
-                    <FileText className="h-6 w-6" />
-                    <span>Báo cáo người dùng</span>
-                    <span className="text-xs text-gray-500">PDF</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleGenerateReport('courses', 'excel')}
-                    className="flex flex-col items-center space-y-2 h-20"
-                  >
-                    <FileText className="h-6 w-6" />
-                    <span>Báo cáo khóa học</span>
-                    <span className="text-xs text-gray-500">Excel</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleGenerateReport('activity', 'pdf')}
-                    className="flex flex-col items-center space-y-2 h-20"
-                  >
-                    <FileText className="h-6 w-6" />
-                    <span>Báo cáo hoạt động</span>
-                    <span className="text-xs text-gray-500">PDF</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleGenerateReport('users', 'excel')}
-                    className="flex flex-col items-center space-y-2 h-20"
-                  >
-                    <Download className="h-6 w-6" />
-                    <span>Xuất dữ liệu</span>
-                    <span className="text-xs text-gray-500">Excel</span>
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
 
         </div>
       </CardContent>

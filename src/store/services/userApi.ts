@@ -1,148 +1,137 @@
-// src/store/services/userApi.ts
-// ✅ RTK Query API for User Management
+// RTK Query API cho quản lý user
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-// ==================== TYPES ====================
-export interface UserItem {
-  _id: string;
-  fullname: string;
-  username: string;
-  email: string;
-  role: "admin" | "premium" | "basic";
-  avatar?: string;
-}
-
-export interface UserListParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  role?: string;
-}
-
-export interface UserStats {
-  total: number;
-  admin: number;
-  premium: number;
-  basic: number;
-}
-
-export interface UserListResponse {
-  success: boolean;
-  data: UserItem[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-export interface UserStatsResponse {
-  success: boolean;
-  data: UserStats;
-}
-
-// ==================== BASE QUERY ====================
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
-  credentials: "include", // Cookie authentication
-  prepareHeaders: (headers) => {
-    headers.set("Content-Type", "application/json");
+  credentials: "include", // Để gửi cookies
+  prepareHeaders: (headers, { endpoint }) => {
+    // RTK Query tự động không set Content-Type cho FormData
+    // Chỉ set Content-Type cho các request JSON thông thường
+    // updateProfile dùng FormData nên không set Content-Type
+    if (endpoint !== "updateProfile") {
+      headers.set("Content-Type", "application/json");
+    }
     return headers;
   },
 });
 
-// ==================== RTK QUERY API ====================
 export const userApi = createApi({
   reducerPath: "userApi",
   baseQuery,
-  tagTypes: ["Users", "UserStats"],
+  tagTypes: ["User", "Profile"],
   endpoints: (builder) => ({
-    // ================== GET USERS LIST ==================
-    getUsersList: builder.query<UserListResponse, UserListParams>({
-      query: (params = {}) => {
-        const queryParams = new URLSearchParams();
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
-        if (params.search) queryParams.append("search", params.search);
-        if (params.role) queryParams.append("role", params.role);
-
-        return {
-          url: `/user/search?${queryParams.toString()}`,
-          method: "GET",
-        };
-      },
-      transformResponse: (response: any) => {
-        // Transform backend response to expected format
-        if (response.success && response.data) {
-          const { users, total, page, limit } = response.data;
-          return {
-            success: true,
-            data: users || [],
-            pagination: {
-              page: page || 1,
-              limit: limit || 20,
-              total: total || 0,
-              totalPages: Math.ceil((total || 0) / (limit || 20)),
-            },
-          };
-        }
-        return response;
-      },
-      providesTags: ["Users"],
+    // Lấy danh sách tất cả user
+    getUsers: builder.query<any[], void>({
+      query: () => "/users",
+      providesTags: ["User"],
     }),
-
-    // ================== SEARCH USERS ==================
-    // Note: This is the same as getUsersList in the original implementation
-    searchUsers: builder.query<UserListResponse, UserListParams>({
-      query: (params = {}) => {
-        const queryParams = new URLSearchParams();
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
-        if (params.search) queryParams.append("search", params.search);
-        if (params.role) queryParams.append("role", params.role);
-
-        return {
-          url: `/user/search?${queryParams.toString()}`,
-          method: "GET",
-        };
-      },
-      transformResponse: (response: any) => {
-        // Transform backend response to expected format
-        if (response.success && response.data) {
-          const { users, total, page, limit } = response.data;
-          return {
-            success: true,
-            data: users || [],
-            pagination: {
-              page: page || 1,
-              limit: limit || 20,
-              total: total || 0,
-              totalPages: Math.ceil((total || 0) / (limit || 20)),
-            },
-          };
-        }
-        return response;
-      },
-      providesTags: ["Users"],
+    // Lấy thông tin user theo ID
+    getUserById: builder.query<any, string>({
+      query: (id) => `/users/${id}`,
+      providesTags: (result, error, id) => [{ type: "User", id }],
     }),
-
-    // ================== GET USER STATS ==================
-    getUserStats: builder.query<UserStatsResponse, void>({
-      query: () => ({
-        url: "/user/stats",
-        method: "GET",
+    // Cập nhật thông tin user
+    updateUser: builder.mutation<any, { id: string; body: any }>({
+      query: ({ id, body }) => ({
+        url: `/users/${id}`,
+        method: "PUT",
+        body,
       }),
-      providesTags: ["UserStats"],
+      invalidatesTags: (result, error, { id }) => [{ type: "User", id }],
+    }),
+    // Profile stats endpoints
+    getUserStats: builder.query<any, void>({
+      query: () => "/user/profile/stats",
+      providesTags: ["Profile"],
+    }),
+    getUserCourses: builder.query<any[], void>({
+      query: () => "/user/profile/courses",
+      providesTags: ["Profile"],
+    }),
+    getWeeklyProgress: builder.query<any[], void>({
+      query: () => "/user/profile/weekly-progress",
+      providesTags: ["Profile"],
+    }),
+    getUserAchievements: builder.query<any[], void>({
+      query: () => "/user/profile/achievements",
+      providesTags: ["Profile"],
+    }),
+    getUserInsights: builder.query<any, void>({
+      query: () => "/user/profile/insights",
+      providesTags: ["Profile"],
+    }),
+    // Update profile
+    updateProfile: builder.mutation<any, FormData>({
+      query: (formData) => ({
+        url: "/user/change-profile",
+        method: "PATCH",
+        body: formData,
+        // Không set Content-Type, để browser tự set với boundary cho FormData
+      }),
+      invalidatesTags: ["Profile", "User"],
+    }),
+    // Search users
+    searchUsers: builder.query<any, { q: string }>({
+      query: ({ q }) => ({
+        url: "/user/search",
+        params: { q },
+      }),
+      providesTags: ["User"],
+    }),
+    // Get user profile by ID (for viewing other users' profiles)
+    getUserProfileById: builder.query<any, string>({
+      query: (id) => `/user/profile/${id}`,
+      providesTags: (result, error, id) => [{ type: "User", id }],
+    }),
+    // Follow user
+    followUser: builder.mutation<any, { userId: string }>({
+      query: ({ userId }) => ({
+        url: `/user/${userId}/follow`,
+        method: "POST",
+      }),
+      invalidatesTags: (result, error, { userId }) => [
+        { type: "User", id: userId },
+        "User",
+      ],
+    }),
+    // Unfollow user
+    unfollowUser: builder.mutation<any, { userId: string }>({
+      query: ({ userId }) => ({
+        url: `/user/${userId}/follow`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, { userId }) => [
+        { type: "User", id: userId },
+        "User",
+      ],
+    }),
+    // Get friends list
+    getFriends: builder.query<any, string>({
+      query: (userId) => `/user/friends/${userId}`,
+      providesTags: (result, error, userId) => [{ type: "User", id: userId }],
+    }),
+    // Get my friends list (for ChatDock)
+    getMyFriends: builder.query<any, void>({
+      query: () => "/user/friends/me",
+      providesTags: ["User"],
     }),
   }),
 });
 
-// ==================== EXPORT HOOKS ====================
 export const {
-  useGetUsersListQuery,
-  useSearchUsersQuery,
+  useGetUsersQuery,
+  useGetUserByIdQuery,
+  useUpdateUserMutation,
   useGetUserStatsQuery,
-  useLazyGetUsersListQuery,
-  useLazySearchUsersQuery,
+  useGetUserCoursesQuery,
+  useGetWeeklyProgressQuery,
+  useGetUserAchievementsQuery,
+  useGetUserInsightsQuery,
+  useUpdateProfileMutation,
+  useSearchUsersQuery,
+  useGetUserProfileByIdQuery,
+  useFollowUserMutation,
+  useUnfollowUserMutation,
+  useGetFriendsQuery,
+  useGetMyFriendsQuery,
 } = userApi;

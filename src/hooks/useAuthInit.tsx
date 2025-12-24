@@ -3,7 +3,11 @@
 import React, { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useGetCurrentUserQuery } from "../store/services/authApi";
-import { loginStart, loginSuccess, logoutThunk } from "../store/slices/authSlice";
+import {
+  loginStart,
+  loginSuccess,
+  logoutThunk,
+} from "../store/slices/authSlice";
 import { RootState } from "../store";
 import { authApi } from "../store/services/authApi";
 // Update the import path to the correct relative location
@@ -108,16 +112,14 @@ export const useAuthInit = () => {
 
 /**
  * Component wrapper để init auth state
+ * Tối ưu: Không block render, cho phép children render ngay
  */
 export const AuthInitializer: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { isLoading } = useAuthInit();
 
-  // Hiển thị loading khi đang kiểm tra auth state
-  if (isLoading) {
-    return <LoadingPage />;
-  }
-
+  // Không block render - cho phép app render ngay, auth check chạy background
+  // Chỉ hiển thị loading nếu thực sự cần (ví dụ: protected routes)
   return <>{children}</>;
 };

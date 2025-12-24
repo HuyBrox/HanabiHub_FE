@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { X, Image as ImageIcon, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -465,10 +466,13 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                     </label>
                   ) : (
                     <div className="relative w-full aspect-square">
-                      <img
+                      <Image
                         src={thumbnailPreview}
                         alt="Preview"
-                        className="w-full h-full object-cover rounded-lg border"
+                        fill
+                        className="object-cover rounded-lg border"
+                        loading="lazy"
+                        unoptimized
                       />
                       <button
                         type="button"
@@ -476,7 +480,7 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                           setThumbnailPreview(null);
                           setThumbnailFile(null);
                         }}
-                        className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                        className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 z-10"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -569,10 +573,13 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                       </label>
                     ) : (
                       <div className="relative w-40 h-40">
-                        <img
+                        <Image
                           src={thumbnailPreview}
                           alt="Preview"
-                          className="w-full h-full object-cover rounded-lg border"
+                          fill
+                          className="object-cover rounded-lg border"
+                          loading="lazy"
+                          unoptimized
                         />
                         <button
                           type="button"
@@ -580,7 +587,7 @@ export function AddNewModal({ open, onClose }: AddNewModalProps) {
                             setThumbnailPreview(null);
                             setThumbnailFile(null);
                           }}
-                          className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70"
+                          className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 z-10"
                         >
                           <X className="h-4 w-4" />
                         </button>

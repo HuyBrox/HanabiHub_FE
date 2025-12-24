@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, use } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,6 +43,7 @@ import {
   useGetCourseByIdQuery,
   useGetUserCourseProgressQuery,
   useResetCourseProgressMutation,
+  useRateCourseMutation,
 } from "@/store/services/courseApi";
 import { LoadingSpinner } from "@/components/loading";
 import { withAuth } from "@/components/auth";
@@ -72,10 +75,21 @@ const formatDate = (dateString: string) => {
   });
 };
 
+// Helper function để tính rating trung bình
+const calculateAverageRating = (
+  ratings?: Array<{ user: string | any; rating: number }>
+) => {
+  if (!ratings || ratings.length === 0) return 0;
+  const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+  return sum / ratings.length;
+};
+
 function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [isLiked, setIsLiked] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const router = useRouter();
+  const currentUser = useSelector((state: RootState) => state.auth.user);
 
   // Unwrap params Promise
   const { id } = use(params);
@@ -94,6 +108,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
   const [resetProgress, { isLoading: isResetting }] =
     useResetCourseProgressMutation();
+
+  const [rateCourse, { isLoading: isRating }] = useRateCourseMutation();
 
   // Transform lessons data
   const lessons = useMemo(() => {
@@ -135,11 +151,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   }, [lessons, userProgress, isLessonCompleted]);
 
   const handleStartLearning = () => {
-    if (nextLesson) {
-      router.push(`/courses/${id}/learn/${nextLesson._id}`);
-    } else if (lessons.length > 0) {
-      router.push(`/courses/${id}/learn/${lessons[0]._id}`);
-    }
+    router.push(`/courses/${id}`);
   };
 
   const handleResetProgress = async () => {
@@ -150,6 +162,17 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
       } catch (error) {
         console.error("Failed to reset progress:", error);
       }
+    }
+  };
+
+  const handleRateCourse = async () => {
+    if (!selectedRating) return;
+    try {
+      await rateCourse({ courseId: id, rating: selectedRating }).unwrap();
+      refetch();
+      setSelectedRating(null);
+    } catch (error) {
+      console.error("Failed to rate course:", error);
     }
   };
 
@@ -177,27 +200,47 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     );
   }
 
+  // Tính toán ratings
+  const ratings = course?.ratings || [];
+  const avgRating = calculateAverageRating(ratings);
+  const userRating = currentUser
+    ? ratings.find((r: any) =>
+        typeof r.user === "string"
+          ? r.user === currentUser._id
+          : r.user?._id === currentUser._id
+      )
+    : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
+        <div className="container mx-auto px-3 md:px-4 py-3 md:py-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <Link href="/courses">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Quay lại
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 md:h-9 text-xs md:text-sm"
+              >
+                <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Quay lại</span>
               </Button>
             </Link>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">{course.title}</h1>
-              <p className="text-muted-foreground">{course.description}</p>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg md:text-xl lg:text-2xl font-bold line-clamp-2">
+                {course.title}
+              </h1>
+              <p className="text-xs md:text-sm text-muted-foreground line-clamp-1 mt-0.5">
+                {course.description}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsLiked(!isLiked)}
+                className="h-8 w-8 md:h-9 md:w-9 p-0"
               >
                 <Heart
                   className={`h-4 w-4 ${
@@ -205,7 +248,11 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                   }`}
                 />
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 md:h-9 md:w-9 p-0"
+              >
                 <Share2 className="h-4 w-4" />
               </Button>
             </div>
@@ -213,10 +260,10 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-6 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6 lg:space-y-8">
             {/* Course Thumbnail & Info */}
             <Card>
               <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-t-lg relative overflow-hidden">
@@ -230,25 +277,27 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center text-white">
-                      <BookOpen className="h-20 w-20 mx-auto mb-4 opacity-50" />
-                      <h3 className="text-xl font-semibold">{course.title}</h3>
+                      <BookOpen className="h-12 w-12 md:h-16 md:w-16 lg:h-20 lg:w-20 mx-auto mb-2 md:mb-4 opacity-50" />
+                      <h3 className="text-base md:text-lg lg:text-xl font-semibold px-2">
+                        {course.title}
+                      </h3>
                     </div>
                   </div>
                 )}
               </div>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <CardContent className="p-4 md:p-5 lg:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 md:mb-4">
+                  <div className="flex flex-wrap items-center gap-2 md:gap-3 lg:gap-4 text-xs md:text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
+                      <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
                       <span>{formatDuration(totalDuration)}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <BookOpen className="h-4 w-4" />
+                      <BookOpen className="h-3.5 w-3.5 md:h-4 md:w-4" />
                       <span>{lessons.length} bài học</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
+                      <Users className="h-3.5 w-3.5 md:h-4 md:w-4" />
                       <span>
                         {(
                           course.studentCount ||
@@ -259,17 +308,21 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       </span>
                     </div>
                   </div>
-                  <Badge variant="secondary">{course.level}</Badge>
+                  <Badge variant="secondary" className="text-xs w-fit">
+                    {course.level}
+                  </Badge>
                 </div>
-                <h2 className="text-2xl font-bold mb-4">{course.title}</h2>
-                <p className="text-muted-foreground mb-6">
+                <h2 className="text-lg md:text-xl lg:text-2xl font-bold mb-2 md:mb-3 lg:mb-4">
+                  {course.title}
+                </h2>
+                <p className="text-sm md:text-base text-muted-foreground mb-4 md:mb-5 lg:mb-6">
                   {course.description}
                 </p>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3 lg:gap-4">
                   <Button
                     size="lg"
                     onClick={handleStartLearning}
-                    className="bg-orange-500 hover:bg-orange-600"
+                    className="bg-orange-500 hover:bg-orange-600 text-sm md:text-base h-10 md:h-11"
                     disabled={lessons.length === 0}
                   >
                     <Play className="h-4 w-4 mr-2" />
@@ -283,14 +336,21 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       size="lg"
                       onClick={handleResetProgress}
                       disabled={isResetting}
+                      className="text-sm md:text-base h-10 md:h-11"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
-                      Reset tiến độ
+                      <span className="hidden sm:inline">Reset tiến độ</span>
+                      <span className="sm:hidden">Reset</span>
                     </Button>
                   )}
-                  <Button variant="outline" size="lg">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="text-sm md:text-base h-10 md:h-11"
+                  >
                     <Download className="h-4 w-4 mr-2" />
-                    Tải tài liệu
+                    <span className="hidden sm:inline">Tải tài liệu</span>
+                    <span className="sm:hidden">Tải về</span>
                   </Button>
                 </div>
               </CardContent>
@@ -303,20 +363,40 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 onValueChange={setActiveTab}
                 className="w-full"
               >
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-                  <TabsTrigger value="curriculum">Chương trình</TabsTrigger>
-                  <TabsTrigger value="instructor">Giảng viên</TabsTrigger>
-                  <TabsTrigger value="reviews">Đánh giá</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+                  <TabsTrigger
+                    value="overview"
+                    className="text-xs md:text-sm py-2 px-2 md:px-4"
+                  >
+                    Tổng quan
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="curriculum"
+                    className="text-xs md:text-sm py-2 px-2 md:px-4"
+                  >
+                    Chương trình
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="instructor"
+                    className="text-xs md:text-sm py-2 px-2 md:px-4"
+                  >
+                    Giảng viên
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="reviews"
+                    className="text-xs md:text-sm py-2 px-2 md:px-4"
+                  >
+                    Đánh giá
+                  </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="overview" className="p-6">
-                  <div className="space-y-6">
+                <TabsContent value="overview" className="p-4 md:p-5 lg:p-6">
+                  <div className="space-y-4 md:space-y-5 lg:space-y-6">
                     <div>
-                      <h3 className="text-xl font-semibold mb-4">
+                      <h3 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">
                         Giới thiệu khóa học
                       </h3>
-                      <p className="text-muted-foreground leading-relaxed">
+                      <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
                         {course.description}
                       </p>
                     </div>
@@ -324,21 +404,21 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                     <Separator />
 
                     <div>
-                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <Target className="h-5 w-5" />
+                      <h4 className="font-semibold mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
+                        <Target className="h-4 w-4 md:h-5 md:w-5" />
                         Mục tiêu khóa học
                       </h4>
-                      <ul className="space-y-2 text-muted-foreground">
+                      <ul className="space-y-1.5 md:space-y-2 text-sm md:text-base text-muted-foreground">
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-500 mt-0.5 flex-shrink-0" />
                           <span>Nắm vững kiến thức cơ bản về tiếng Nhật</span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-500 mt-0.5 flex-shrink-0" />
                           <span>Phát triển kỹ năng giao tiếp thực tế</span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-500 mt-0.5 flex-shrink-0" />
                           <span>Chuẩn bị cho các kỳ thi JLPT</span>
                         </li>
                       </ul>
@@ -347,27 +427,27 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                     <Separator />
 
                     <div>
-                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <Lightbulb className="h-5 w-5" />
+                      <h4 className="font-semibold mb-2 md:mb-3 flex items-center gap-2 text-sm md:text-base">
+                        <Lightbulb className="h-4 w-4 md:h-5 md:w-5" />
                         Bạn sẽ học được gì
                       </h4>
-                      <ul className="space-y-2 text-muted-foreground">
+                      <ul className="space-y-1.5 md:space-y-2 text-sm md:text-base text-muted-foreground">
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                           <span>Đọc và viết tất cả các ký tự hiragana</span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                           <span>Hiểu thứ tự nét vẽ và kỹ thuật viết đúng</span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                           <span>
                             Nhận biết hiragana trong văn bản tiếng Nhật thực tế
                           </span>
                         </li>
                         <li className="flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-500 mt-0.5 flex-shrink-0" />
                           <span>Sử dụng kỹ thuật ghi nhớ để học nhanh hơn</span>
                         </li>
                       </ul>
@@ -375,24 +455,27 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="curriculum" className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-semibold">
+                <TabsContent value="curriculum" className="p-4 md:p-5 lg:p-6">
+                  <div className="space-y-3 md:space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 md:mb-4">
+                      <h3 className="text-lg md:text-xl font-semibold">
                         Nội dung khóa học
                       </h3>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs md:text-sm text-muted-foreground">
                         {completedLessons}/{lessons.length} bài đã hoàn thành
                       </div>
                     </div>
 
                     {lessons.length > 0 && (
-                      <div className="mb-4">
-                        <Progress value={progressPercentage} className="h-2" />
+                      <div className="mb-3 md:mb-4">
+                        <Progress
+                          value={progressPercentage}
+                          className="h-1.5 md:h-2"
+                        />
                       </div>
                     )}
 
-                    <div className="space-y-3">
+                    <div className="space-y-2 md:space-y-3">
                       {lessons.map((lesson, index) => {
                         const completed = isLessonCompleted(lesson._id);
                         const isCurrent =
@@ -401,34 +484,42 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                           <div
                             key={lesson._id}
                             className={cn(
-                              "flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer",
+                              "flex items-start gap-2 md:gap-3 lg:gap-4 p-3 md:p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer",
                               isCurrent && "border-primary bg-primary/5"
                             )}
                             onClick={() =>
                               router.push(`/courses/${id}/learn/${lesson._id}`)
                             }
                           >
-                            <div className="flex-shrink-0">
+                            <div className="flex-shrink-0 mt-0.5">
                               {completed ? (
-                                <CheckCircle className="h-5 w-5 text-green-600" />
+                                <CheckCircle className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
                               ) : isCurrent ? (
-                                <Circle className="h-5 w-5 text-primary fill-primary/20" />
+                                <Circle className="h-4 w-4 md:h-5 md:w-5 text-primary fill-primary/20" />
                               ) : (
-                                <Circle className="h-5 w-5 text-muted-foreground" />
+                                <Circle className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
                               )}
                             </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge variant="outline" className="text-xs">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mb-1">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] md:text-xs"
+                                >
                                   Bài {index + 1}
                                 </Badge>
-                                <Badge variant="secondary" className="text-xs">
-                                  {lesson.type === "video" ? "Video" : "Bài tập"}
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] md:text-xs"
+                                >
+                                  {lesson.type === "video"
+                                    ? "Video"
+                                    : "Bài tập"}
                                 </Badge>
                                 {isCurrent && (
                                   <Badge
                                     variant="default"
-                                    className="text-xs bg-primary"
+                                    className="text-[10px] md:text-xs bg-primary"
                                   >
                                     Đang học
                                   </Badge>
@@ -436,20 +527,24 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                 {completed && (
                                   <Badge
                                     variant="default"
-                                    className="text-xs bg-green-600"
+                                    className="text-[10px] md:text-xs bg-green-600"
                                   >
                                     Hoàn thành ✓
                                   </Badge>
                                 )}
                               </div>
-                              <h4 className="font-medium">{lesson.title}</h4>
-                              <p className="text-sm text-muted-foreground">
+                              <h4 className="font-medium text-sm md:text-base mb-1">
+                                {lesson.title}
+                              </h4>
+                              <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
                                 {lesson.content}
                               </p>
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Clock className="h-4 w-4" />
-                              <span>{formatDuration(lesson.duration || 0)}</span>
+                            <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-muted-foreground flex-shrink-0">
+                              <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                              <span>
+                                {formatDuration(lesson.duration || 0)}
+                              </span>
                             </div>
                           </div>
                         );
@@ -458,36 +553,36 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="instructor" className="p-6">
-                  <div className="flex items-start gap-6">
-                    <Avatar className="w-20 h-20">
+                <TabsContent value="instructor" className="p-4 md:p-5 lg:p-6">
+                  <div className="flex flex-col sm:flex-row items-start gap-4 md:gap-6">
+                    <Avatar className="w-16 h-16 md:w-20 md:h-20">
                       <AvatarImage src={course.instructor?.avatar} />
-                      <AvatarFallback className="text-2xl">
+                      <AvatarFallback className="text-xl md:text-2xl">
                         {course.instructor?.fullname?.charAt(0) || "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <h3 className="text-xl font-semibold mb-2">
+                      <h3 className="text-lg md:text-xl font-semibold mb-2">
                         {course.instructor?.fullname || "Chưa xác định"}
                       </h3>
-                      <p className="text-muted-foreground mb-4">
+                      <p className="text-sm md:text-base text-muted-foreground mb-3 md:mb-4">
                         {course.instructor?.email || "Chưa xác định"}
                       </p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+                      <div className="flex flex-wrap items-center gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
                         <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          <Star className="h-3.5 w-3.5 md:h-4 md:w-4 fill-yellow-400 text-yellow-400" />
                           <span>4.9</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
+                          <Users className="h-3.5 w-3.5 md:h-4 md:w-4" />
                           <span>5,000+ học viên</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <GraduationCap className="h-4 w-4" />
+                          <GraduationCap className="h-3.5 w-3.5 md:h-4 md:w-4" />
                           <span>10+ năm kinh nghiệm</span>
                         </div>
                       </div>
-                      <p className="text-muted-foreground">
+                      <p className="text-sm md:text-base text-muted-foreground">
                         Giảng viên có nhiều năm kinh nghiệm trong việc giảng dạy
                         tiếng Nhật, đã giúp hàng nghìn học viên đạt được mục
                         tiêu học tập của mình.
@@ -496,15 +591,137 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="reviews" className="p-6">
-                  <div className="text-center py-8">
-                    <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">
-                      Chưa có đánh giá
-                    </h3>
-                    <p className="text-muted-foreground">
-                      Hãy là người đầu tiên đánh giá khóa học này
-                    </p>
+                <TabsContent value="reviews" className="p-4 md:p-5 lg:p-6">
+                  <div className="space-y-6 md:space-y-8">
+                    {/* Rating Summary */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-3xl md:text-4xl font-bold">
+                            {avgRating > 0 ? avgRating.toFixed(1) : "0.0"}
+                          </div>
+                          <div className="flex items-center">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-5 w-5 md:h-6 md:w-6 ${
+                                  star <= Math.round(avgRating)
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-sm md:text-base text-muted-foreground">
+                          {ratings.length} đánh giá
+                        </p>
+                      </div>
+
+                      {/* Rating Form - Only show if user is logged in */}
+                      {currentUser && (
+                        <div className="w-full sm:w-auto">
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                  key={star}
+                                  type="button"
+                                  onClick={() => setSelectedRating(star)}
+                                  className="focus:outline-none"
+                                >
+                                  <Star
+                                    className={`h-6 w-6 md:h-7 md:w-7 transition-colors ${
+                                      selectedRating
+                                        ? star <= selectedRating
+                                          ? "fill-yellow-400 text-yellow-400"
+                                          : "text-gray-300"
+                                        : star <= (userRating?.rating || 0)
+                                        ? "fill-yellow-400 text-yellow-400"
+                                        : "text-gray-300"
+                                    } hover:text-yellow-400 cursor-pointer`}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                            {(selectedRating || userRating) && (
+                              <Button
+                                onClick={handleRateCourse}
+                                disabled={isRating || !selectedRating}
+                                size="sm"
+                                className="w-full sm:w-auto"
+                              >
+                                {userRating
+                                  ? "Cập nhật đánh giá"
+                                  : "Gửi đánh giá"}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Ratings List */}
+                    {ratings.length > 0 ? (
+                      <div className="space-y-4 md:space-y-5">
+                        {ratings.map((rating: any, index: number) => {
+                          const ratingUser =
+                            typeof rating.user === "string"
+                              ? null
+                              : rating.user;
+                          return (
+                            <div
+                              key={index}
+                              className="flex gap-3 md:gap-4 pb-4 border-b last:border-0"
+                            >
+                              <Avatar className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0">
+                                <AvatarImage
+                                  src={ratingUser?.avatar}
+                                  alt={ratingUser?.fullname || "User"}
+                                />
+                                <AvatarFallback>
+                                  {ratingUser?.fullname?.charAt(0) || "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-semibold text-sm md:text-base">
+                                    {ratingUser?.fullname || "Người dùng"}
+                                  </h4>
+                                  <div className="flex items-center">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`h-3 w-3 md:h-4 md:w-4 ${
+                                          star <= rating.rating
+                                            ? "fill-yellow-400 text-yellow-400"
+                                            : "text-gray-300"
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <p className="text-xs md:text-sm text-muted-foreground">
+                                  Đánh giá {rating.rating} sao
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 md:py-12">
+                        <Star className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mx-auto mb-3 md:mb-4" />
+                        <h3 className="text-base md:text-lg font-semibold mb-2">
+                          Chưa có đánh giá
+                        </h3>
+                        <p className="text-sm md:text-base text-muted-foreground">
+                          {currentUser
+                            ? "Hãy là người đầu tiên đánh giá khóa học này"
+                            : "Đăng nhập để đánh giá khóa học này"}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
               </Tabs>
@@ -512,33 +729,35 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-5 lg:space-y-6">
             {/* Course Info Card */}
             <Card>
-              <CardContent className="p-6">
-                <div className="text-center mb-6">
-                  <div className="text-3xl font-bold text-orange-500 mb-2">
+              <CardContent className="p-4 md:p-5 lg:p-6">
+                <div className="text-center mb-4 md:mb-5 lg:mb-6">
+                  <div className="text-2xl md:text-3xl font-bold text-orange-500 mb-1 md:mb-2">
                     {formatPrice(course.price)}
                   </div>
                   {course.price > 0 && (
-                    <div className="text-sm text-muted-foreground line-through">
+                    <div className="text-xs md:text-sm text-muted-foreground line-through">
                       {formatPrice(course.price * 1.5)}
                     </div>
                   )}
                 </div>
                 <Button
-                  className="w-full bg-orange-500 hover:bg-orange-600 mb-4"
+                  className="w-full bg-orange-500 hover:bg-orange-600 mb-3 md:mb-4 text-sm md:text-base h-10 md:h-11"
                   onClick={handleStartLearning}
                   disabled={lessons.length === 0}
                 >
                   <Play className="h-4 w-4 mr-2" />
-                  {userProgress?.status === "in_progress"
-                    ? nextLesson
-                      ? `Tiếp tục: ${nextLesson.title.slice(0, 20)}...`
-                      : "Tiếp tục học"
-                    : "Bắt đầu học ngay"}
+                  <span className="line-clamp-1">
+                    {userProgress?.status === "in_progress"
+                      ? nextLesson
+                        ? `Tiếp tục: ${nextLesson.title.slice(0, 15)}...`
+                        : "Tiếp tục học"
+                      : "Bắt đầu học ngay"}
+                  </span>
                 </Button>
-                <div className="text-center text-sm text-muted-foreground">
+                <div className="text-center text-xs md:text-sm text-muted-foreground">
                   Đảm bảo hoàn tiền trong 30 ngày
                 </div>
               </CardContent>
@@ -546,21 +765,23 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
             {/* Course Stats */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Thống kê khóa học</CardTitle>
+              <CardHeader className="p-4 md:p-5 lg:p-6 pb-3 md:pb-4">
+                <CardTitle className="text-base md:text-lg">
+                  Thống kê khóa học
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+              <CardContent className="p-4 md:p-5 lg:p-6 pt-0 space-y-3 md:space-y-4">
+                <div className="flex items-center justify-between text-sm md:text-base">
                   <span className="text-muted-foreground">Thời lượng</span>
                   <span className="font-medium">
                     {formatDuration(totalDuration)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between text-sm md:text-base">
                   <span className="text-muted-foreground">Số bài học</span>
                   <span className="font-medium">{lessons.length}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between text-sm md:text-base">
                   <span className="text-muted-foreground">Học viên</span>
                   <span className="font-medium">
                     {(
@@ -570,27 +791,29 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                     ).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between text-sm md:text-base">
                   <span className="text-muted-foreground">Cấp độ</span>
-                  <Badge variant="secondary">{course.level}</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {course.level}
+                  </Badge>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between text-sm md:text-base">
                   <span className="text-muted-foreground">Ngôn ngữ</span>
                   <div className="flex items-center gap-1">
-                    <Globe className="h-4 w-4" />
-                    <span>Tiếng Việt</span>
+                    <Globe className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span className="text-sm">Tiếng Việt</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between text-sm md:text-base">
                   <span className="text-muted-foreground">Chứng chỉ</span>
                   <div className="flex items-center gap-1">
-                    <Award className="h-4 w-4 text-primary" />
-                    <span>Có</span>
+                    <Award className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
+                    <span className="text-sm">Có</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between text-sm md:text-base">
                   <span className="text-muted-foreground">Ngày tạo</span>
-                  <span className="font-medium">
+                  <span className="font-medium text-xs md:text-sm">
                     {formatDate(course.createdAt)}
                   </span>
                 </div>
@@ -600,29 +823,36 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
             {/* Progress Card */}
             {lessons.length > 0 && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Tiến độ học tập</CardTitle>
+                <CardHeader className="p-4 md:p-5 lg:p-6 pb-3 md:pb-4">
+                  <CardTitle className="text-base md:text-lg">
+                    Tiến độ học tập
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 md:p-5 lg:p-6 pt-0 space-y-3 md:space-y-4">
                   <div>
-                    <div className="flex items-center justify-between text-sm mb-2">
+                    <div className="flex items-center justify-between text-xs md:text-sm mb-2">
                       <span>Hoàn thành</span>
                       <span className="font-medium">
                         {Math.round(progressPercentage)}%
                       </span>
                     </div>
-                    <Progress value={progressPercentage} className="h-3" />
+                    <Progress
+                      value={progressPercentage}
+                      className="h-2 md:h-3"
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
                     <div>
-                      <p className="text-muted-foreground">Đã hoàn thành</p>
-                      <p className="font-semibold text-primary">
+                      <p className="text-muted-foreground mb-1">
+                        Đã hoàn thành
+                      </p>
+                      <p className="font-semibold text-primary text-base md:text-lg">
                         {completedLessons}
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Còn lại</p>
-                      <p className="font-semibold">
+                      <p className="text-muted-foreground mb-1">Còn lại</p>
+                      <p className="font-semibold text-base md:text-lg">
                         {lessons.length - completedLessons}
                       </p>
                     </div>

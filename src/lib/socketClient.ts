@@ -67,20 +67,16 @@ export function createSocketConnection(opts: ConnectOptions = {}): Socket {
   });
 
   socket.on("connect_error", (err: any) => {
-    // Ignore websocket errors as polling will be used instead
-    if (err.message === "websocket error" || err.type === "TransportError") {
+    if (err.message === "websocket error") {
       console.warn("⚠️ WebSocket không khả dụng, fallback về polling");
       return;
     }
-    // Only log actual connection errors (not transport fallbacks)
-    if (err.message && !err.message.includes("xhr poll error")) {
-      console.error("🔴 Socket connection error:", err.message || err);
-      console.error("🔍 Error details:", {
-        type: err.type || "unknown",
-        description: err.description || "no description",
-        message: err.message || "no message",
-      });
-    }
+    console.error("🔴 Socket connection error:", err.message || err);
+    console.error("🔍 Error details:", {
+      type: err.type || "unknown",
+      description: err.description || "no description",
+      message: err.message || "no message",
+    });
   });
 
   try {

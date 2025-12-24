@@ -3,7 +3,7 @@
 import type React from "react";
 
 /**
- * Layout for receiver page - hides ChatDock and other UI elements
+ * Layout for receiver page - full screen call interface
  */
 export default function ReceiverLayout({
   children,

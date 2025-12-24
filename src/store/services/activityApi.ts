@@ -61,7 +61,7 @@ export const activityApi = createApi({
     // 📹 Track video lesson activity
     trackVideoActivity: builder.mutation<ApiResponse<null>, TrackVideoRequest>({
       query: (data) => ({
-        url: "/activity/track-video",
+        url: "/user-activity/track-video",
         method: "POST",
         body: data,
       }),
@@ -81,7 +81,7 @@ export const activityApi = createApi({
     // 📝 Track task lesson activity
     trackTaskActivity: builder.mutation<ApiResponse<{ passed: boolean }>, TrackTaskRequest>({
       query: (data) => ({
-        url: "/activity/track-task",
+        url: "/user-activity/track-task",
         method: "POST",
         body: data,
       }),
@@ -97,7 +97,7 @@ export const activityApi = createApi({
     // 📚 Track course access
     trackCourseAccess: builder.mutation<ApiResponse<null>, TrackCourseAccessRequest>({
       query: (data) => ({
-        url: "/activity/track-course-access",
+        url: "/user-activity/track-course-access",
         method: "POST",
         body: data,
       }),
@@ -123,7 +123,7 @@ export const activityApi = createApi({
       void
     >({
       query: () => ({
-        url: "/activity/summary",
+        url: "/user-activity/summary",
         method: "GET",
       }),
       providesTags: ["Activity"],

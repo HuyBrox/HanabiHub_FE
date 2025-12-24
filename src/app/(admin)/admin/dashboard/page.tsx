@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   StatsCard, 
@@ -11,55 +10,58 @@ import {
   QuickActions 
 } from "@/components/admin/admin/dashboard";
 import { Users, UserPlus, Clock, Globe, TrendingUp } from "lucide-react";
-import { getStats, getPopularCourses, getRecentActivities } from "@/store/services/dashboardApi";
-
-import axios from "axios";
+import { 
+  useGetStatsQuery, 
+  useGetPopularCoursesQuery, 
+  useGetRecentActivitiesQuery 
+} from "@/store/services/admin/dashboardApi";
 
 
 
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<any>(null);
-  const [popularCourses, setPopularCourses] = useState<any[]>([]);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 🚀 Sử dụng RTK Query hooks
+  const { 
+    data: statsData, 
+    isLoading: statsLoading, 
+    error: statsError 
+  } = useGetStatsQuery();
 
-  // 🔹 Gọi 2 API cùng lúc
-  const fetchDashboardData = async () => {
-    try {
-      const statsRes = await getStats();
-      const coursesRes = await getPopularCourses();
-      const activitiesRes = await getRecentActivities();
+  const { 
+    data: coursesData, 
+    isLoading: coursesLoading, 
+    error: coursesError 
+  } = useGetPopularCoursesQuery();
 
-      // Tính toán tỉ lệ phần trăm từ dữ liệu levelDistribution
-      const levelData = statsRes?.levelDistribution || {};
-      const total = Object.values(levelData).reduce((sum: number, count: any) => sum + count, 0);
+  const { 
+    data: activitiesData, 
+    isLoading: activitiesLoading, 
+    error: activitiesError 
+  } = useGetRecentActivitiesQuery();
 
-      const formattedLevels = Object.entries(levelData).map(
-        ([level, count]: [string, any]) => ({
-          level,
-          count,
-          percentage: total ? ((count / total) * 100).toFixed(1) : 0,
-        })
-      );
+  // 🔹 Tính toán dữ liệu đã format
+  const stats = statsData ? (() => {
+    const levelData = statsData?.levelDistribution || {};
+    const total = Object.values(levelData).reduce((sum: number, count: any) => sum + count, 0);
 
-      setStats({
-        ...statsRes,
-        formattedLevelDistribution: formattedLevels,
-      });
+    const formattedLevels = Object.entries(levelData).map(
+      ([level, count]: [string, any]) => ({
+        level,
+        count,
+        percentage: total ? ((count / total) * 100).toFixed(1) : 0,
+      })
+    );
 
-      setPopularCourses(coursesRes || []);
-      setRecentActivities(activitiesRes.activities || []);
-    } catch (error) {
-      console.error("Lỗi khi tải dashboard:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return {
+      ...statsData,
+      formattedLevelDistribution: formattedLevels,
+    };
+  })() : null;
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  const popularCourses = coursesData || [];
+  const recentActivities = activitiesData?.activities || [];
+  
+  const loading = statsLoading || coursesLoading || activitiesLoading;
 
   console.log(popularCourses);
   console.log(stats);
@@ -68,11 +70,6 @@ export default function Dashboard() {
   const handleCreateUser = (userData: any) => {
     console.log('Creating user:', userData);
     // Thêm logic tạo user ở đây
-  };
-
-  const handleGenerateReport = (type: string, format: string) => {
-    console.log('Generating report:', type, format);
-    // Thêm logic tạo báo cáo ở đây
   };
 
   if (!stats) {
@@ -140,7 +137,6 @@ export default function Dashboard() {
         <div className="lg:col-span-1">
           <QuickActions 
             onCreateUser={handleCreateUser}
-            onGenerateReport={handleGenerateReport}
           />
         </div>
         

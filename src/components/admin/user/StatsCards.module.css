@@ -1,0 +1,229 @@
+/* ===== CARD CHUNG – pastel tím nhẹ ===== */
+.card {
+  position: relative;
+  border-radius: 20px;
+  padding: 18px 18px 16px;
+
+  /* ✨ nền pastel tím cực nhẹ giống hình m gửi */
+  background:
+    linear-gradient(135deg, rgba(250,247,255,0.95), rgba(247,248,255,0.98)),
+    #ffffff;
+
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow:
+    0 12px 30px rgba(15, 23, 42, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+
+  transition: transform 0.18s ease,
+              box-shadow 0.18s ease,
+              border-color 0.18s ease,
+              background 0.18s ease;
+
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: #a855f7;
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.95) inset;
+}
+
+/* line mờ phân cách nội dung / footer */
+.card::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 46px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0),
+    rgba(226, 232, 240, 1),
+    rgba(226, 232, 240, 0)
+  );
+}
+
+/* ===== TOP: avatar + tên + menu ===== */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* avatar gradient + animation nhẹ */
+.avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: conic-gradient(
+    from 210deg,
+    #a855f7,
+    #6366f1,
+    #22c55e,
+    #f97316,
+    #ec4899,
+    #a855f7
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 18px;
+  box-shadow: 0 12px 26px rgba(79, 70, 229, 0.5);
+  animation: avatarGlow 6s linear infinite;
+}
+
+@keyframes avatarGlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.name {
+  font-weight: 700;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.email {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.more {
+  margin-left: auto;
+  background: rgba(248, 250, 252, 0.9);
+  border-radius: 999px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.more:hover {
+  background: #0f172a;
+  color: #e5e7eb;
+  border-color: #0f172a;
+}
+
+/* ===== META: role + online ===== */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badgeBlue { background: #e0f2fe; color: #0369a1; }
+.badgeRed { background: #fee2e2; color: #b91c1c; }
+.badgeGreen { background: #dcfce7; color: #166534; }
+.badgeYellow { background: #fef3c7; color: #92400e; }
+.badgeGray { background: #e5e7eb; color: #374151; }
+
+/* online/offline chip */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.dotGreen,
+.dotGray {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.dotGreen { background: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25); }
+.dotGray { background: #cbd5e1; }
+
+/* ===== BODY TEXT ===== */
+.bodyRow {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.bodyLabel {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.note {
+  font-size: 12px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.link {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: #f8fafc;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.link:hover {
+  background: #0f172a;
+  color: #f9fafb;
+  border-color: #0f172a;
+}
+
+.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.danger:hover {
+  background: #b91c1c;
+  color: #fef2f2;
+  border-color: #b91c1c;
+}

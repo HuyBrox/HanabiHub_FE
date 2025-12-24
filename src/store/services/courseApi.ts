@@ -15,11 +15,12 @@ export interface Course {
   description: string;
   thumbnail?: string;
   lessons?: Lesson[];
-  level: string;
+  level?: string;
   instructor?: Instructor;
   students?: string[];
   studentCount?: number;
   price: number;
+  ratings?: Array<{ user: string; rating: number }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -338,70 +339,22 @@ export const courseApi = createApi({
       ],
     }),
 
-    // ============ USER ACTIVITY TRACKING ENDPOINTS ============
-
-    // Track video lesson activity
-    trackVideoActivity: builder.mutation<
-      ApiResponse<null>,
-      {
-        courseId?: string;
-        lessonId: string;
-        lessonTitle: string;
-        totalDuration: number;
-        watchedDuration?: number;
-        isWatchedCompletely?: boolean;
-        watchCount: number;
-        completedAt?: string;
-      }
+    // Đánh giá khóa học
+    rateCourse: builder.mutation<
+      ApiResponse<Course>,
+      { courseId: string; rating: number }
     >({
-      query: (body) => ({
-        url: "/user-activity/track-video",
+      query: ({ courseId, rating }) => ({
+        url: `/courses/${courseId}/rate`,
         method: "POST",
-        body,
+        body: { rating },
       }),
-      invalidatesTags: ["Course"],
+      invalidatesTags: (_result, _error, { courseId }) => [
+        { type: "Course", id: courseId },
+        "Course",
+      ],
     }),
 
-    // Track task/quiz lesson activity
-    trackTaskActivity: builder.mutation<
-      ApiResponse<{ passed: boolean }>,
-      {
-        courseId?: string;
-        lessonId: string;
-        lessonTitle: string;
-        taskType: string;
-        score: number;
-        maxScore?: number;
-        correctAnswers?: number;
-        totalQuestions?: number;
-        timeSpent?: number;
-        completedAt?: string;
-      }
-    >({
-      query: (body) => ({
-        url: "/user-activity/track-task",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Course"],
-    }),
-
-    // Track course access
-    trackCourseAccess: builder.mutation<
-      ApiResponse<null>,
-      {
-        courseId: string;
-        action?: "enroll" | "continue" | "complete";
-        isCompleted?: boolean;
-      }
-    >({
-      query: (body) => ({
-        url: "/user-activity/track-course-access",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Course"],
-    }),
   }),
 });
 
@@ -422,7 +375,5 @@ export const {
   useUpdateCurrentLessonMutation,
   useMarkLessonCompleteMutation,
   useResetCourseProgressMutation,
-  useTrackVideoActivityMutation,
-  useTrackTaskActivityMutation,
-  useTrackCourseAccessMutation,
+  useRateCourseMutation,
 } = courseApi;

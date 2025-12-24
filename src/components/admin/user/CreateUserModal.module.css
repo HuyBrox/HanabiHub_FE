@@ -1,0 +1,203 @@
+/* ===== OVERLAY – tối + blur nhẹ ===== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ===== MODAL – pastel glass ===== */
+.modal {
+  width: min(720px, 96vw);
+  background:
+    radial-gradient(circle at top left, rgba(250, 247, 255, 0.98), transparent 60%),
+    radial-gradient(circle at bottom right, rgba(236, 245, 255, 0.96), transparent 55%),
+    #ffffff;
+  border-radius: 22px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 22px 22px 18px;
+  box-shadow:
+    0 22px 52px rgba(15, 23, 42, 0.24),
+    0 0 0 1px rgba(255, 255, 255, 0.95) inset;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  animation: modalPop 0.2s ease-out;
+}
+
+/* viền gradient rất nhẹ quanh modal */
+.modal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from 215deg,
+    rgba(129, 140, 248, 0.45),
+    rgba(56, 189, 248, 0.3),
+    rgba(52, 211, 153, 0.3),
+    rgba(244, 114, 182, 0.3),
+    rgba(129, 140, 248, 0.45)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ===== TITLE ===== */
+.modal h2 {
+  margin: 0 0 6px 0;
+  font-weight: 800;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+/* ===== ERROR ===== */
+.error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+/* ===== LABEL & INPUT ===== */
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #111827;
+}
+
+/* input/select nền pastel nhẹ */
+.input,
+.select {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  outline: none;
+  font-size: 14px;
+  color: #0f172a;
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(239, 246, 255, 0.94));
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease,
+    background-color 0.14s ease,
+    transform 0.06s ease;
+}
+
+.input::placeholder {
+  color: #9ca3af;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #4f46e5;
+  box-shadow:
+    0 0 0 1px rgba(79, 70, 229, 0.22),
+    0 8px 20px rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* ===== ROW: Vai trò + Trạng thái ===== */
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .modal {
+    padding: 20px 16px 16px;
+  }
+  .row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== ACTIONS ===== */
+.actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* base button */
+.cancel,
+.primary {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease,
+    box-shadow 0.14s ease,
+    transform 0.06s ease;
+}
+
+/* Hủy – xám pastel */
+.cancel {
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+  color: #111827;
+  border-color: #e2e8f0;
+}
+
+.cancel:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e5e7eb, #dbeafe);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.14);
+  transform: translateY(-1px);
+}
+
+/* Lưu – tím gradient nổi bật */
+.primary {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.4);
+}
+
+.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4338ca, #6d28d9);
+  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.5);
+  transform: translateY(-1px);
+}
+
+.cancel:disabled,
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ===== ANIMATION ===== */
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

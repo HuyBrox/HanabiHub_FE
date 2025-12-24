@@ -1,0 +1,105 @@
+/* ================================
+   WRAPPER – grid đẹp, thoáng
+================================ */
+.wrap {
+  display: grid;
+  grid-template-columns: 1fr 180px 180px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+/* mobile: dồn xuống */
+@media (max-width: 640px) {
+  .wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ================================
+   INPUT – pastel glass, border mềm
+================================ */
+.input {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  outline: none;
+
+  /* hiệu ứng glass nhẹ */
+  backdrop-filter: blur(8px);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.input:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.input:focus {
+  border-color: #a78bfa; /* tím nhạt */
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.25);
+}
+
+/* ================================
+   SELECT – pastel gradient
+================================ */
+.select {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  cursor: pointer;
+
+  background: linear-gradient(
+    135deg,
+    #f5f3ff,
+    #eef2ff
+  ); /* tím pastel gradient */
+
+  color: #5b21b6;
+  font-weight: 500;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.select:hover {
+  background: linear-gradient(135deg, #ede9fe, #e0e7ff);
+}
+
+.select:focus {
+  outline: none;
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.35);
+}
+
+/* ================================
+   BUTTON – nếu sau này dùng
+================================ */
+.button {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.button:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}

@@ -1,5 +1,6 @@
 // Cấu hình Redux store chính của app
 import { configureStore } from "@reduxjs/toolkit";
+
 import { userApi } from "./services/userApi";
 import { authApi } from "./services/authApi";
 import { messageApi } from "./services/messageApi";
@@ -12,6 +13,14 @@ import { notificationApi } from "./services/notificationApi";
 import { scheduledNotificationApi } from "./services/scheduledNotificationApi";
 import { templateApi } from "./services/templateApi";
 import { reportApi } from "./services/reportApi";
+import { aiChatApi } from "./services/aiChatApi";
+import { postApi } from "./services/postApi";
+import { commentApi } from "./services/commentApi";
+
+// Admin APIs
+import { dashboardApi } from "./services/admin/dashboardApi";
+import { usersAdminApi } from "./services/admin/usersAdminApi";
+
 import authReducer from "./slices/authSlice";
 import {
   authMiddleware, // để tự động refresh token
@@ -21,6 +30,8 @@ import {
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+
+    // Main APIs
     [userApi.reducerPath]: userApi.reducer,
     [authApi.reducerPath]: authApi.reducer,
     [messageApi.reducerPath]: messageApi.reducer,
@@ -33,7 +44,15 @@ export const store = configureStore({
     [scheduledNotificationApi.reducerPath]: scheduledNotificationApi.reducer,
     [templateApi.reducerPath]: templateApi.reducer,
     [reportApi.reducerPath]: reportApi.reducer,
+    [aiChatApi.reducerPath]: aiChatApi.reducer,
+    [postApi.reducerPath]: postApi.reducer,
+    [commentApi.reducerPath]: commentApi.reducer,
+
+    // Admin APIs
+    [dashboardApi.reducerPath]: dashboardApi.reducer,
+    [usersAdminApi.reducerPath]: usersAdminApi.reducer,
   },
+
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(userApi.middleware)
@@ -48,6 +67,12 @@ export const store = configureStore({
       .concat(scheduledNotificationApi.middleware)
       .concat(templateApi.middleware)
       .concat(reportApi.middleware)
+      .concat(aiChatApi.middleware)
+      .concat(postApi.middleware)
+      .concat(commentApi.middleware)
+      .concat(dashboardApi.middleware)
+      .concat(usersAdminApi.middleware)
+      // auth middleware giữ nguyên thứ tự
       .concat(authMiddleware)
       .prepend(authListenerMiddleware.middleware),
 });

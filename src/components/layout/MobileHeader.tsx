@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Home,
   BookOpen,
@@ -19,14 +20,17 @@ import {
   MessageCircle,
   Video,
   Bell,
+  Search,
+  Settings,
 } from "lucide-react";
-import { ModeToggle, LanguageToggle } from "@/components/common";
+import { ModeToggle, LanguageToggle, JapaneseInputModeToggle } from "@/components/common";
 import { useLanguage } from "@/lib/language-context";
 import { useAuth } from "@/hooks/useAuth";
 import { MobileHeaderProps, NavigationItem, LayoutUser } from "@/types/layout";
 import { NotificationPanel } from "@/components/notification/NotificationPanel";
 import { useSocketContext } from "@/providers/SocketProvider";
 import { buildApiUrl } from "@/utils/api-helper";
+import { useSearch } from "@/contexts/SearchContext";
 import styles from "./MobileHeader.module.css";
 
 const navigation: NavigationItem[] = [
@@ -57,13 +61,6 @@ const navigation: NavigationItem[] = [
     icon: Bot,
     key: "nav.aiPractice",
   },
-  {
-    name: "Notifications",
-    href: "/notifications",
-    icon: Bell,
-    key: "nav.notifications",
-  },
-  { name: "Profile", href: "/profile", icon: User, key: "nav.profile" },
 ];
 
 export function MobileHeader({}: MobileHeaderProps) {
@@ -72,13 +69,14 @@ export function MobileHeader({}: MobileHeaderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, isInitialized } = useAuth();
   const { socket, connected } = useSocketContext();
+  const { openSearch } = useSearch();
 
   // ✅ Fetch unread count from API
   const fetchUnreadCount = async () => {
     if (!isAuthenticated) return;
-    
+
     try {
       const response = await fetch(
         buildApiUrl("/notifications/my?unreadOnly=true&limit=1"),
@@ -140,19 +138,29 @@ export function MobileHeader({}: MobileHeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          {isAuthenticated && user?.avatar ? (
-            <img
-              src={user.avatar || "/images/placeholders/placeholder.svg"}
-              alt={user.fullname || user.username || "User"}
-              className="w-8 h-8 rounded-full object-cover"
-            />
+          {/* Chỉ render avatar sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+          {isInitialized && isAuthenticated && user?.avatar ? (
+            <div className="relative w-8 h-8 rounded-full overflow-hidden">
+              <Image
+                src={user.avatar || "/images/placeholders/placeholder.svg"}
+                alt={user.fullname || user.username || "User"}
+                fill
+                className="object-cover"
+                loading="lazy"
+                unoptimized
+              />
+            </div>
           ) : (
             <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
               <User className="h-4 w-4 text-muted-foreground" />
             </div>
           )}
           <span className="text-sm font-medium text-foreground truncate max-w-20">
-            {isAuthenticated ? (user?.fullname || user?.username || "User") : "Guest"}
+            {isInitialized
+              ? isAuthenticated
+                ? user?.fullname || user?.username || "User"
+                : "Guest"
+              : "Guest"}
           </span>
           <Button
             variant="ghost"
@@ -197,7 +205,7 @@ export function MobileHeader({}: MobileHeaderProps) {
                 onClick={() => setIsMenuOpen(false)}
                 className="text-foreground"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
 
@@ -205,68 +213,129 @@ export function MobileHeader({}: MobileHeaderProps) {
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
               {navigation.map((item) => {
                 const isActive = pathname === item.href;
-                const isProfileItem = item.key === "nav.profile";
-                const isNotificationItem = item.key === "nav.notifications";
-
                 return (
-                  <div key={item.name} className="relative">
-                    {isNotificationItem && isAuthenticated ? (
-                      <Button
-                        variant={isActive ? "default" : "ghost"}
-                        onClick={() => {
-                          handleOpenNotificationPanel();
-                          setIsMenuOpen(false);
-                        }}
-                        className={cn(
-                          "w-full justify-start gap-3 text-foreground hover:bg-accent",
-                          isActive &&
-                            "bg-primary text-primary-foreground hover:bg-primary/90"
-                        )}
-                      >
-                        <item.icon className="h-4 w-4 flex-shrink-0" />
-                        <span>{t(item.key)}</span>
-                        {/* Notification badge */}
-                        {unreadCount > 0 && (
-                          <div className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center px-1">
-                            <span className="text-white text-xs font-bold">
-                              {unreadCount > 9 ? "9+" : unreadCount}
-                            </span>
-                          </div>
-                        )}
-                      </Button>
-                    ) : (
-                      <Link
-                        href={item.href}
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <Button
-                          variant={isActive ? "default" : "ghost"}
-                          className={cn(
-                            "w-full justify-start gap-3 text-foreground hover:bg-accent",
-                            isActive &&
-                              "bg-primary text-primary-foreground hover:bg-primary/90"
-                          )}
-                        >
-                          {isProfileItem && isAuthenticated && user?.avatar ? (
-                            <img
-                              src={user.avatar || "/placeholder.svg"}
-                              alt={user.fullname || user.username || "User"}
-                              className="h-4 w-4 rounded-full object-cover flex-shrink-0"
-                            />
-                          ) : (
-                            <item.icon className="h-4 w-4 flex-shrink-0" />
-                          )}
-                          <span>
-                            {isProfileItem && isAuthenticated && user?.avatar
-                              ? (user.fullname || user.username || "User")
-                              : t(item.key)}
-                          </span>
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <Button
+                      variant={isActive ? "default" : "ghost"}
+                      className={cn(
+                        "w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2",
+                        isActive &&
+                          "bg-primary text-primary-foreground hover:bg-primary/90"
+                      )}
+                    >
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="font-medium">{t(item.key)}</span>
+                    </Button>
+                  </Link>
                 );
               })}
+
+              {/* Notification Bell Button - Opens Panel */}
+              {isAuthenticated && (
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      handleOpenNotificationPanel();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
+                  >
+                    <Bell className="h-5 w-5 flex-shrink-0" />
+                    <span className="font-medium">{t("nav.notifications")}</span>
+                    {/* Notification badge */}
+                    {unreadCount > 0 && (
+                      <div className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center px-1">
+                        <span className="text-white text-xs font-bold">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Admin Management Button - Only show for admin users */}
+              {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+              {isInitialized && isAuthenticated && user?.isAdmin && (
+                <Link href="/admin/dashboard" onClick={() => setIsMenuOpen(false)}>
+                  <Button
+                    variant={pathname?.startsWith("/admin") ? "default" : "ghost"}
+                    className={cn(
+                      "w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2",
+                      pathname?.startsWith("/admin") &&
+                        "bg-primary text-primary-foreground hover:bg-primary/90"
+                    )}
+                  >
+                    <Settings className="h-5 w-5 flex-shrink-0" />
+                    <span className="font-medium">{t("nav.admin") || "Quản lý"}</span>
+                  </Button>
+                </Link>
+              )}
+
+              {/* Search Button */}
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  openSearch();
+                  setIsMenuOpen(false);
+                }}
+                className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
+              >
+                <Search className="h-5 w-5 flex-shrink-0" />
+                <span className="font-medium">{t("nav.search") || "Tìm kiếm"}</span>
+              </Button>
+
+              {/* Profile/User Section */}
+              {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+              {isInitialized ? (
+                isAuthenticated ? (
+                  <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
+                    <Button
+                      variant={pathname === "/profile" ? "default" : "ghost"}
+                      className={cn(
+                        "w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2",
+                        pathname === "/profile" &&
+                          "bg-primary text-primary-foreground hover:bg-primary/90"
+                      )}
+                    >
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage
+                          src={user?.avatar || "/placeholder.svg"}
+                          alt={user?.fullname || user?.username || "User"}
+                        />
+                        <AvatarFallback className="text-xs">
+                          {user?.fullname?.charAt(0)?.toUpperCase() ||
+                            user?.username?.charAt(0)?.toUpperCase() ||
+                            "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium truncate">
+                        {user?.fullname || user?.username || "User"}
+                      </span>
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link href="/login" onClick={() => setIsMenuOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
+                    >
+                      <User className="h-5 w-5 flex-shrink-0" />
+                      <span className="font-medium">{t("nav.login")}</span>
+                    </Button>
+                  </Link>
+                )
+              ) : (
+                // Placeholder khi chưa initialized để tránh hydration mismatch
+                <div className="w-full px-3 py-2">
+                  <div className="w-8 h-8 bg-muted rounded-full animate-pulse" />
+                </div>
+              )}
             </nav>
 
             {/* Mobile Menu Footer */}
@@ -278,29 +347,38 @@ export function MobileHeader({}: MobileHeaderProps) {
                 <ModeToggle />
                 <span className="ml-3 text-sm text-foreground">Theme</span>
               </div>
-              {isAuthenticated ? (
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3 text-foreground hover:bg-accent"
-                  onClick={() => {
-                    logout();
-                    setIsMenuOpen(false);
-                  }}
-                >
-                  <LogOut className="h-4 w-4 flex-shrink-0" />
-                  <span>{t("nav.logout")}</span>
-                </Button>
-              ) : (
-                <Link href="/login">
+              <JapaneseInputModeToggle collapsed={false} />
+              {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+              {isInitialized ? (
+                isAuthenticated ? (
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-3 text-foreground hover:bg-accent"
-                    onClick={() => setIsMenuOpen(false)}
+                    className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
+                    onClick={() => {
+                      logout();
+                      setIsMenuOpen(false);
+                    }}
                   >
-                    <User className="h-4 w-4 flex-shrink-0" />
-                    <span>{t("nav.login")}</span>
+                    <LogOut className="h-5 w-5 flex-shrink-0" />
+                    <span className="font-medium">{t("nav.logout")}</span>
                   </Button>
-                </Link>
+                ) : (
+                  <Link href="/login">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 text-foreground hover:bg-accent px-3 py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="h-5 w-5 flex-shrink-0" />
+                      <span className="font-medium">{t("nav.login")}</span>
+                    </Button>
+                  </Link>
+                )
+              ) : (
+                // Placeholder khi chưa initialized
+                <div className="w-full px-3 py-2">
+                  <div className="w-full h-9 bg-muted rounded-md animate-pulse" />
+                </div>
               )}
             </div>
           </div>

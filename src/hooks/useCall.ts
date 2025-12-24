@@ -94,10 +94,17 @@ export function useCall(): UseCallApi {
 
       // 1. Mở popup trước để tạo real peer ID
       const callUrl = `/call/caller?receiverId=${receiverId}&callType=${callType}`;
+
+      // Calculate center position for popup
+      const width = 1200;
+      const height = 800;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+
       const callWindow = window.open(
         callUrl,
         "call-window",
-        "width=800,height=600,resizable=yes,scrollbars=no,menubar=no,toolbar=no"
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,menubar=no,toolbar=no`
       );
 
       if (!callWindow) {
@@ -127,10 +134,17 @@ export function useCall(): UseCallApi {
 
     // 2. Mở popup để nhận cuộc gọi
     const callUrl = `/call/receiver?callerId=${callData.callerId}&callType=${callData.callType}&otherPeerId=${callData.peerId}`;
+
+    // Calculate center position for popup
+    const width = 1200;
+    const height = 800;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+
     const callWindow = window.open(
       callUrl,
       "call-window",
-      "width=800,height=600,resizable=yes,scrollbars=no,menubar=no,toolbar=no"
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,menubar=no,toolbar=no`
     );
 
     if (!callWindow) {
@@ -219,12 +233,33 @@ export function useCall(): UseCallApi {
     async (callType: CallType): Promise<MediaStream> => {
       console.log("[getUserMedia] Getting media for:", callType);
 
-      const constraints = {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+      // Tạo constraints cơ bản
+      const baseAudioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 48000, // Tăng sample rate để chất lượng tốt hơn
+        channelCount: 1, // Mono để giảm bandwidth
+        latency: 0.01, // Giảm độ trễ
+      };
+
+      // Thêm các constraints nâng cao của Chrome/Chromium nếu có
+      const advancedAudioConstraints: any = {
+        ...baseAudioConstraints,
+      };
+
+      // Chỉ thêm Google-specific constraints nếu trình duyệt hỗ trợ (Chrome/Edge)
+      if (navigator.userAgent.includes("Chrome") || navigator.userAgent.includes("Edge")) {
+        advancedAudioConstraints.googEchoCancellation = true;
+        advancedAudioConstraints.googNoiseSuppression = true;
+        advancedAudioConstraints.googAutoGainControl = true;
+        advancedAudioConstraints.googHighpassFilter = true;
+        advancedAudioConstraints.googTypingNoiseDetection = true;
+        advancedAudioConstraints.googNoiseReduction = true;
+      }
+
+      const constraints: MediaStreamConstraints = {
+        audio: advancedAudioConstraints,
         video:
           callType === "video"
             ? {
@@ -238,13 +273,49 @@ export function useCall(): UseCallApi {
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        localStreamRef.current = stream;
-        setState((s) => ({ ...s, localStream: stream }));
+
+        // Xử lý audio với noise reduction nếu có audio track
+        if (stream.getAudioTracks().length > 0) {
+          try {
+            const { processAudioWithNoiseReduction } = await import(
+              "@/lib/audio-processor"
+            );
+            const processedStream = await processAudioWithNoiseReduction(
+              stream,
+              {
+                noiseGateThreshold: 0.015, // Ngưỡng nhạy hơn
+                highPassFrequency: 100, // Loại bỏ tiếng ồn tần số thấp hơn
+              }
+            );
+
+            // KHÔNG dừng tracks từ stream gốc vì source node trong AudioContext
+            // cần chúng để lấy input. Chỉ dừng khi cleanup (end call).
+            // stream.getAudioTracks().forEach((track) => track.stop());
+
+            localStreamRef.current = processedStream;
+            setState((s) => ({ ...s, localStream: processedStream }));
+            console.log("[getUserMedia] Audio processed with noise reduction");
+            return processedStream;
+          } catch (processingError) {
+            console.warn(
+              "[getUserMedia] Audio processing failed, using original stream:",
+              processingError
+            );
+            // Nếu xử lý audio thất bại, sử dụng stream gốc
+            localStreamRef.current = stream;
+            setState((s) => ({ ...s, localStream: stream }));
+            return stream;
+          }
+        } else {
+          localStreamRef.current = stream;
+          setState((s) => ({ ...s, localStream: stream }));
+        }
+
         console.log("[getUserMedia] Success:", {
           audio: stream.getAudioTracks().length,
           video: stream.getVideoTracks().length,
         });
-        return stream;
+        return localStreamRef.current;
       } catch (error: any) {
         console.error("[getUserMedia] Error:", error);
 

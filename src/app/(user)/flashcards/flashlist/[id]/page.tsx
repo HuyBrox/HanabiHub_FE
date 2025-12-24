@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import {
   useGetFlashListByIdQuery,
@@ -246,8 +247,8 @@ const FlashcardFanDetail: React.FC<FlashcardFanDetailProps> = () => {
               {/* Left Section */}
               <div className="flex-1 space-y-4 lg:space-y-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full overflow-hidden flex-shrink-0 border-4 border-primary/20 ring-4 ring-primary/10 shadow-lg">
-                    <img
+                  <div className="relative w-16 h-16 lg:w-20 lg:h-20 rounded-full overflow-hidden flex-shrink-0 border-4 border-primary/20 ring-4 ring-primary/10 shadow-lg">
+                    <Image
                       src={
                         (typeof flashlist.user === "object"
                           ? flashlist.user.avatar
@@ -258,7 +259,10 @@ const FlashcardFanDetail: React.FC<FlashcardFanDetailProps> = () => {
                           ? flashlist.user.fullname
                           : "User"
                       }
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      loading="lazy"
+                      unoptimized
                     />
                   </div>
                   <div className="flex-1">
@@ -432,7 +436,7 @@ const FlashcardFanDetail: React.FC<FlashcardFanDetailProps> = () => {
                 <div className="space-y-4">
                   {/* Thumbnail với overlay luôn render */}
                   <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-border shadow-2xl bg-gradient-to-br from-muted/20 to-muted/40 group/thumb">
-                    <img
+                    <Image
                       src={
                         isEditing && editedThumbnail
                           ? editedThumbnail
@@ -440,7 +444,10 @@ const FlashcardFanDetail: React.FC<FlashcardFanDetailProps> = () => {
                             "/images/placeholders/placeholder.jpg"
                       }
                       alt={flashlist.title}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      loading="lazy"
+                      unoptimized
                     />
 
                     {/* Overlay - luôn có trong DOM */}
@@ -555,13 +562,16 @@ const FlashcardFanDetail: React.FC<FlashcardFanDetailProps> = () => {
                         >
                           <CardContent className="p-0 h-full flex flex-col">
                             <div className="aspect-[4/3] relative overflow-hidden">
-                              <img
+                              <Image
                                 src={
                                   flashcard.thumbnail ||
                                   "/images/placeholders/placeholder.jpg"
                                 }
                                 alt={flashcard.name}
-                                className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-500"
+                                fill
+                                className="object-cover group-hover/card:scale-110 transition-transform duration-500"
+                                loading="lazy"
+                                unoptimized
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity"></div>
                               <div className="absolute top-3 right-3">
