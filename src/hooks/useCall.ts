@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Peer, { MediaConnection } from "peerjs";
 import { useSocketContext } from "@/providers/SocketProvider";
-import { getSocket, createSocketConnection } from "@/lib/socketClient";
+import { getSocket } from "@/lib/socketClient";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
@@ -188,11 +188,9 @@ export function useCall(): UseCallApi {
       }
 
       // Otherwise wait for a socket instance to become available (fallback to global getSocket)
-      // Tăng thời gian đợi và cải thiện logic retry
-      const maxWait = 10000; // Tăng từ 5s lên 10s
+      const maxWait = 5000; // ms
       const interval = 200;
       let elapsed = 0;
-      let timeoutId: NodeJS.Timeout | null = null;
 
       const tryEmit = () => {
         const s = getSocket();
@@ -202,8 +200,7 @@ export function useCall(): UseCallApi {
             { receiverId, peerId, callType }
           );
           s.emit("sendPeerId", { receiverId, peerId, callType });
-          if (timeoutId) clearTimeout(timeoutId);
-          return true; // Success
+          return;
         }
 
         elapsed += interval;
@@ -211,52 +208,25 @@ export function useCall(): UseCallApi {
           // As a last resort, attach a one-time connect listener to future socket
           const s2 = getSocket();
           if (s2) {
-            console.log(
-              "[sendPeerIdToReceiver] Socket exists but not connected, waiting for connect event..."
-            );
             s2.once("connect", () => {
               console.log(
                 "[sendPeerIdToReceiver] socket connected (late). Emitting peerId"
               );
               s2.emit("sendPeerId", { receiverId, peerId, callType });
             });
-            // Also try to reconnect if disconnected
-            if (s2.disconnected) {
-              s2.connect();
-            }
-          } else {
-            console.error(
-              "[sendPeerIdToReceiver] Socket not ready after retry, attempting to create new connection..."
-            );
-            // Try to create socket connection if user is available
-            if (user?._id) {
-              try {
-                const newSocket = createSocketConnection({ userId: user._id });
-                newSocket.once("connect", () => {
-                  console.log(
-                    "[sendPeerIdToReceiver] New socket connected. Emitting peerId"
-                  );
-                  newSocket.emit("sendPeerId", { receiverId, peerId, callType });
-                });
-                // Also try to connect immediately if not already connecting
-                if (newSocket.disconnected) {
-                  newSocket.connect();
-                }
-              } catch (error) {
-                console.error("[sendPeerIdToReceiver] Failed to create socket:", error);
-              }
-            }
+            return;
           }
-          return false; // Timeout
+
+          console.error("[sendPeerIdToReceiver] Socket not ready after retry");
+          return;
         }
 
-        timeoutId = setTimeout(tryEmit, interval);
-        return false; // Continue retrying
+        setTimeout(tryEmit, interval);
       };
 
       tryEmit();
     },
-    [socket, connected, user]
+    [socket, connected]
   );
 
   const getUserMedia = useCallback(
@@ -270,6 +240,7 @@ export function useCall(): UseCallApi {
         autoGainControl: true,
         sampleRate: 48000, // Tăng sample rate để chất lượng tốt hơn
         channelCount: 1, // Mono để giảm bandwidth
+        latency: 0.01, // Giảm độ trễ
       };
 
       // Thêm các constraints nâng cao của Chrome/Chromium nếu có
@@ -278,7 +249,10 @@ export function useCall(): UseCallApi {
       };
 
       // Chỉ thêm Google-specific constraints nếu trình duyệt hỗ trợ (Chrome/Edge)
-      if (navigator.userAgent.includes("Chrome") || navigator.userAgent.includes("Edge")) {
+      if (
+        navigator.userAgent.includes("Chrome") ||
+        navigator.userAgent.includes("Edge")
+      ) {
         advancedAudioConstraints.googEchoCancellation = true;
         advancedAudioConstraints.googNoiseSuppression = true;
         advancedAudioConstraints.googAutoGainControl = true;
@@ -317,9 +291,8 @@ export function useCall(): UseCallApi {
               }
             );
 
-            // KHÔNG dừng tracks từ stream gốc vì source node trong AudioContext
-            // cần chúng để lấy input. Chỉ dừng khi cleanup (end call).
-            // stream.getAudioTracks().forEach((track) => track.stop());
+            // Dừng tracks từ stream cũ
+            stream.getAudioTracks().forEach((track) => track.stop());
 
             localStreamRef.current = processedStream;
             setState((s) => ({ ...s, localStream: processedStream }));
@@ -466,10 +439,6 @@ export function useCall(): UseCallApi {
             "[startCallInPopup] Caller sending real peer ID and waiting...",
             myPeerId
           );
-
-          // Đợi một chút để đảm bảo socket connection đã sẵn sàng trong popup window
-          // Popup window cần thời gian để SocketProvider khởi tạo
-          await new Promise((resolve) => setTimeout(resolve, 500));
 
           // Emit real peer ID to receiver via socket
           sendPeerIdToReceiver(receiverId, myPeerId, callType);

@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   description:
     "Luyện nói tiếng Nhật cùng AI, theo dõi tiến độ học, và trò chuyện với giáo viên ảo Hanabi.",
   generator: "v0.app",
+  icons: {
+    icon: "/images/logos/logohanabi.png",
+    shortcut: "/images/logos/logohanabi.png",
+    apple: "/images/logos/logohanabi.png",
+  },
   openGraph: {
     title: "HanabiHub - Nền tảng học tiếng Nhật thông minh",
     description:
@@ -55,6 +60,10 @@ export default function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
       <head>
+        {/* Favicon */}
+        <link rel="icon" href="/images/logos/logohanabi.png" type="image/png" />
+        <link rel="shortcut icon" href="/images/logos/logohanabi.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/images/logos/logohanabi.png" />
         {/* Theme & Language initialization - using Next.js Script for better hydration handling */}
       </head>
       <body suppressHydrationWarning>
