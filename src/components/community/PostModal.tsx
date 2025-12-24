@@ -10,7 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Heart, MessageCircle, Share, Trash2, MoreVertical } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Share,
+  Trash2,
+  MoreVertical,
+} from "lucide-react";
 import {
   Carousel,
   CarouselContent,
@@ -42,11 +48,17 @@ interface PostModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export default function PostModal({ post, open, onOpenChange }: PostModalProps) {
+export default function PostModal({
+  post,
+  open,
+  onOpenChange,
+}: PostModalProps) {
   const { data: commentsData, isLoading: commentsLoading } =
     useGetCommentsByPostQuery(post?._id || "", { skip: !post?._id });
 
-  const { data: updatedPost } = useGetPostByIdQuery(post?._id || "", { skip: !post?._id });
+  const { data: updatedPost } = useGetPostByIdQuery(post?._id || "", {
+    skip: !post?._id,
+  });
   const [toggleLike] = useToggleLikePostMutation();
   const [deletePost] = useDeletePostMutation();
   const { data: currentUser } = useGetCurrentUserQuery();
@@ -60,12 +72,15 @@ export default function PostModal({ post, open, onOpenChange }: PostModalProps) 
   if (!post) return null;
 
   const displayPost = updatedPost || post;
-  const author = typeof displayPost.author === "string" ? null : displayPost.author;
+  const author =
+    typeof displayPost.author === "string" ? null : displayPost.author;
   const isAuthor = author?._id === currentUserId;
   const isLiked = Array.isArray(displayPost.likes)
     ? displayPost.likes.includes(currentUserId)
     : false;
-  const likesCount = Array.isArray(displayPost.likes) ? displayPost.likes.length : 0;
+  const likesCount = Array.isArray(displayPost.likes)
+    ? displayPost.likes.length
+    : 0;
   const comments = (commentsData as Comment[]) || [];
 
   const handleLike = async () => {
@@ -90,7 +105,7 @@ export default function PostModal({ post, open, onOpenChange }: PostModalProps) 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        style={{ maxWidth: '900px', width: '100%' }}
+        style={{ maxWidth: "900px", width: "100%" }}
         className="max-h-[90vh] p-0 flex flex-col bg-background text-foreground"
       >
         {/* Header cố định */}
@@ -107,7 +122,10 @@ export default function PostModal({ post, open, onOpenChange }: PostModalProps) 
             </DialogTitle>
             {displayPost.createdAt && (
               <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
-                {formatDistanceToNow(new Date(displayPost.createdAt), { addSuffix: true, locale: vi })}
+                {formatDistanceToNow(new Date(displayPost.createdAt), {
+                  addSuffix: true,
+                  locale: vi,
+                })}
               </p>
             )}
           </div>
@@ -139,7 +157,10 @@ export default function PostModal({ post, open, onOpenChange }: PostModalProps) 
                 <CarouselContent>
                   {displayPost.images.map((image, index) => (
                     <CarouselItem key={index} className="flex justify-center">
-                      <div className="relative w-full" style={{ maxHeight: '60vh' }}>
+                      <div
+                        className="relative w-full"
+                        style={{ maxHeight: "60vh" }}
+                      >
                         <Image
                           src={image}
                           alt={`Post image ${index + 1}`}
@@ -181,10 +202,16 @@ export default function PostModal({ post, open, onOpenChange }: PostModalProps) 
               variant="ghost"
               onClick={handleLike}
               className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 h-auto hover:bg-muted transition-colors ${
-                isLiked ? "text-orange-500 hover:text-orange-600" : "text-muted-foreground hover:text-foreground"
+                isLiked
+                  ? "text-orange-500 hover:text-orange-600"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Heart className={`h-5 w-5 ${isLiked ? "fill-orange-500 text-orange-500" : ""}`} />
+              <Heart
+                className={`h-5 w-5 ${
+                  isLiked ? "fill-orange-500 text-orange-500" : ""
+                }`}
+              />
               Thích
             </Button>
             <Button
@@ -220,12 +247,20 @@ export default function PostModal({ post, open, onOpenChange }: PostModalProps) 
             ) : comments.length === 0 ? (
               <div className="py-8 md:py-10 text-center">
                 <MessageCircle className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-                <p className="text-sm md:text-base text-muted-foreground">Chưa có bình luận nào</p>
-                <p className="text-xs md:text-sm text-muted-foreground mt-1">Hãy là người đầu tiên bình luận!</p>
+                <p className="text-sm md:text-base text-muted-foreground">
+                  Chưa có bình luận nào
+                </p>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                  Hãy là người đầu tiên bình luận!
+                </p>
               </div>
             ) : (
               comments.map((comment) => (
-                <CommentItem key={comment._id} comment={comment} postId={displayPost._id} />
+                <CommentItem
+                  key={comment._id}
+                  comment={comment}
+                  postId={displayPost._id}
+                />
               ))
             )}
           </div>
