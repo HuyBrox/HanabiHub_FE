@@ -54,8 +54,10 @@ import {
 import { useGetCurrentUserQuery } from "@/store/services/authApi";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { useLanguage } from "@/lib/language-context";
 
 function ProfilePage() {
+  const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     fullname: "",
@@ -77,7 +79,11 @@ function ProfilePage() {
   const shouldSkip = !isAuthenticated || !isInitialized;
 
   // Lấy current user data để so sánh
-  const { data: currentUserData } = useGetCurrentUserQuery(undefined, {
+  const {
+    data: currentUserData,
+    isLoading: currentUserLoading,
+    error: currentUserError,
+  } = useGetCurrentUserQuery(undefined, {
     skip: shouldSkip,
   });
 
@@ -154,16 +160,16 @@ function ProfilePage() {
     nextMilestone: "Start learning",
   };
 
-  const maxHours = useMemo(
-    () =>
-      Math.max(
-        ...weeklyProgress.map((d: { day: string; hours: number }) => d.hours),
-        1
-      ),
-    [weeklyProgress]
-  );
+  const maxHours = useMemo(() => {
+    if (!weeklyProgress || weeklyProgress.length === 0) return 1;
+    const hours = weeklyProgress.map(
+      (d: { day: string; hours: number }) => d.hours || 0
+    );
+    return Math.max(...hours, 1);
+  }, [weeklyProgress]);
 
   const isLoading =
+    currentUserLoading ||
     statsLoading ||
     coursesLoading ||
     weeklyLoading ||
@@ -171,6 +177,7 @@ function ProfilePage() {
     insightsLoading;
 
   const hasError =
+    currentUserError ||
     statsError ||
     coursesError ||
     weeklyError ||

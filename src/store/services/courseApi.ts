@@ -176,7 +176,7 @@ export const courseApi = createApi({
       { id: string; formData: FormData }
     >({
       query: ({ id, formData }) => ({
-        url: `/courses/update/${id}`,
+        url: `/courses/${id}`,
         method: "PUT",
         body: formData,
       }),
@@ -189,7 +189,7 @@ export const courseApi = createApi({
     // Xóa course (Admin)
     deleteCourse: builder.mutation<ApiResponse<null>, string>({
       query: (id) => ({
-        url: `/courses/delete/${id}`,
+        url: `/courses/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: ["Course"],

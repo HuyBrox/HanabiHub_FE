@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { buildApiUrl } from "@/utils/api-helper";
-import LatestNewsPreview from '@/components/news/LatestNewsPreview';
-import NewsDetail from '@/components/news/NewsDetail';
+import LatestNewsPreview from "@/components/news/LatestNewsPreview";
+import NewsDetail from "@/components/news/NewsDetail";
 
 interface Notification {
   _id: string;
@@ -41,7 +41,8 @@ function NotificationsPageContent() {
   const searchParams = useSearchParams();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [selectedNotification, setSelectedNotification] =
+    useState<Notification | null>(null);
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [selectedNewsId, setSelectedNewsId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,9 @@ function NotificationsPageContent() {
       setLoading(true);
       const unreadOnly = filter === "unread" ? "true" : "false";
       const response = await fetch(
-        buildApiUrl(`/notifications/my?page=${page}&limit=${limit}&unreadOnly=${unreadOnly}`),
+        buildApiUrl(
+          `/notifications/my?page=${page}&limit=${limit}&unreadOnly=${unreadOnly}`
+        ),
         { credentials: "include" }
       );
 
@@ -106,8 +109,8 @@ function NotificationsPageContent() {
     const fullNews = await fetchNewsById(newsId);
     if (fullNews) {
       setSelectedNews(fullNews);
-      setContentType('news');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setContentType("news");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -169,7 +172,10 @@ function NotificationsPageContent() {
   const fetchRecentNews = async () => {
     try {
       setRecentLoading(true);
-      const response = await fetch(buildApiUrl(`/news/public?page=1&limit=5&status=published`), { credentials: "include" });
+      const response = await fetch(
+        buildApiUrl(`/news/public?page=1&limit=5&status=published`),
+        { credentials: "include" }
+      );
       if (!response.ok) throw new Error("Failed to fetch recent news");
       const data = await response.json();
       if (data.success && data.data?.items) {
@@ -187,7 +193,7 @@ function NotificationsPageContent() {
 
   // Keep the recent list fresh (load when entering the News tab)
   useEffect(() => {
-    if (contentType === 'news') {
+    if (contentType === "news") {
       fetchRecentNews();
     }
   }, [contentType]);
@@ -231,9 +237,7 @@ function NotificationsPageContent() {
 
       // Update local state
       setNotifications((prev) =>
-        prev.map((n) =>
-          n._id === notificationId ? { ...n, isRead: true } : n
-        )
+        prev.map((n) => (n._id === notificationId ? { ...n, isRead: true } : n))
       );
 
       success("Đã đánh dấu đã đọc");
@@ -258,9 +262,7 @@ function NotificationsPageContent() {
       );
 
       // Update local state
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, isRead: true }))
-      );
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
 
       success("Đã đánh dấu tất cả đã đọc");
     } catch (err) {
@@ -277,7 +279,8 @@ function NotificationsPageContent() {
     if (diffInSeconds < 60) return "Vừa xong";
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} ngày`;
+    if (diffInSeconds < 604800)
+      return `${Math.floor(diffInSeconds / 86400)} ngày`;
 
     return date.toLocaleDateString("vi-VN");
   };
@@ -302,7 +305,8 @@ function NotificationsPageContent() {
     );
   });
 
-  const currentList = contentType === "notifications" ? filteredNotifications : filteredNews;
+  const currentList =
+    contentType === "notifications" ? filteredNotifications : filteredNews;
 
   // Loading state
   if (loading) {
@@ -428,10 +432,18 @@ function NotificationsPageContent() {
                 <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                 <p className="text-sm text-muted-foreground">
                   {searchQuery
-                    ? `Không tìm thấy ${contentType === "notifications" ? "thông báo" : "tin tức"}`
+                    ? `Không tìm thấy ${
+                        contentType === "notifications"
+                          ? "thông báo"
+                          : "tin tức"
+                      }`
                     : contentType === "notifications" && filter === "unread"
                     ? "Không có thông báo chưa đọc"
-                    : `Chưa có ${contentType === "notifications" ? "thông báo" : "tin tức"} nào`}
+                    : `Chưa có ${
+                        contentType === "notifications"
+                          ? "thông báo"
+                          : "tin tức"
+                      } nào`}
                 </p>
               </div>
             ) : contentType === "notifications" ? (
@@ -439,18 +451,20 @@ function NotificationsPageContent() {
                 <div
                   key={notification._id}
                   onClick={async () => {
-                      // If notification references a news, open that news instead
-                      const newsId = (notification as any).metadata?.newsId || (notification as any).newsId;
-                      if (newsId) {
-                        // Use unified handler so selectedNewsId is set consistently
-                        await handleSelectNews(newsId);
-                      } else {
-                        setSelectedNotification(notification);
-                      }
-                      if (!notification.isRead) {
-                        markAsRead(notification._id);
-                      }
-                    }}
+                    // If notification references a news, open that news instead
+                    const newsId =
+                      (notification as any).metadata?.newsId ||
+                      (notification as any).newsId;
+                    if (newsId) {
+                      // Use unified handler so selectedNewsId is set consistently
+                      await handleSelectNews(newsId);
+                    } else {
+                      setSelectedNotification(notification);
+                    }
+                    if (!notification.isRead) {
+                      markAsRead(notification._id);
+                    }
+                  }}
                   className={`p-3 mb-2 rounded-lg cursor-pointer transition-all ${
                     selectedNotification?._id === notification._id
                       ? "bg-accent"
@@ -491,7 +505,10 @@ function NotificationsPageContent() {
                           {formatTime(notification.createdAt)}
                         </span>
                         {notification.type === "system" && (
-                          <Badge variant="secondary" className="h-4 text-xs px-1">
+                          <Badge
+                            variant="secondary"
+                            className="h-4 text-xs px-1"
+                          >
                             Hệ thống
                           </Badge>
                         )}
@@ -539,14 +556,22 @@ function NotificationsPageContent() {
                           prose-img:hidden
                           prose-a:text-primary prose-a:no-underline"
                         dangerouslySetInnerHTML={{
-                          __html: newsItem.content.replace(/<[^>]*>/g, '').substring(0, 120) + '...'
+                          __html:
+                            newsItem.content
+                              .replace(/<[^>]*>/g, "")
+                              .substring(0, 120) + "...",
                         }}
                       />
                       <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <span className="text-xs text-muted-foreground font-medium">
-                          {formatTime(newsItem.publishedAt || newsItem.createdAt)}
+                          {formatTime(
+                            newsItem.publishedAt || newsItem.createdAt
+                          )}
                         </span>
-                        <Badge variant="secondary" className="h-5 text-xs px-2 bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                        <Badge
+                          variant="secondary"
+                          className="h-5 text-xs px-2 bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+                        >
                           📰 Tin tức
                         </Badge>
                         {newsItem.views > 0 && (
@@ -582,11 +607,16 @@ function NotificationsPageContent() {
 
       {/* Right Side - Content Detail */}
       <div className="flex-1 flex flex-col bg-background">
-        {contentType === 'news' ? (
+        {contentType === "news" ? (
           selectedNews ? (
             <NewsDetail news={selectedNews} />
           ) : (
-            <LatestNewsPreview recentNews={recentNews} loading={recentLoading} onSelect={handleSelectNews} maxItems={5} />
+            <LatestNewsPreview
+              recentNews={recentNews}
+              loading={recentLoading}
+              onSelect={handleSelectNews}
+              maxItems={5}
+            />
           )
         ) : selectedNotification ? (
           <div className="flex-1 overflow-y-auto p-6">
@@ -648,7 +678,9 @@ function NotificationsPageContent() {
                 </div>
               </div>
               <h2 className="text-xl font-semibold mb-2">
-                {contentType === "notifications" ? "Thông báo của bạn" : "Tin tức"}
+                {contentType === "notifications"
+                  ? "Thông báo của bạn"
+                  : "Tin tức"}
               </h2>
               <p className="text-muted-foreground mb-4 max-w-sm">
                 {contentType === "notifications"
@@ -665,16 +697,17 @@ function NotificationsPageContent() {
 
 export default function NotificationsPage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-full items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Đang tải...</p>
+    <Suspense
+      fallback={
+        <div className="flex h-full items-center justify-center bg-background">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Đang tải...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <NotificationsPageContent />
     </Suspense>
   );
 }
-

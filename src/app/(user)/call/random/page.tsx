@@ -204,12 +204,12 @@ function RandomCallPage() {
         autoGainControl: true,
         sampleRate: 48000, // Tăng sample rate để chất lượng tốt hơn
         channelCount: 1, // Mono để giảm bandwidth
-        latency: 0.01, // Giảm độ trễ
       };
 
       // Thêm các constraints nâng cao của Chrome/Chromium nếu có
       const advancedAudioConstraints: any = {
         ...baseAudioConstraints,
+        latency: 0.01, // Giảm độ trễ (không phải property chuẩn của MediaTrackConstraints)
       };
 
       // Chỉ thêm Google-specific constraints nếu trình duyệt hỗ trợ (Chrome/Edge)
