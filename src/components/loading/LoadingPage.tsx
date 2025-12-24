@@ -12,7 +12,7 @@ export function LoadingPage() {
         <div
           className="absolute w-24 h-24 rounded-full border-4 border-primary"
           style={{
-            animation: "spin 4s linear infinite"
+            animation: "spin 4s linear infinite",
           }}
         />
 

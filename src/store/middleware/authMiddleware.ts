@@ -80,16 +80,17 @@ export const authMiddleware: Middleware =
 // Listener middleware để handle các auth events
 export const authListenerMiddleware = createListenerMiddleware();
 
-// Listener cho login thành công
-authListenerMiddleware.startListening({
-  matcher: authApi.endpoints.login.matchFulfilled,
-  effect: async (action, listenerApi) => {
-    console.log("✅ Login successful:", action.payload);
-    if (action.payload?.success && action.payload?.data?.user) {
-      listenerApi.dispatch(loginSuccess(action.payload.data.user));
-    }
-  },
-});
+// Listener cho login thành công - ĐÃ XÓA vì useAuth đã dispatch loginSuccess
+// Tránh duplicate dispatch gây hiển thị thông báo 2 lần
+// authListenerMiddleware.startListening({
+//   matcher: authApi.endpoints.login.matchFulfilled,
+//   effect: async (action, listenerApi) => {
+//     console.log("✅ Login successful:", action.payload);
+//     if (action.payload?.success && action.payload?.data?.user) {
+//       listenerApi.dispatch(loginSuccess(action.payload.data.user));
+//     }
+//   },
+// });
 
 // Listener cho refresh token thành công
 authListenerMiddleware.startListening({
