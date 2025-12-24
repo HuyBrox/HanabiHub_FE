@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { withAuth } from "@/components/auth";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/language-context";
 import {
   Card,
   CardContent,
@@ -27,17 +28,8 @@ import {
 import { useGetAllCoursesQuery } from "@/store/services/courseApi";
 import { LoadingSpinner } from "@/components/loading";
 
-// Helper function để format giá
-const formatPrice = (price: number) => {
-  if (price === 0) return "Miễn phí";
-  return `${price.toLocaleString("vi-VN")} VNĐ`;
-};
-
-// Helper function để format thời gian học dự kiến
-const estimateDuration = (lessonCount: number) => {
-  const weeks = Math.ceil(lessonCount / 3); // Giả sử 3 bài/tuần
-  return `${weeks} tuần`;
-};
+// Helper function để format giá - sẽ được định nghĩa trong component để có thể dùng t()
+// Helper function để format thời gian học dự kiến - sẽ được định nghĩa trong component để có thể dùng t()
 
 // Helper function để tính rating trung bình
 const calculateAverageRating = (
@@ -52,9 +44,22 @@ type PriceFilter = "all" | "free" | "paid";
 type RatingFilter = "all" | "rated" | "high";
 
 function CoursesPage() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
   const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
+
+  // Helper function để format giá
+  const formatPrice = (price: number) => {
+    if (price === 0) return t("courses.format.free");
+    return `${price.toLocaleString("vi-VN")} ${t("courses.format.currency")}`;
+  };
+
+  // Helper function để format thời gian học dự kiến
+  const estimateDuration = (lessonCount: number) => {
+    const weeks = Math.ceil(lessonCount / 3); // Giả sử 3 bài/tuần
+    return `${weeks} ${t("courses.format.weeks")}`;
+  };
 
   // Fetch courses từ API
   // Memoize query params to prevent infinite re-fetching
@@ -111,11 +116,13 @@ function CoursesPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Có lỗi xảy ra</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {t("courses.error.title")}
+          </h3>
           <p className="text-muted-foreground mb-4">
-            Không thể tải danh sách khóa học. Vui lòng thử lại.
+            {t("courses.error.message")}
           </p>
-          <Button onClick={() => refetch()}>Thử lại</Button>
+          <Button onClick={() => refetch()}>{t("courses.error.retry")}</Button>
         </div>
       </div>
     );
@@ -134,11 +141,10 @@ function CoursesPage() {
         <div className="container mx-auto px-4 md:px-6 relative z-10">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 tracking-tight">
-              Khám phá khóa học tiếng Nhật
+              {t("courses.hero.title")}
             </h1>
             <p className="text-base md:text-xl lg:text-2xl mb-6 md:mb-10 opacity-95 px-2 leading-relaxed">
-              Từ cơ bản đến nâng cao, tìm khóa học hoàn hảo cho hành trình học
-              tiếng Nhật của bạn
+              {t("courses.hero.subtitle")}
             </p>
 
             {/* Search Bar */}
@@ -147,7 +153,7 @@ function CoursesPage() {
                 <Search className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5 md:h-6 md:w-6 transition-colors group-focus-within:text-orange-500" />
                 <Input
                   type="text"
-                  placeholder="Tìm kiếm khóa học theo tên hoặc mô tả..."
+                  placeholder={t("courses.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-12 md:pl-14 pr-4 py-3 md:py-4 text-sm md:text-base rounded-full border-0 shadow-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-orange-500 transition-all duration-200"
@@ -155,7 +161,7 @@ function CoursesPage() {
               </div>
               {searchTerm && (
                 <div className="mt-3 text-sm text-white/90">
-                  Đang tìm kiếm:{" "}
+                  {t("courses.searchIndicator")}{" "}
                   <span className="font-semibold">"{searchTerm}"</span>
                 </div>
               )}
@@ -172,7 +178,7 @@ function CoursesPage() {
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
               <span className="text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
-                Bộ lọc:
+                {t("courses.filters")}
               </span>
             </div>
 
@@ -188,7 +194,7 @@ function CoursesPage() {
                     : ""
                 }`}
               >
-                Tất cả
+                {t("courses.filter.all")}
               </Button>
               <Button
                 variant={priceFilter === "free" ? "default" : "outline"}
@@ -200,7 +206,7 @@ function CoursesPage() {
                     : ""
                 }`}
               >
-                Miễn phí
+                {t("courses.filter.free")}
               </Button>
               <Button
                 variant={priceFilter === "paid" ? "default" : "outline"}
@@ -212,7 +218,7 @@ function CoursesPage() {
                     : ""
                 }`}
               >
-                Có phí
+                {t("courses.filter.paid")}
               </Button>
             </div>
 
@@ -228,7 +234,7 @@ function CoursesPage() {
                     : ""
                 }`}
               >
-                Tất cả
+                {t("courses.filter.all")}
               </Button>
               <Button
                 variant={ratingFilter === "rated" ? "default" : "outline"}
@@ -241,7 +247,7 @@ function CoursesPage() {
                 }`}
               >
                 <Star className="h-3 w-3" />
-                Có đánh giá
+                {t("courses.filter.rated")}
               </Button>
               <Button
                 variant={ratingFilter === "high" ? "default" : "outline"}
@@ -254,7 +260,7 @@ function CoursesPage() {
                 }`}
               >
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                Đánh giá cao
+                {t("courses.filter.highRating")}
               </Button>
             </div>
           </div>
@@ -263,8 +269,9 @@ function CoursesPage() {
         {/* Results Count */}
         <div className="mb-4 md:mb-6">
           <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-            Hiển thị {filteredCourses.length} trong{" "}
-            {coursesData?.data?.length || 0} khóa học
+            {t("courses.results.showing")} {filteredCourses.length}{" "}
+            {t("courses.results.of")} {coursesData?.data?.length || 0}{" "}
+            {t("courses.results.courses")}
           </p>
         </div>
 
@@ -287,7 +294,7 @@ function CoursesPage() {
                 {(course.studentCount || course.students?.length || 0) >
                   100 && (
                   <Badge className="absolute top-1.5 left-1.5 md:top-2 md:left-2 bg-orange-500 hover:bg-orange-600 text-[10px] md:text-xs px-1.5 py-0.5">
-                    Phổ biến
+                    {t("courses.popular")}
                   </Badge>
                 )}
                 <div className="absolute top-1.5 right-1.5 md:top-2 md:right-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm rounded-full px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-medium">
@@ -348,12 +355,16 @@ function CoursesPage() {
                   })()}
                   <div className="flex items-center gap-0.5 md:gap-1 text-[10px] md:text-xs text-gray-500">
                     <BookOpen className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                    <span>{course.lessons?.length || 0} bài</span>
+                    <span>
+                      {course.lessons?.length || 0}{" "}
+                      {t("courses.format.lessons")}
+                    </span>
                   </div>
                 </div>
 
                 <p className="text-[10px] md:text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
-                  {course.instructor?.fullname || "Chưa xác định"}
+                  {course.instructor?.fullname ||
+                    t("courses.instructor.unknown")}
                 </p>
               </CardContent>
 
@@ -368,13 +379,13 @@ function CoursesPage() {
                       className="w-full text-[10px] md:text-xs h-7 md:h-8 px-2"
                     >
                       <BookOpen className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
-                      Chi tiết
+                      {t("courses.button.details")}
                     </Button>
                   </Link>
                   <Link href={`/courses/${course._id}`} className="flex-1">
                     <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs h-7 md:h-8 px-2">
                       <Play className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
-                      Học
+                      {t("courses.button.learn")}
                     </Button>
                   </Link>
                 </div>
@@ -389,10 +400,10 @@ function CoursesPage() {
               <BookOpen className="h-12 w-12 md:h-16 md:w-16 mx-auto" />
             </div>
             <h3 className="text-lg md:text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
-              Không tìm thấy khóa học
+              {t("courses.empty.title")}
             </h3>
             <p className="text-sm md:text-base text-gray-500">
-              Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc
+              {t("courses.empty.subtitle")}
             </p>
           </div>
         )}

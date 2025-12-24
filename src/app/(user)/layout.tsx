@@ -13,10 +13,13 @@ import { SearchComponent } from "@/components/search/SearchComponent";
 import { usePathname } from "next/navigation";
 
 // Lazy load ChatDock - component nặng, không cần thiết ngay khi page load
-const ChatDock = dynamic(() => import("@/components/chat").then(mod => ({ default: mod.ChatDock })), {
-  ssr: false, // Không render trên server
-  loading: () => null, // Không hiển thị loading, render khi ready
-});
+const ChatDock = dynamic(
+  () => import("@/components/chat").then((mod) => ({ default: mod.ChatDock })),
+  {
+    ssr: false, // Không render trên server
+    loading: () => null, // Không hiển thị loading, render khi ready
+  }
+);
 
 function LayoutContent({
   children,
@@ -30,7 +33,9 @@ function LayoutContent({
   const pathname = usePathname();
 
   // Check if we're on a caller or receiver call page (not random call)
-  const isCallPage = pathname?.startsWith("/call/caller") || pathname?.startsWith("/call/receiver");
+  const isCallPage =
+    pathname?.startsWith("/call/caller") ||
+    pathname?.startsWith("/call/receiver");
 
   // Apply Japanese input mode globally to all inputs
   useGlobalJapaneseInput();
@@ -47,7 +52,8 @@ function LayoutContent({
             isSearchOpen ? "w-80 opacity-100" : "w-0 opacity-0"
           )}
           style={{
-            transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out",
+            transition:
+              "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-in-out",
           }}
         >
           {isSearchOpen && <SearchComponent />}
@@ -59,7 +65,9 @@ function LayoutContent({
           <SearchComponent />
         </div>
       )}
-      <main className={cn("flex-1 overflow-auto", isCallPage && "overflow-hidden")}>
+      <main
+        className={cn("flex-1 overflow-auto", isCallPage && "overflow-hidden")}
+      >
         {children}
       </main>
       {/* Chỉ hiển thị ChatDock khi đã đăng nhập và không phải call page */}

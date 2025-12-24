@@ -145,7 +145,7 @@ export default function HomePage() {
             >
               <Sparkles className="h-4 w-4 text-primary animate-pulse" />
               <span className="text-sm font-bold text-primary drop-shadow-sm tracking-wide">
-                Nền tảng học tiếng Nhật số 1 Việt Nam
+                {t("home.hero.badge")}
               </span>
             </div>
 
@@ -157,10 +157,10 @@ export default function HomePage() {
               }}
             >
               <span className="text-foreground drop-shadow-md block mb-2">
-                Học Tiếng Nhật
+                {t("home.hero.titlePart1")}
               </span>
               <span className={`${styles.gradientText} drop-shadow-md block`}>
-                Dễ Dàng Hơn
+                {t("home.hero.titlePart2")}
               </span>
             </h1>
 
@@ -173,9 +173,7 @@ export default function HomePage() {
                 letterSpacing: "-0.01em",
               }}
             >
-              Làm chủ tiếng Nhật với các khóa học tương tác, luyện tập AI thông
-              minh và cộng đồng hỗ trợ. Bắt đầu hành trình từ người mới đến
-              thành thạo ngay hôm nay.
+              {t("home.hero.subtitle")}
             </p>
 
             {/* CTA Buttons with animation */}
@@ -195,7 +193,7 @@ export default function HomePage() {
                   className={`px-8 py-3 text-lg font-semibold border-2 backdrop-blur-sm bg-background/80 hover:bg-primary/10 hover:border-primary/50 ${styles.animateGlow} tracking-wide`}
                 >
                   <BookOpen className="mr-2 h-5 w-5" />
-                  Khám phá khóa học
+                  {t("home.hero.exploreCourses")}
                 </Button>
               </Link>
             </div>
@@ -211,7 +209,7 @@ export default function HomePage() {
                   <CountUpNumber end={10} suffix="K+" duration={2000} />
                 </div>
                 <div className="text-xs md:text-sm text-muted-foreground font-medium">
-                  Học viên
+                  {t("home.hero.stats.students")}
                 </div>
               </div>
               <div className="text-center p-4 rounded-xl bg-background/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg transform hover:scale-105">
@@ -221,7 +219,7 @@ export default function HomePage() {
                   <CountUpNumber end={50} suffix="+" duration={2000} />
                 </div>
                 <div className="text-xs md:text-sm text-muted-foreground font-medium">
-                  Khóa học
+                  {t("home.hero.stats.courses")}
                 </div>
               </div>
               <div className="text-center p-4 rounded-xl bg-background/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg transform hover:scale-105">
@@ -231,7 +229,7 @@ export default function HomePage() {
                   <CountUpNumber end={98} suffix="%" duration={2000} />
                 </div>
                 <div className="text-xs md:text-sm text-muted-foreground font-medium">
-                  Hài lòng
+                  {t("home.hero.stats.satisfaction")}
                 </div>
               </div>
               <div className="text-center p-4 rounded-xl bg-background/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-lg transform hover:scale-105">
@@ -241,7 +239,7 @@ export default function HomePage() {
                   24/7
                 </div>
                 <div className="text-xs md:text-sm text-muted-foreground font-medium">
-                  Hỗ trợ
+                  {t("home.hero.stats.support")}
                 </div>
               </div>
             </div>
@@ -263,11 +261,14 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Tại sao chọn <span className="text-primary">HanabiHub</span>?
+              {t("home.features.title")}{" "}
+              <span className="text-primary">
+                {t("home.features.titleHighlight")}
+              </span>
+              ?
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Nền tảng học tiếng Nhật toàn diện với công nghệ AI và phương pháp
-              học hiện đại
+              {t("home.features.subtitle")}
             </p>
           </div>
 
@@ -278,11 +279,8 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <Brain className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>AI Thông Minh</CardTitle>
-                <CardDescription>
-                  Luyện tập với AI tutor thông minh, cá nhân hóa bài học theo
-                  trình độ và tiến độ của bạn
-                </CardDescription>
+                <CardTitle>{t("home.features.ai.title")}</CardTitle>
+                <CardDescription>{t("home.features.ai.desc")}</CardDescription>
               </CardHeader>
             </Card>
 
@@ -292,10 +290,9 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <BookOpen className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>Khóa Học Đa Dạng</CardTitle>
+                <CardTitle>{t("home.features.courses.title")}</CardTitle>
                 <CardDescription>
-                  Hơn 50 khóa học từ cơ bản đến nâng cao, từ Hiragana đến Kanji,
-                  từ ngữ pháp đến giao tiếp
+                  {t("home.features.courses.desc")}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -306,10 +303,9 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <MessageSquare className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>Cộng Đồng Sôi Động</CardTitle>
+                <CardTitle>{t("home.features.community.title")}</CardTitle>
                 <CardDescription>
-                  Kết nối với hàng nghìn học viên, chia sẻ kinh nghiệm và học
-                  hỏi lẫn nhau
+                  {t("home.features.community.desc")}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -320,10 +316,9 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <Zap className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>Flashcards Thông Minh</CardTitle>
+                <CardTitle>{t("home.features.flashcards.title")}</CardTitle>
                 <CardDescription>
-                  Hệ thống flashcard với spaced repetition giúp bạn ghi nhớ từ
-                  vựng hiệu quả
+                  {t("home.features.flashcards.desc")}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -334,10 +329,9 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <GraduationCap className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>Theo Dõi Tiến Độ</CardTitle>
+                <CardTitle>{t("home.features.progress.title")}</CardTitle>
                 <CardDescription>
-                  Dashboard chi tiết giúp bạn theo dõi tiến độ học tập, điểm
-                  mạnh và điểm yếu
+                  {t("home.features.progress.desc")}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -348,10 +342,9 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <Languages className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>Luyện Nói Thực Tế</CardTitle>
+                <CardTitle>{t("home.features.speaking.title")}</CardTitle>
                 <CardDescription>
-                  Luyện nói với AI và người học khác qua video call, nâng cao kỹ
-                  năng giao tiếp
+                  {t("home.features.speaking.desc")}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -364,38 +357,36 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <Badge className="mb-4">Về HanabiHub</Badge>
+              <Badge className="mb-4">{t("home.about.badge")}</Badge>
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                Học tiếng Nhật
+                {t("home.about.title")}
                 <br />
-                <span className="text-primary">hiệu quả hơn</span>
+                <span className="text-primary">
+                  {t("home.about.titleHighlight")}
+                </span>
               </h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                HanabiHub là nền tảng học tiếng Nhật trực tuyến hàng đầu Việt
-                Nam, được xây dựng với mục tiêu giúp mọi người học tiếng Nhật
-                một cách dễ dàng, hiệu quả và thú vị nhất.
+                {t("home.about.desc1")}
               </p>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                Chúng tôi kết hợp công nghệ AI tiên tiến, phương pháp học hiện
-                đại và cộng đồng hỗ trợ để tạo ra trải nghiệm học tập độc đáo và
-                toàn diện.
+                {t("home.about.desc2")}
               </p>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span>Phương pháp học được khoa học chứng minh</span>
+                  <span>{t("home.about.point1")}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span>Đội ngũ giáo viên giàu kinh nghiệm</span>
+                  <span>{t("home.about.point2")}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span>Công nghệ AI cá nhân hóa bài học</span>
+                  <span>{t("home.about.point3")}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span>Cộng đồng học viên tích cực</span>
+                  <span>{t("home.about.point4")}</span>
                 </div>
               </div>
             </div>
@@ -419,7 +410,7 @@ export default function HomePage() {
                   <div>
                     <div className="text-2xl font-bold">98%</div>
                     <div className="text-sm text-muted-foreground">
-                      Học viên hài lòng
+                      {t("home.about.stats.satisfaction")}
                     </div>
                   </div>
                 </div>
@@ -434,11 +425,13 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Khóa Học <span className="text-primary">Nổi Bật</span>
+              {t("home.courses.title")}{" "}
+              <span className="text-primary">
+                {t("home.courses.titleHighlight")}
+              </span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Khám phá các khóa học được yêu thích nhất, được thiết kế bởi các
-              chuyên gia hàng đầu
+              {t("home.courses.subtitle")}
             </p>
           </div>
 
@@ -488,12 +481,15 @@ export default function HomePage() {
                             course.students?.length ||
                             0
                           ).toLocaleString()}{" "}
-                          học viên
+                          {t("home.courses.students")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <BookOpen className="h-4 w-4" />
-                        <span>{course.lessons?.length || 0} bài học</span>
+                        <span>
+                          {course.lessons?.length || 0}{" "}
+                          {t("home.courses.lessons")}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
@@ -503,7 +499,7 @@ export default function HomePage() {
                       className="w-full"
                     >
                       <Button className="w-full bg-primary hover:bg-primary/90">
-                        Xem chi tiết
+                        {t("home.courses.viewDetails")}
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
@@ -514,14 +510,14 @@ export default function HomePage() {
           ) : (
             <div className="text-center py-12">
               <BookOpen className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Chưa có khóa học nào</p>
+              <p className="text-muted-foreground">{t("home.courses.empty")}</p>
             </div>
           )}
 
           <div className="text-center">
             <Link href="/courses">
               <Button size="lg" variant="outline" className="px-8">
-                Xem tất cả khóa học
+                {t("home.courses.viewAll")}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
@@ -534,12 +530,14 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Học Viên Nói Gì Về <span className="text-primary">HanabiHub</span>
+              {t("home.testimonials.title")}{" "}
+              <span className="text-primary">
+                {t("home.testimonials.titleHighlight")}
+              </span>
               ?
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Hàng nghìn học viên đã tin tưởng và đạt được mục tiêu học tiếng
-              Nhật với chúng tôi
+              {t("home.testimonials.subtitle")}
             </p>
           </div>
 
@@ -553,9 +551,11 @@ export default function HomePage() {
                     <AvatarFallback>SK</AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-semibold">Nguyễn Thị Lan</div>
+                    <div className="font-semibold">
+                      {t("home.testimonials.student1.name")}
+                    </div>
                     <div className="text-sm text-muted-foreground">
-                      Học viên N4
+                      {t("home.testimonials.student1.level")}
                     </div>
                   </div>
                 </div>
@@ -568,9 +568,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <CardDescription className="text-base">
-                  "HanabiHub đã giúp tôi vượt qua kỳ thi JLPT N4 một cách dễ
-                  dàng. Hệ thống flashcard và AI tutor thực sự hiệu quả. Cảm ơn
-                  team rất nhiều!"
+                  {t("home.testimonials.student1.content")}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -584,9 +582,11 @@ export default function HomePage() {
                     <AvatarFallback>TM</AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-semibold">Trần Văn Minh</div>
+                    <div className="font-semibold">
+                      {t("home.testimonials.student2.name")}
+                    </div>
                     <div className="text-sm text-muted-foreground">
-                      Học viên N2
+                      {t("home.testimonials.student2.level")}
                     </div>
                   </div>
                 </div>
@@ -599,9 +599,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <CardDescription className="text-base">
-                  "Tôi đã thử nhiều nền tảng học tiếng Nhật nhưng HanabiHub là
-                  tốt nhất. Cộng đồng sôi động, khóa học chất lượng và AI thông
-                  minh. Highly recommended!"
+                  {t("home.testimonials.student2.content")}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -615,9 +613,11 @@ export default function HomePage() {
                     <AvatarFallback>YL</AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-semibold">Lê Thị Yến</div>
+                    <div className="font-semibold">
+                      {t("home.testimonials.student3.name")}
+                    </div>
                     <div className="text-sm text-muted-foreground">
-                      Học viên N5
+                      {t("home.testimonials.student3.level")}
                     </div>
                   </div>
                 </div>
@@ -630,9 +630,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <CardDescription className="text-base">
-                  "Là người mới bắt đầu, tôi rất lo lắng nhưng HanabiHub đã làm
-                  cho việc học trở nên thú vị và dễ dàng. Tôi đã nhớ được tất cả
-                  Hiragana chỉ sau 2 tuần!"
+                  {t("home.testimonials.student3.content")}
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -645,10 +643,13 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
-              Cộng Đồng <span className="text-primary">Sôi Động</span>
+              {t("home.community.title")}{" "}
+              <span className="text-primary">
+                {t("home.community.titleHighlight")}
+              </span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Tham gia cùng hàng nghìn học viên đang chia sẻ và học hỏi lẫn nhau
+              {t("home.community.subtitle")}
             </p>
           </div>
 
@@ -668,9 +669,7 @@ export default function HomePage() {
                       </Badge>
                     </div>
                     <p className="text-muted-foreground mb-3 text-sm">
-                      Vừa vượt qua bài kiểm tra JLPT thử đầu tiên! Flashcard
-                      kanji thực sự hữu ích. 頑張って！ Có ai đang chuẩn bị cho
-                      tháng 12 không?
+                      {t("home.community.post1")}
                     </p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <Button variant="ghost" size="sm" className="p-0 h-auto">
@@ -701,8 +700,7 @@ export default function HomePage() {
                       </Badge>
                     </div>
                     <p className="text-muted-foreground mb-3 text-sm">
-                      Mẹo hay: Khi học từ vựng mới, hãy thử sử dụng nó ngay
-                      trong câu. Ngữ cảnh giúp ghi nhớ tốt hơn nhiều! 🎌
+                      {t("home.community.post2")}
                     </p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <Button variant="ghost" size="sm" className="p-0 h-auto">
@@ -734,9 +732,7 @@ export default function HomePage() {
                       </Badge>
                     </div>
                     <p className="text-muted-foreground mb-3 text-sm">
-                      Cuối cùng cũng nhớ hết Hiragana! Hệ thống spaced
-                      repetition ở đây thật tuyệt vời. Tuần sau sẽ học Katakana.
-                      ありがとうございます！
+                      {t("home.community.post3")}
                     </p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <Button variant="ghost" size="sm" className="p-0 h-auto">
@@ -756,7 +752,7 @@ export default function HomePage() {
           <div className="text-center">
             <Link href="/community">
               <Button size="lg" variant="outline" className="px-8">
-                Tham gia cộng đồng
+                {t("home.community.join")}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
@@ -769,38 +765,38 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <Badge className="mb-4">Flashcards Thông Minh</Badge>
+              <Badge className="mb-4">{t("home.flashcards.badge")}</Badge>
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                Học từ vựng
+                {t("home.flashcards.sectionTitle")}
                 <br />
-                <span className="text-primary">hiệu quả hơn</span>
+                <span className="text-primary">
+                  {t("home.flashcards.sectionTitleHighlight")}
+                </span>
               </h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                Hệ thống flashcard thông minh với thuật toán spaced repetition
-                giúp bạn ghi nhớ từ vựng lâu dài. Học mọi lúc, mọi nơi với hàng
-                nghìn bộ flashcard được tạo sẵn hoặc tự tạo bộ của riêng bạn.
+                {t("home.flashcards.desc")}
               </p>
               <div className="space-y-4 mb-8">
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span>Spaced repetition algorithm</span>
+                  <span>{t("home.flashcards.point1")}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span>Hàng nghìn bộ flashcard sẵn có</span>
+                  <span>{t("home.flashcards.point2")}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span>Tự tạo flashcard của riêng bạn</span>
+                  <span>{t("home.flashcards.point3")}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <span>Theo dõi tiến độ học tập</span>
+                  <span>{t("home.flashcards.point4")}</span>
                 </div>
               </div>
               <Link href="/flashcards">
                 <Button size="lg" className="bg-primary hover:bg-primary/90">
-                  Bắt đầu luyện tập
+                  {t("home.flashcards.start")}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -812,7 +808,9 @@ export default function HomePage() {
                     <div className="text-7xl font-bold text-primary mb-4">
                       水
                     </div>
-                    <p className="text-sm text-muted-foreground">Nhấp để lật</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("home.flashcards.click")}
+                    </p>
                   </div>
                 </CardContent>
                 <CardContent className="hidden group-hover:flex items-center justify-center h-full p-8 bg-primary/5">
@@ -820,7 +818,9 @@ export default function HomePage() {
                     <div className="text-4xl font-bold text-foreground mb-2">
                       みず / mizu
                     </div>
-                    <p className="text-2xl text-muted-foreground mb-2">water</p>
+                    <p className="text-2xl text-muted-foreground mb-2">
+                      {t("home.flashcards.water")}
+                    </p>
                     <p className="text-sm text-muted-foreground">nước</p>
                   </div>
                 </CardContent>
@@ -837,17 +837,16 @@ export default function HomePage() {
       <section className="px-6 py-20 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Sẵn sàng bắt đầu hành trình học tiếng Nhật?
+            {t("home.cta.title")}
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Tham gia cùng hàng nghìn học viên đang học và tiến bộ mỗi ngày. Bắt
-            đầu miễn phí ngay hôm nay!
+            {t("home.cta.subtitle")}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <HeroCTA />
             <Link href="/courses">
               <Button size="lg" variant="outline" className="px-8 border-2">
-                Khám phá khóa học
+                {t("home.cta.exploreCourses")}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
@@ -876,21 +875,20 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground mb-4">
-                Nền tảng học tiếng Nhật hàng đầu Việt Nam. Học mọi lúc, mọi nơi
-                với AI thông minh.
+                {t("home.footer.tagline")}
               </p>
             </div>
 
             {/* Links 1 */}
             <div>
-              <h3 className="font-semibold mb-4">Khóa học</h3>
+              <h3 className="font-semibold mb-4">{t("home.footer.courses")}</h3>
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
                     href="/courses"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Tất cả khóa học
+                    {t("home.footer.allCourses")}
                   </Link>
                 </li>
                 <li>
@@ -898,7 +896,7 @@ export default function HomePage() {
                     href="/courses?level=Beginner"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Cho người mới bắt đầu
+                    {t("home.footer.beginner")}
                   </Link>
                 </li>
                 <li>
@@ -906,7 +904,7 @@ export default function HomePage() {
                     href="/courses?level=Intermediate"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Trung cấp
+                    {t("home.footer.intermediate")}
                   </Link>
                 </li>
                 <li>
@@ -914,7 +912,7 @@ export default function HomePage() {
                     href="/courses?level=Advanced"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Nâng cao
+                    {t("home.footer.advanced")}
                   </Link>
                 </li>
               </ul>
@@ -922,7 +920,9 @@ export default function HomePage() {
 
             {/* Links 2 */}
             <div>
-              <h3 className="font-semibold mb-4">Tính năng</h3>
+              <h3 className="font-semibold mb-4">
+                {t("home.footer.features")}
+              </h3>
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
@@ -945,7 +945,7 @@ export default function HomePage() {
                     href="/community"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Cộng đồng
+                    {t("home.footer.community")}
                   </Link>
                 </li>
                 <li>
@@ -953,7 +953,7 @@ export default function HomePage() {
                     href="/call/random"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Luyện nói
+                    {t("home.footer.speaking")}
                   </Link>
                 </li>
               </ul>
@@ -961,14 +961,14 @@ export default function HomePage() {
 
             {/* Links 3 */}
             <div>
-              <h3 className="font-semibold mb-4">Hỗ trợ</h3>
+              <h3 className="font-semibold mb-4">{t("home.footer.support")}</h3>
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
                     href="/about"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Về chúng tôi
+                    {t("home.footer.about")}
                   </Link>
                 </li>
                 <li>
@@ -976,7 +976,7 @@ export default function HomePage() {
                     href="/contact"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Liên hệ
+                    {t("home.footer.contact")}
                   </Link>
                 </li>
                 <li>
@@ -984,7 +984,7 @@ export default function HomePage() {
                     href="/privacy"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Chính sách bảo mật
+                    {t("home.footer.privacy")}
                   </Link>
                 </li>
                 <li>
@@ -992,7 +992,7 @@ export default function HomePage() {
                     href="/terms"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    Điều khoản sử dụng
+                    {t("home.footer.terms")}
                   </Link>
                 </li>
               </ul>
@@ -1002,17 +1002,16 @@ export default function HomePage() {
           <div className="pt-8 border-t border-border">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <p className="text-sm text-muted-foreground text-center md:text-left">
-                © 2024 HanabiHub. Tất cả quyền được bảo lưu. Được tạo với ❤️
-                dành cho những người học tiếng Nhật.
+                {t("home.footer.copyright")}
               </p>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Award className="h-4 w-4 text-primary" />
-                  <span>98% hài lòng</span>
+                  <span>{t("home.footer.stats.satisfaction")}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Users className="h-4 w-4 text-primary" />
-                  <span>10K+ học viên</span>
+                  <span>{t("home.footer.stats.students")}</span>
                 </div>
               </div>
             </div>

@@ -232,7 +232,8 @@ export function AppSidebar({}: AppSidebarProps) {
         })}
 
         {/* Notification Bell - Opens Panel */}
-        {isAuthenticated && (
+        {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+        {isInitialized && isAuthenticated && (
           <div className="relative">
             <Button
               variant="ghost"
