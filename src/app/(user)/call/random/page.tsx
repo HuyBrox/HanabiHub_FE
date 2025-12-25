@@ -18,7 +18,7 @@ import Peer, { MediaConnection } from "peerjs";
 import { useNotification } from "@/components/notification/NotificationProvider";
 
 const SERVER_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+  process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8080";
 
 function RandomCallPage() {
   const router = useRouter();
@@ -114,21 +114,22 @@ function RandomCallPage() {
       const peerConfig: any = {
         host: url.hostname,
         secure: url.protocol === "https:",
+        port: url.port
+          ? Number(url.port)
+          : url.protocol === "https:"
+          ? 443
+          : 80,
         path: "/peerjs",
         config: {
           iceServers,
         },
       };
 
-      // Only add port if explicitly specified in URL
-      if (url.port) {
-        peerConfig.port = Number(url.port);
-      }
-
       console.log("[RandomCall] Creating new peer with config:", {
         peerId,
         host: url.hostname,
-        port: url.port || "default",
+        port: peerConfig.port,
+        secure: peerConfig.secure,
         path: "/peerjs",
       });
 
