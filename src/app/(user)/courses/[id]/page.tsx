@@ -3,7 +3,7 @@
 import { useState, useMemo, use, useEffect, useRef, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
-// 🗑️ REMOVED: Page visibility and localStorage (not needed for simple tracking)
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
