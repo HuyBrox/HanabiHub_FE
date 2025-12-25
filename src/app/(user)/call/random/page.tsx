@@ -17,7 +17,8 @@ import { toast } from "sonner";
 import Peer, { MediaConnection } from "peerjs";
 import { useNotification } from "@/components/notification/NotificationProvider";
 
-const SERVER_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8080";
+const SERVER_URL =
+  process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:8080";
 
 function RandomCallPage() {
   const router = useRouter();
@@ -44,7 +45,8 @@ function RandomCallPage() {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [hasRated, setHasRated] = useState(false); // Track if user has rated this partner
-  const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null);
+  const [peerConnection, setPeerConnection] =
+    useState<RTCPeerConnection | null>(null);
 
   // Refs
   const joinedQueueRef = useRef(false);
@@ -82,12 +84,14 @@ function RandomCallPage() {
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   // Initialize PeerJS
   const initPeer = useCallback(async (): Promise<string> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       if (peerRef.current) {
         console.log("[RandomCall] Peer already exists:", peerRef.current.id);
         resolve(peerRef.current.id!);
@@ -97,24 +101,36 @@ function RandomCallPage() {
       const url = new URL(SERVER_URL);
       const peerId = `${user?._id || "anon"}-random-${Date.now()}`;
 
+      // Fetch TURN credentials (includes Twilio TURN servers for better connectivity)
+      let iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
+      try {
+        const { getTurnCredentials } = await import("@/lib/webrtc");
+        iceServers = await getTurnCredentials();
+        console.log("[RandomCall] Using TURN servers:", iceServers.length, "servers");
+      } catch (error) {
+        console.warn("[RandomCall] Failed to fetch TURN credentials, using STUN only:", error);
+      }
+
+      // PeerJS config - use port from URL if available, otherwise use default based on protocol
       const peerConfig: any = {
         host: url.hostname,
         secure: url.protocol === "https:",
+        port: url.port
+          ? Number(url.port)
+          : url.protocol === "https:"
+          ? 443
+          : 80,
         path: "/peerjs",
         config: {
-          iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+          iceServers,
         },
       };
-
-      // Only add port if explicitly specified in URL
-      if (url.port) {
-        peerConfig.port = Number(url.port);
-      }
 
       console.log("[RandomCall] Creating new peer with config:", {
         peerId,
         host: url.hostname,
-        port: url.port || "default",
+        port: peerConfig.port,
+        secure: peerConfig.secure,
         path: "/peerjs",
       });
 
@@ -145,7 +161,9 @@ function RandomCallPage() {
       });
 
       peer.on("disconnected", () => {
-        console.warn("[RandomCall] ⚠️ Peer disconnected - may reconnect automatically");
+        console.warn(
+          "[RandomCall] ⚠️ Peer disconnected - may reconnect automatically"
+        );
         // Don't end call immediately, peer might reconnect
       });
 
@@ -157,6 +175,14 @@ function RandomCallPage() {
       // Handle incoming call
       peer.on("call", (conn) => {
         console.log("[RandomCall] 📞 Incoming call from:", conn.peer);
+
+        // ✅ GUARD: If already have a connection, reject new one
+        if (mediaConnRef.current) {
+          console.warn("[RandomCall] Already have connection, rejecting new call");
+          conn.close();
+          return;
+        }
+
         mediaConnRef.current = conn;
 
         if (localStreamRef.current) {
@@ -164,6 +190,8 @@ function RandomCallPage() {
           conn.answer(localStreamRef.current);
         } else {
           console.error("[RandomCall] No local stream to answer with");
+          conn.close();
+          return;
         }
 
         conn.on("stream", (remoteStream) => {
@@ -198,16 +226,19 @@ function RandomCallPage() {
         autoGainControl: true,
         sampleRate: 48000, // Tăng sample rate để chất lượng tốt hơn
         channelCount: 1, // Mono để giảm bandwidth
-        latency: 0.01, // Giảm độ trễ
       };
 
       // Thêm các constraints nâng cao của Chrome/Chromium nếu có
       const advancedAudioConstraints: any = {
         ...baseAudioConstraints,
+        latency: 0.01, // Giảm độ trễ (không phải property chuẩn của MediaTrackConstraints)
       };
 
       // Chỉ thêm Google-specific constraints nếu trình duyệt hỗ trợ (Chrome/Edge)
-      if (navigator.userAgent.includes("Chrome") || navigator.userAgent.includes("Edge")) {
+      if (
+        navigator.userAgent.includes("Chrome") ||
+        navigator.userAgent.includes("Edge")
+      ) {
         advancedAudioConstraints.googEchoCancellation = true;
         advancedAudioConstraints.googNoiseSuppression = true;
         advancedAudioConstraints.googAutoGainControl = true;
@@ -234,13 +265,10 @@ function RandomCallPage() {
           const { processAudioWithNoiseReduction } = await import(
             "@/lib/audio-processor"
           );
-          const processedStream = await processAudioWithNoiseReduction(
-            stream,
-            {
-              noiseGateThreshold: 0.015, // Ngưỡng nhạy hơn
-              highPassFrequency: 100, // Loại bỏ tiếng ồn tần số thấp hơn
-            }
-          );
+          const processedStream = await processAudioWithNoiseReduction(stream, {
+            noiseGateThreshold: 0.015, // Ngưỡng nhạy hơn
+            highPassFrequency: 100, // Loại bỏ tiếng ồn tần số thấp hơn
+          });
 
           // KHÔNG dừng tracks từ stream gốc vì source node trong AudioContext
           // cần chúng để lấy input. Chỉ dừng khi cleanup (end call).
@@ -426,6 +454,12 @@ function RandomCallPage() {
     socket.on("receiveRandomCallPeerId", async (data: any) => {
       console.log("[RandomCall] Received partner peer ID:", data.peerId);
 
+      // ✅ GUARD: Prevent duplicate calls - if already in call or already calling, ignore
+      if (isInCall || mediaConnRef.current) {
+        console.warn("[RandomCall] Already in call or calling, ignoring peer ID");
+        return;
+      }
+
       try {
         if (!data.peerId) {
           console.error("[RandomCall] Invalid peer ID received");
@@ -434,18 +468,25 @@ function RandomCallPage() {
           return;
         }
 
-        // Wait for peer and stream to be ready (with timeout)
-        const waitForReady = async (maxWait: number = 10000): Promise<boolean> => {
+        // Wait for peer and stream to be ready (with shorter timeout)
+        const waitForReady = async (
+          maxWait: number = 5000 // Reduced from 10s to 5s
+        ): Promise<boolean> => {
           const startTime = Date.now();
           while (Date.now() - startTime < maxWait) {
             if (peerRef.current && localStreamRef.current) {
               console.log("[RandomCall] Peer and stream ready");
               return true;
             }
-            console.log("[RandomCall] Waiting for ready... Peer:", !!peerRef.current, "Stream:", !!localStreamRef.current);
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            // Check every 100ms instead of 200ms for faster response
+            await new Promise((resolve) => setTimeout(resolve, 100));
           }
-          console.error("[RandomCall] Timeout - Peer ready:", !!peerRef.current, "Stream ready:", !!localStreamRef.current);
+          console.error(
+            "[RandomCall] Timeout - Peer ready:",
+            !!peerRef.current,
+            "Stream ready:",
+            !!localStreamRef.current
+          );
           return false;
         };
 
@@ -463,12 +504,22 @@ function RandomCallPage() {
           throw new Error("Peer or stream became null after ready check");
         }
 
-        // Additional delay for stability
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // ✅ Reduced delay - only wait 200ms instead of 500ms for faster connection
+        // This gives peer server time to register the peer ID
+        await new Promise((resolve) => setTimeout(resolve, 200));
 
         console.log("[RandomCall] Calling partner with peer:", data.peerId);
         console.log("[RandomCall] peerRef.current:", peerRef.current);
-        console.log("[RandomCall] localStreamRef.current:", localStreamRef.current);
+        console.log(
+          "[RandomCall] localStreamRef.current:",
+          localStreamRef.current
+        );
+
+        // ✅ GUARD: Double check not already calling/in call
+        if (mediaConnRef.current || isInCall) {
+          console.warn("[RandomCall] Already calling/in call, aborting");
+          return;
+        }
 
         const conn = peerRef.current.call(data.peerId, localStreamRef.current);
 
@@ -525,7 +576,9 @@ function RandomCallPage() {
     socket.on("partnerRatedYou", (data: any) => {
       console.log("[RandomCall] Partner rated you:", data);
       addNotification({
-        title: `${data.partnerName || "Partner"} rated you ${data.rating} stars! 💫`,
+        title: `${data.partnerName || "Partner"} rated you ${
+          data.rating
+        } stars! 💫`,
         message: "Your listening & speaking skills have been tracked!",
         type: "success",
         duration: 6000,
@@ -563,8 +616,31 @@ function RandomCallPage() {
     });
 
     // Errors
-    socket.on("randomCallError", (error: any) => {
+    socket.on("randomCallError", async (error: any) => {
       console.error("[RandomCall] Error:", error);
+
+      // Handle NOT_IN_QUEUE error - auto rejoin
+      if (error.code === "NOT_IN_QUEUE" && isCallModeOn && user?._id) {
+        console.log("[RandomCall] Not in queue, attempting to rejoin...");
+        try {
+          socket.emit("joinRandomQueue", {
+            filters: {
+              level: selectedLevel,
+              lang: "ja",
+            },
+          });
+          // Wait a bit then retry
+          setTimeout(() => {
+            if (isSearching) {
+              socket.emit("startRandomSearch", {});
+            }
+          }, 500);
+          return; // Don't show error toast for auto-rejoin
+        } catch (rejoinError) {
+          console.error("[RandomCall] Failed to rejoin queue:", rejoinError);
+        }
+      }
+
       toast.error(error.message || "Random call error");
       setIsSearching(false);
       setIsMatched(false);
@@ -573,6 +649,9 @@ function RandomCallPage() {
     // Socket disconnect handling
     socket.on("disconnect", (reason: string) => {
       console.warn("[RandomCall] Socket disconnected:", reason);
+      // Mark as not in queue since socket changed
+      joinedQueueRef.current = false;
+
       if (isInCall) {
         toast.error("Connection lost");
         handleCallEnd();
@@ -583,10 +662,35 @@ function RandomCallPage() {
     });
 
     // Socket reconnect handling
-    socket.on("connect", () => {
+    socket.on("connect", async () => {
       console.log("[RandomCall] Socket reconnected");
-      if (isSearching) {
-        toast.info("Reconnected. Resuming search...");
+
+      // Rejoin queue if user was in call mode or searching
+      if (isCallModeOn && !joinedQueueRef.current && user?._id) {
+        console.log("[RandomCall] Rejoining queue after reconnect...");
+        try {
+          socket.emit("joinRandomQueue", {
+            filters: {
+              level: selectedLevel,
+              lang: "ja",
+            },
+          });
+          // Wait a bit for queue join to complete
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // Resume search if was searching
+          if (isSearching) {
+            toast.info("Reconnected. Resuming search...");
+            socket.emit("startRandomSearch", {});
+          } else {
+            toast.success("Reconnected successfully");
+          }
+        } catch (error) {
+          console.error("[RandomCall] Failed to rejoin queue:", error);
+          toast.error("Failed to reconnect. Please refresh the page.");
+        }
+      } else if (isSearching) {
+        toast.info("Reconnected. Please start search again.");
       }
     });
 
@@ -603,21 +707,59 @@ function RandomCallPage() {
       socket.off("disconnect");
       socket.off("connect");
     };
-  }, [socket, getUserMedia, initPeer, localStream, isInCall, isSearching, isCallModeOn]);
+  }, [
+    socket,
+    getUserMedia,
+    initPeer,
+    localStream,
+    isInCall,
+    isSearching,
+    isCallModeOn,
+    selectedLevel,
+    user?._id,
+  ]);
 
   // Attach streams to video elements
   useEffect(() => {
     if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-      localVideoRef.current.muted = true;
-      localVideoRef.current.play().catch(() => {});
+      const video = localVideoRef.current;
+      // ✅ Only set srcObject if it's different to avoid interruption
+      if (video.srcObject !== localStream) {
+        video.srcObject = localStream;
+      }
+      video.muted = true;
+
+      // ✅ Safe play with proper error handling
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // Ignore AbortError (interrupted by new load)
+          if (err.name !== "AbortError") {
+            console.warn("[RandomCall] Local video play error:", err);
+          }
+        });
+      }
     }
   }, [localStream, isVideoOff]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch(() => {});
+      const video = remoteVideoRef.current;
+      // ✅ Only set srcObject if it's different to avoid interruption
+      if (video.srcObject !== remoteStream) {
+        video.srcObject = remoteStream;
+      }
+
+      // ✅ Safe play with proper error handling
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // Ignore AbortError (interrupted by new load)
+          if (err.name !== "AbortError") {
+            console.warn("[RandomCall] Remote video play error:", err);
+          }
+        });
+      }
     }
   }, [remoteStream]);
 
@@ -777,7 +919,7 @@ function RandomCallPage() {
       partnerId: partnerInfo.partnerId,
       rating,
       isInCall,
-      isConnected: socket.connected
+      isConnected: socket.connected,
     });
 
     // Send rating to server via socket
@@ -799,66 +941,105 @@ function RandomCallPage() {
   const handleCallEnd = () => {
     // ✅ GUARD: Prevent circular calls
     if (isEndingCallRef.current) {
-      console.log("[RandomCall] ⚠️ Already ending call, skipping duplicate call");
+      console.log(
+        "[RandomCall] ⚠️ Already ending call, skipping duplicate call"
+      );
       return;
     }
 
     isEndingCallRef.current = true;
-    console.log("[RandomCall] 🔴 handleCallEnd called - Stack trace:");
-    console.trace(); // ✅ Show where this function was called from
+    console.log("[RandomCall] 🔴 handleCallEnd called");
 
-    // Notify server
-    if (socket && partnerInfo) {
-      socket.emit("endRandomCall", {
-        partnerId: partnerInfo.partnerId,
-      });
+    // Use try-finally to ensure guard is reset even if errors occur
+    try {
+      // Notify server (only if we have socket and partner info)
+      if (socket && partnerInfo) {
+        try {
+          socket.emit("endRandomCall", {
+            partnerId: partnerInfo.partnerId,
+          });
+        } catch (emitError) {
+          console.warn("[RandomCall] Failed to emit endRandomCall:", emitError);
+        }
+      }
+
+      // Cleanup media connections
+      if (mediaConnRef.current) {
+        try {
+          mediaConnRef.current.close();
+        } catch (closeError) {
+          console.warn("[RandomCall] Error closing media connection:", closeError);
+        }
+        mediaConnRef.current = null;
+      }
+
+      // Clear peer connection
+      setPeerConnection(null);
+
+      // Stop local stream tracks
+      if (localStream) {
+        try {
+          localStream.getTracks().forEach((track) => {
+            try {
+              track.stop();
+            } catch (stopError) {
+              console.warn("[RandomCall] Error stopping track:", stopError);
+            }
+          });
+        } catch (streamError) {
+          console.warn("[RandomCall] Error stopping local stream:", streamError);
+        }
+        setLocalStream(null);
+      }
+
+      // Stop remote stream tracks
+      if (remoteStream) {
+        try {
+          remoteStream.getTracks().forEach((track) => {
+            try {
+              track.stop();
+            } catch (stopError) {
+              console.warn("[RandomCall] Error stopping remote track:", stopError);
+            }
+          });
+        } catch (streamError) {
+          console.warn("[RandomCall] Error stopping remote stream:", streamError);
+        }
+        setRemoteStream(null);
+      }
+
+      // Destroy peer
+      if (peerRef.current) {
+        try {
+          peerRef.current.destroy();
+        } catch (destroyError) {
+          console.warn("[RandomCall] Error destroying peer:", destroyError);
+        }
+        peerRef.current = null;
+      }
+
+      // Clear refs
+      localStreamRef.current = null;
+
+      // Reset states
+      setIsInCall(false);
+      setIsMatched(false);
+      setIsSearching(false);
+      setPartnerInfo(null);
+      setCallDuration(0);
+      callStartTimeRef.current = null;
+
+      // Reset rating UI
+      setHoveredRating(0);
+      setHasRated(false);
+      setIsMuted(false);
+      setIsVideoOff(false);
+    } finally {
+      // ✅ Reset guard after cleanup (always, even on error)
+      setTimeout(() => {
+        isEndingCallRef.current = false;
+      }, 1000); // Increased timeout to prevent rapid re-calls
     }
-
-    // Cleanup media connections
-    if (mediaConnRef.current) {
-      mediaConnRef.current.close();
-      mediaConnRef.current = null;
-    }
-
-    // Clear peer connection
-    setPeerConnection(null);
-
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
-      setLocalStream(null);
-    }
-
-    if (remoteStream) {
-      remoteStream.getTracks().forEach((track) => track.stop());
-      setRemoteStream(null);
-    }
-
-    if (peerRef.current) {
-      peerRef.current.destroy();
-      peerRef.current = null;
-    }
-
-    // Clear refs
-    localStreamRef.current = null;
-
-    // Reset states
-    setIsInCall(false);
-    setIsMatched(false);
-    setIsSearching(false);
-    setPartnerInfo(null);
-    setCallDuration(0);
-    callStartTimeRef.current = null;
-
-    // Reset rating UI
-    setHoveredRating(0);
-    setHasRated(false);
-    setIsMuted(false);
-    setIsVideoOff(false);
-
-    // ✅ Reset guard after cleanup
-    setTimeout(() => {
-      isEndingCallRef.current = false;
-    }, 500);
   };
 
   return (
@@ -867,8 +1048,12 @@ function RandomCallPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Random Japanese Call</h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">Practice Japanese with native speakers</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+              Random Japanese Call
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-1">
+              Practice Japanese with native speakers
+            </p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -914,7 +1099,11 @@ function RandomCallPage() {
               type="remote"
               isLoading={isSearching}
               isConnected={isInCall}
-              userName={isInCall && partnerInfo ? partnerInfo.partnerLevel : "Waiting..."}
+              userName={
+                isInCall && partnerInfo
+                  ? partnerInfo.partnerLevel
+                  : "Waiting..."
+              }
               level={partnerInfo?.partnerLevel}
               videoRef={remoteVideoRef}
               flipped={true}
@@ -925,11 +1114,17 @@ function RandomCallPage() {
           {!isCallModeOn && (
             <Card className="p-6 text-center mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
               <Users className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Ready to Practice Japanese?</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Ready to Practice Japanese?
+              </h3>
               <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Connect with a native speaker at {selectedLevel} level
               </p>
-              <Button onClick={handleToggleCallMode} size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-8">
+              <Button
+                onClick={handleToggleCallMode}
+                size="lg"
+                className="bg-orange-500 hover:bg-orange-600 text-white px-8"
+              >
                 🔴 Turn Call Mode ON
               </Button>
             </Card>
@@ -938,9 +1133,18 @@ function RandomCallPage() {
           {isCallModeOn && isSearching && !isInCall && (
             <Card className="p-6 text-center mb-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
               <div className="animate-spin h-8 w-8 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Searching...</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-2">Finding a Japanese speaker for you</p>
-              <Button onClick={handleToggleCallMode} size="sm" variant="outline" className="mt-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Searching...
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-2">
+                Finding a Japanese speaker for you
+              </p>
+              <Button
+                onClick={handleToggleCallMode}
+                size="sm"
+                variant="outline"
+                className="mt-2"
+              >
                 🔴 Turn Call Mode OFF
               </Button>
             </Card>
@@ -949,11 +1153,11 @@ function RandomCallPage() {
           {/* Call Controls */}
           {isCallModeOn && (
             <div className="space-y-4">
-            <CallControls
-              isMuted={isMuted}
-              isVideoOff={isVideoOff}
-              onToggleMute={handleToggleMute}
-              onToggleVideo={handleToggleVideo}
+              <CallControls
+                isMuted={isMuted}
+                isVideoOff={isVideoOff}
+                onToggleMute={handleToggleMute}
+                onToggleVideo={handleToggleVideo}
                 onNextPartner={handleNextPartner}
                 onEndCall={handleEndCurrentCall}
                 onStartCall={async () => {

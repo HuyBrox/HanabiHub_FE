@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -19,16 +19,24 @@ import {
   X,
   MessageCircle,
   Video,
+  Bell,
   Search,
   Settings,
 } from "lucide-react";
-import { ModeToggle, LanguageToggle, JapaneseInputModeToggle } from "@/components/common";
+import {
+  ModeToggle,
+  LanguageToggle,
+  JapaneseInputModeToggle,
+} from "@/components/common";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/lib/language-context";
 import { AppSidebarProps, NavigationItem } from "@/types/layout";
+import { NotificationPanel } from "@/components/notification/NotificationPanel";
 import { useSearch } from "@/contexts/SearchContext";
 import { SearchComponent } from "@/components/search/SearchComponent";
 import styles from "./AppSidebar.module.css";
+import { useSocketContext } from "@/providers/SocketProvider";
+import { buildApiUrl } from "@/utils/api-helper";
 
 const navigation: NavigationItem[] = [
   { name: "Home", href: "/", icon: Home, key: "nav.home" },
@@ -62,16 +70,86 @@ const navigation: NavigationItem[] = [
 
 export function AppSidebar({}: AppSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
+  const [prevCollapsed, setPrevCollapsed] = useState<boolean | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
   const { t } = useLanguage();
   const { isAuthenticated, user, logout, isInitialized } = useAuth();
+  const { socket, connected } = useSocketContext();
   const { openSearch, closeSearch, isSearchOpen } = useSearch();
+
+  // ✅ Fetch unread count from API
+  const fetchUnreadCount = async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      const response = await fetch(
+        buildApiUrl("/notifications/my?unreadOnly=true&limit=1"),
+        { credentials: "include" }
+      );
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        setUnreadCount(data.data.total || 0);
+      }
+    } catch (error) {
+      console.error("Failed to fetch unread count:", error);
+    }
+  };
+
+  // Fetch unread count when authenticated
+  useEffect(() => {
+    if (isAuthenticated && connected) {
+      fetchUnreadCount();
+    }
+  }, [isAuthenticated, connected]);
+
+  // Listen for new notifications via socket
+  useEffect(() => {
+    if (!socket || !connected || !isAuthenticated) return;
+
+    const handleNotification = () => {
+      setUnreadCount((prev) => prev + 1);
+    };
+
+    socket.on("notification", handleNotification);
+
+    return () => {
+      socket.off("notification", handleNotification);
+    };
+  }, [socket, connected, isAuthenticated]);
+
+  // Reset unread count when panel opens and collapse sidebar to icons-only
+  const handleOpenPanel = () => {
+    // Save previous collapse state so we can restore it when panel closes
+    setPrevCollapsed(isCollapsed);
+    setIsCollapsed(true);
+    setIsNotificationPanelOpen(true);
+    // Optionally reset count when opening panel
+    // setUnreadCount(0);
+  };
+
+  // Close panel and restore previous sidebar state
+  const handleClosePanel = () => {
+    setIsNotificationPanelOpen(false);
+    if (prevCollapsed !== null) {
+      setIsCollapsed(prevCollapsed);
+      setPrevCollapsed(null);
+    }
+  };
 
   return (
     <div
       className={cn(
         "hidden lg:flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
-        isSearchOpen ? "w-16" : isCollapsed ? "w-16" : "w-64"
+        isNotificationPanelOpen || isSearchOpen
+          ? "w-16"
+          : isCollapsed
+          ? "w-16"
+          : "w-64"
       )}
       style={{
         transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -79,7 +157,7 @@ export function AppSidebar({}: AppSidebarProps) {
     >
       {/* Header with Logo and Toggle */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-        {!isCollapsed && !isSearchOpen && (
+        {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
               <Image
@@ -102,11 +180,14 @@ export function AppSidebar({}: AppSidebarProps) {
             if (isSearchOpen) {
               closeSearch();
             }
+            if (isNotificationPanelOpen) {
+              handleClosePanel();
+            }
             setIsCollapsed(!isCollapsed);
           }}
           className="text-sidebar-foreground hover:bg-sidebar-accent"
         >
-          {isCollapsed || isSearchOpen ? (
+          {isCollapsed || isNotificationPanelOpen || isSearchOpen ? (
             <Menu className="h-5 w-5" />
           ) : (
             <X className="h-5 w-5" />
@@ -126,6 +207,9 @@ export function AppSidebar({}: AppSidebarProps) {
                 if (isSearchOpen) {
                   closeSearch();
                 }
+                if (isNotificationPanelOpen) {
+                  handleClosePanel();
+                }
               }}
             >
               <Button
@@ -134,15 +218,55 @@ export function AppSidebar({}: AppSidebarProps) {
                   "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                   isActive &&
                     "bg-primary text-primary-foreground hover:bg-primary/90",
-                  (isCollapsed || isSearchOpen) && "px-2 justify-center"
+                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                    "px-2 justify-center"
                 )}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && !isSearchOpen && <span className="font-medium">{t(item.key)}</span>}
+                {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
+                  <span className="font-medium">{t(item.key)}</span>
+                )}
               </Button>
             </Link>
           );
         })}
+
+        {/* Notification Bell - Opens Panel */}
+        {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
+        {/* Không hiển thị trên trang quản lý */}
+        {isInitialized &&
+          isAuthenticated &&
+          !pathname?.startsWith("/admin") && (
+            <div className="relative">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  isNotificationPanelOpen
+                    ? handleClosePanel()
+                    : handleOpenPanel()
+                }
+                className={cn(
+                  "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
+                  isNotificationPanelOpen && "bg-accent",
+                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                    "px-2 justify-center"
+                )}
+              >
+                <Bell className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
+                  <span className="font-medium">{t("nav.notifications")}</span>
+                )}
+                {/* Notification badge - Dynamic from API */}
+                {unreadCount > 0 && (
+                  <div className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center px-1">
+                    <span className="text-white text-xs font-bold">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  </div>
+                )}
+              </Button>
+            </div>
+          )}
 
         {/* Admin Management Button - Only show for admin users */}
         {/* Chỉ render sau khi auth đã được khởi tạo để tránh hydration mismatch */}
@@ -154,12 +278,15 @@ export function AppSidebar({}: AppSidebarProps) {
                 "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                 pathname?.startsWith("/admin") &&
                   "bg-primary text-primary-foreground hover:bg-primary/90",
-                (isCollapsed || isSearchOpen) && "px-2 justify-center"
+                (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                  "px-2 justify-center"
               )}
             >
               <Settings className="h-5 w-5 flex-shrink-0" />
-              {!isCollapsed && !isSearchOpen && (
-                <span className="font-medium">{t("nav.admin") || "Quản lý"}</span>
+              {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
+                <span className="font-medium">
+                  {t("nav.admin") || "Quản lý"}
+                </span>
               )}
             </Button>
           </Link>
@@ -173,17 +300,21 @@ export function AppSidebar({}: AppSidebarProps) {
               closeSearch();
             } else {
               openSearch();
+              if (isNotificationPanelOpen) {
+                handleClosePanel();
+              }
             }
           }}
           className={cn(
             "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
             isSearchOpen &&
               "bg-primary text-primary-foreground hover:bg-primary/90",
-            (isCollapsed || isSearchOpen) && "px-2 justify-center"
+            (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+              "px-2 justify-center"
           )}
         >
           <Search className="h-5 w-5 flex-shrink-0" />
-          {!isCollapsed && !isSearchOpen && (
+          {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
             <span className="font-medium">{t("nav.search") || "Tìm kiếm"}</span>
           )}
         </Button>
@@ -199,10 +330,11 @@ export function AppSidebar({}: AppSidebarProps) {
                   "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
                   pathname === "/profile" &&
                     "bg-primary text-primary-foreground hover:bg-primary/90",
-                  (isCollapsed || isSearchOpen) && "px-2 justify-center"
+                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                    "px-2 justify-center"
                 )}
               >
-                {(isCollapsed || isSearchOpen) ? (
+                {isCollapsed || isNotificationPanelOpen || isSearchOpen ? (
                   <Avatar className="h-6 w-6">
                     <AvatarImage
                       src={user?.avatar || "/placeholder.svg"}
@@ -240,11 +372,12 @@ export function AppSidebar({}: AppSidebarProps) {
                 variant="ghost"
                 className={cn(
                   "w-full justify-start gap-3 text-sidebar-foreground hover:bg-sidebar-accent px-3 py-2",
-                  (isCollapsed || isSearchOpen) && "px-2 justify-center"
+                  (isCollapsed || isNotificationPanelOpen || isSearchOpen) &&
+                    "px-2 justify-center"
                 )}
               >
                 <User className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && !isSearchOpen && (
+                {!isCollapsed && !isNotificationPanelOpen && !isSearchOpen && (
                   <span className="font-medium">{t("nav.login")}</span>
                 )}
               </Button>
@@ -259,7 +392,7 @@ export function AppSidebar({}: AppSidebarProps) {
       </nav>
 
       {/* Language Toggle, Theme Toggle, Japanese Input Mode Toggle and Auth Button */}
-      {!isSearchOpen && (
+      {!isNotificationPanelOpen && !isSearchOpen && (
         <div className="p-4 border-t border-sidebar-border space-y-2">
           <div
             className={cn(
@@ -299,7 +432,9 @@ export function AppSidebar({}: AppSidebarProps) {
                 )}
               >
                 <LogOut className="h-5 w-5 flex-shrink-0" />
-                {!isCollapsed && <span className="font-medium">{t("nav.logout")}</span>}
+                {!isCollapsed && (
+                  <span className="font-medium">{t("nav.logout")}</span>
+                )}
               </Button>
             ) : (
               <Link href="/login">
@@ -311,7 +446,9 @@ export function AppSidebar({}: AppSidebarProps) {
                   )}
                 >
                   <User className="h-5 w-5 flex-shrink-0" />
-                  {!isCollapsed && <span className="font-medium">{t("nav.login")}</span>}
+                  {!isCollapsed && (
+                    <span className="font-medium">{t("nav.login")}</span>
+                  )}
                 </Button>
               </Link>
             )
@@ -323,6 +460,13 @@ export function AppSidebar({}: AppSidebarProps) {
           )}
         </div>
       )}
+
+      {/* Notification Panel - Tách riêng component */}
+      <NotificationPanel
+        isOpen={isNotificationPanelOpen}
+        onClose={handleClosePanel}
+        sidebarCollapsed={isCollapsed}
+      />
     </div>
   );
 }

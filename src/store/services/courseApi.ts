@@ -15,11 +15,12 @@ export interface Course {
   description: string;
   thumbnail?: string;
   lessons?: Lesson[];
-  level: string;
+  level?: string;
   instructor?: Instructor;
   students?: string[];
   studentCount?: number;
   price: number;
+  ratings?: Array<{ user: string; rating: number }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -176,7 +177,7 @@ export const courseApi = createApi({
 
     deleteCourse: builder.mutation<ApiResponse<null>, string>({
       query: (id) => ({
-        url: `/courses/delete/${id}`,
+        url: `/courses/${id}`,
         method: "DELETE",
       }),
       invalidatesTags: ["Course"],
@@ -323,4 +324,5 @@ export const {
   useUpdateCurrentLessonMutation,
   useMarkLessonCompleteMutation,
   useResetCourseProgressMutation,
+  useRateCourseMutation,
 } = courseApi;

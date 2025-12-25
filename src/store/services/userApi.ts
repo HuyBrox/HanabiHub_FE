@@ -108,9 +108,7 @@ export const userApi = createApi({
     // Get friends list
     getFriends: builder.query<any, string>({
       query: (userId) => `/user/friends/${userId}`,
-      providesTags: (result, error, userId) => [
-        { type: "User", id: userId },
-      ],
+      providesTags: (result, error, userId) => [{ type: "User", id: userId }],
     }),
     // Get my friends list (for ChatDock)
     getMyFriends: builder.query<any, void>({

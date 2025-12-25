@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { withAuth } from "@/components/auth";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/language-context";
 import {
   Card,
   CardContent,
@@ -28,6 +29,7 @@ import {
 import { useGetAllCoursesQuery } from "@/store/services/courseApi";
 import { LoadingSpinner } from "@/components/loading";
 
+<<<<<<< HEAD
 const API_BASE_RAW =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 const API_BASE = API_BASE_RAW.replace(/\/+$/, "");
@@ -179,11 +181,40 @@ const categories = [
   "Culture",
 ];
 const levels = ["All", "Beginner", "Intermediate", "Advanced"];
+=======
+// Helper function để format giá - sẽ được định nghĩa trong component để có thể dùng t()
+// Helper function để format thời gian học dự kiến - sẽ được định nghĩa trong component để có thể dùng t()
+
+// Helper function để tính rating trung bình
+const calculateAverageRating = (
+  ratings?: Array<{ user: string; rating: number }>
+) => {
+  if (!ratings || ratings.length === 0) return 0;
+  const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+  return sum / ratings.length;
+};
+
+type PriceFilter = "all" | "free" | "paid";
+type RatingFilter = "all" | "rated" | "high";
+>>>>>>> origin/main
 
 function CoursesPage() {
+  const { t } = useLanguage();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [selectedLevel, setSelectedLevel] = useState("All");
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
+  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
+
+  // Helper function để format giá
+  const formatPrice = (price: number) => {
+    if (price === 0) return t("courses.format.free");
+    return `${price.toLocaleString("vi-VN")} ${t("courses.format.currency")}`;
+  };
+
+  // Helper function để format thời gian học dự kiến
+  const estimateDuration = (lessonCount: number) => {
+    const weeks = Math.ceil(lessonCount / 3); // Giả sử 3 bài/tuần
+    return `${weeks} ${t("courses.format.weeks")}`;
+  };
 
   const [buyingId, setBuyingId] = useState<string | null>(null);
 
@@ -298,6 +329,7 @@ function CoursesPage() {
   const filteredCourses = useMemo(() => {
     if (!coursesData?.data) return [];
 
+<<<<<<< HEAD
     return coursesData.data.filter((course: any) => {
       const matchesSearch =
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -308,8 +340,33 @@ function CoursesPage() {
 
       // category filter bạn chưa map thật sự -> giữ nguyên
       return matchesSearch && matchesLevel;
+=======
+    let courses = coursesData.data.filter((course) => {
+      // Filter theo search term
+      const matchesSearch =
+        course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Filter theo price
+      const matchesPrice =
+        priceFilter === "all" ||
+        (priceFilter === "free" && course.price === 0) ||
+        (priceFilter === "paid" && course.price > 0);
+
+      // Filter theo rating
+      const ratings = course.ratings || [];
+      const avgRating = calculateAverageRating(ratings);
+      const matchesRating =
+        ratingFilter === "all" ||
+        (ratingFilter === "rated" && ratings.length > 0) ||
+        (ratingFilter === "high" && avgRating >= 4.0);
+
+      return matchesSearch && matchesPrice && matchesRating;
+>>>>>>> origin/main
     });
-  }, [coursesData, searchTerm, selectedLevel]);
+
+    return courses;
+  }, [coursesData, searchTerm, priceFilter, ratingFilter]);
 
   const onBuy = async (courseId: string) => {
     try {
@@ -343,11 +400,13 @@ function CoursesPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Có lỗi xảy ra</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            {t("courses.error.title")}
+          </h3>
           <p className="text-muted-foreground mb-4">
-            Không thể tải danh sách khóa học. Vui lòng thử lại.
+            {t("courses.error.message")}
           </p>
-          <Button onClick={() => refetch()}>Thử lại</Button>
+          <Button onClick={() => refetch()}>{t("courses.error.retry")}</Button>
         </div>
       </div>
     );
@@ -356,26 +415,39 @@ function CoursesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-8 md:py-16">
-        <div className="container mx-auto px-4 md:px-6">
+      <div className="relative bg-gradient-to-r from-orange-500 via-orange-600 to-red-500 text-white py-12 md:py-20 lg:py-24 overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-1/4 w-72 h-72 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="container mx-auto px-4 md:px-6 relative z-10">
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-2xl md:text-4xl lg:text-6xl font-bold mb-3 md:mb-6">
-              Khám phá khóa học tiếng Nhật
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 tracking-tight">
+              {t("courses.hero.title")}
             </h1>
-            <p className="text-sm md:text-xl lg:text-2xl mb-4 md:mb-8 opacity-90 px-2">
-              Từ cơ bản đến nâng cao, tìm khóa học hoàn hảo cho hành trình học
-              tiếng Nhật của bạn
+            <p className="text-base md:text-xl lg:text-2xl mb-6 md:mb-10 opacity-95 px-2 leading-relaxed">
+              {t("courses.hero.subtitle")}
             </p>
 
             <div className="relative max-w-2xl mx-auto">
-              <Search className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 md:h-5 md:w-5" />
-              <Input
-                type="text"
-                placeholder="Tìm kiếm khóa học..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 md:pl-12 pr-4 py-2.5 md:py-4 text-sm md:text-lg rounded-full border-0 shadow-lg"
-              />
+              <div className="relative group">
+                <Search className="absolute left-4 md:left-5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-5 w-5 md:h-6 md:w-6 transition-colors group-focus-within:text-orange-500" />
+                <Input
+                  type="text"
+                  placeholder={t("courses.searchPlaceholder")}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12 md:pl-14 pr-4 py-3 md:py-4 text-sm md:text-base rounded-full border-0 shadow-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-orange-500 transition-all duration-200"
+                />
+              </div>
+              {searchTerm && (
+                <div className="mt-3 text-sm text-white/90">
+                  {t("courses.searchIndicator")}{" "}
+                  <span className="font-semibold">"{searchTerm}"</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -383,55 +455,118 @@ function CoursesPage() {
 
       <div className="container mx-auto px-3 md:px-4 lg:px-6 py-6 md:py-12">
         {/* Filters */}
-        <div className="flex flex-col md:flex-row md:flex-wrap gap-3 md:gap-4 mb-4 md:mb-8">
-          <div className="flex items-center gap-2 mb-1 md:mb-0">
-            <Filter className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
-            <span className="text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
-              Bộ lọc:
-            </span>
-          </div>
+        <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-8">
+          {/* Filter Row 1: Price & Rating */}
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 md:h-5 md:w-5 text-gray-600" />
+              <span className="text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
+                {t("courses.filters")}
+              </span>
+            </div>
 
+<<<<<<< HEAD
           <div className="flex flex-wrap gap-2">
             {categories.map((category) => (
+=======
+            {/* Price Filter */}
+            <div className="flex flex-wrap gap-2">
+>>>>>>> origin/main
               <Button
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
+                variant={priceFilter === "all" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setPriceFilter("all")}
                 className={`text-xs md:text-sm ${
-                  selectedCategory === category
+                  priceFilter === "all"
                     ? "bg-orange-500 hover:bg-orange-600"
                     : ""
                 }`}
               >
-                {category}
+                {t("courses.filter.all")}
               </Button>
+<<<<<<< HEAD
             ))}
           </div>
 
           <div className="flex flex-wrap gap-2">
             {levels.map((level) => (
+=======
+>>>>>>> origin/main
               <Button
-                key={level}
-                variant={selectedLevel === level ? "default" : "outline"}
+                variant={priceFilter === "free" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedLevel(level)}
+                onClick={() => setPriceFilter("free")}
                 className={`text-xs md:text-sm ${
-                  selectedLevel === level
+                  priceFilter === "free"
                     ? "bg-orange-500 hover:bg-orange-600"
                     : ""
                 }`}
               >
-                {level}
+                {t("courses.filter.free")}
               </Button>
-            ))}
+              <Button
+                variant={priceFilter === "paid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPriceFilter("paid")}
+                className={`text-xs md:text-sm ${
+                  priceFilter === "paid"
+                    ? "bg-orange-500 hover:bg-orange-600"
+                    : ""
+                }`}
+              >
+                {t("courses.filter.paid")}
+              </Button>
+            </div>
+
+            {/* Rating Filter */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={ratingFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRatingFilter("all")}
+                className={`text-xs md:text-sm ${
+                  ratingFilter === "all"
+                    ? "bg-orange-500 hover:bg-orange-600"
+                    : ""
+                }`}
+              >
+                {t("courses.filter.all")}
+              </Button>
+              <Button
+                variant={ratingFilter === "rated" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRatingFilter("rated")}
+                className={`text-xs md:text-sm flex items-center gap-1 ${
+                  ratingFilter === "rated"
+                    ? "bg-orange-500 hover:bg-orange-600"
+                    : ""
+                }`}
+              >
+                <Star className="h-3 w-3" />
+                {t("courses.filter.rated")}
+              </Button>
+              <Button
+                variant={ratingFilter === "high" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRatingFilter("high")}
+                className={`text-xs md:text-sm flex items-center gap-1 ${
+                  ratingFilter === "high"
+                    ? "bg-orange-500 hover:bg-orange-600"
+                    : ""
+                }`}
+              >
+                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                {t("courses.filter.highRating")}
+              </Button>
+            </div>
           </div>
         </div>
 
         <div className="mb-4 md:mb-6">
           <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
-            Hiển thị {filteredCourses.length} trong{" "}
-            {coursesData?.data?.length || 0} khóa học
+            {t("courses.results.showing")} {filteredCourses.length}{" "}
+            {t("courses.results.of")} {coursesData?.data?.length || 0}{" "}
+            {t("courses.results.courses")}
           </p>
         </div>
 
@@ -520,6 +655,7 @@ function CoursesPage() {
                   </div>
                 </CardHeader>
 
+<<<<<<< HEAD
                 <CardContent className="p-3 md:p-4 pt-0 pb-2">
                   <div className="flex items-center justify-between mb-2">
                     <Badge
@@ -581,6 +717,68 @@ function CoursesPage() {
               </Card>
             );
           })}
+=======
+              <CardContent className="p-3 md:p-4 pt-0 pb-2">
+                <div className="flex items-center justify-between mb-2">
+                  {/* Rating Display */}
+                  {(() => {
+                    const ratings = course.ratings || [];
+                    const avgRating = calculateAverageRating(ratings);
+                    if (ratings.length > 0) {
+                      return (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                          <span className="text-[10px] md:text-xs font-medium">
+                            {avgRating.toFixed(1)}
+                          </span>
+                          <span className="text-[10px] md:text-xs text-gray-500">
+                            ({ratings.length})
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <div className="flex items-center gap-0.5 md:gap-1 text-[10px] md:text-xs text-gray-500">
+                    <BookOpen className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                    <span>
+                      {course.lessons?.length || 0}{" "}
+                      {t("courses.format.lessons")}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] md:text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                  {course.instructor?.fullname ||
+                    t("courses.instructor.unknown")}
+                </p>
+              </CardContent>
+
+              <CardFooter className="p-3 md:p-4 pt-2">
+                <div className="flex gap-1.5 md:gap-2 w-full">
+                  <Link
+                    href={`/courses/${course._id}/detail`}
+                    className="flex-1"
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full text-[10px] md:text-xs h-7 md:h-8 px-2"
+                    >
+                      <BookOpen className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
+                      {t("courses.button.details")}
+                    </Button>
+                  </Link>
+                  <Link href={`/courses/${course._id}`} className="flex-1">
+                    <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white text-[10px] md:text-xs h-7 md:h-8 px-2">
+                      <Play className="h-2.5 w-2.5 md:h-3 md:w-3 mr-1" />
+                      {t("courses.button.learn")}
+                    </Button>
+                  </Link>
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
+>>>>>>> origin/main
         </div>
 
         {filteredCourses.length === 0 && (
@@ -589,10 +787,10 @@ function CoursesPage() {
               <BookOpen className="h-12 w-12 md:h-16 md:w-16 mx-auto" />
             </div>
             <h3 className="text-lg md:text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
-              Không tìm thấy khóa học
+              {t("courses.empty.title")}
             </h3>
             <p className="text-sm md:text-base text-gray-500">
-              Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc
+              {t("courses.empty.subtitle")}
             </p>
           </div>
         )}

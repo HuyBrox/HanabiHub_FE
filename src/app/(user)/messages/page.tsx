@@ -104,12 +104,10 @@ function MessagesPage() {
   });
 
   // Fetch user profile nếu có userId trong URL nhưng chưa có conversation
-  const {
-    data: userProfileData,
-    isLoading: userProfileLoading,
-  } = useGetUserProfileByIdQuery(userIdFromUrl || "", {
-    skip: !userIdFromUrl || conversationsLoading,
-  });
+  const { data: userProfileData, isLoading: userProfileLoading } =
+    useGetUserProfileByIdQuery(userIdFromUrl || "", {
+      skip: !userIdFromUrl || conversationsLoading,
+    });
 
   // Transform data và filter theo search
   const conversations = useMemo(() => {
@@ -208,8 +206,7 @@ function MessagesPage() {
         return {
           id: `temp-${userIdFromUrl}`,
           name: userProfile.fullname || userProfile.username || "Unknown",
-          avatar:
-            userProfile.avatar || "/images/placeholders/placeholder.svg",
+          avatar: userProfile.avatar || "/images/placeholders/placeholder.svg",
           lastMessage: "Chưa có tin nhắn",
           timestamp: "",
           unread: 0,
@@ -219,12 +216,7 @@ function MessagesPage() {
       }
     }
     return null;
-  }, [
-    userIdFromUrl,
-    selectedConv,
-    userProfileData,
-    conversationsLoading,
-  ]);
+  }, [userIdFromUrl, selectedConv, userProfileData, conversationsLoading]);
 
   // Loading state
   if (conversationsLoading) {
@@ -261,14 +253,22 @@ function MessagesPage() {
   return (
     <div className="flex h-full bg-background">
       {/* Left Sidebar - Conversations List */}
-      <div className={`${hasSelectedConversation ? 'hidden lg:flex' : 'flex'} w-full lg:w-80 border-r border-border flex-col bg-card`}>
+      <div
+        className={`${
+          hasSelectedConversation ? "hidden lg:flex" : "flex"
+        } w-full lg:w-80 border-r border-border flex-col bg-card`}
+      >
         {/* Header */}
         <div className="p-3 md:p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <h1 className="text-lg md:text-xl font-semibold">
               {user?.username || "Messages"}
             </h1>
-            <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 md:h-10 md:w-10"
+            >
               <Edit className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
           </div>
@@ -369,7 +369,11 @@ function MessagesPage() {
       </div>
 
       {/* Right Side - Chat Area */}
-      <div className={`${hasSelectedConversation ? 'flex' : 'hidden lg:flex'} flex-1 flex-col`}>
+      <div
+        className={`${
+          hasSelectedConversation ? "flex" : "hidden lg:flex"
+        } flex-1 flex-col`}
+      >
         {selectedConversation && selectedConv ? (
           <div className="flex flex-col h-full">
             {/* Mobile back button */}
@@ -412,7 +416,9 @@ function MessagesPage() {
               />
             </div>
           </div>
-        ) : userIdFromUrl && userProfileData?.data && !userProfileData.data.canMessage ? (
+        ) : userIdFromUrl &&
+          userProfileData?.data &&
+          !userProfileData.data.canMessage ? (
           /* No permission to message */
           <div className="flex-1 flex items-center justify-center p-4">
             <div className="text-center max-w-sm">
@@ -421,7 +427,9 @@ function MessagesPage() {
                   <Info className="h-4 w-4 md:h-6 md:w-6 text-white" />
                 </div>
               </div>
-              <h2 className="text-lg md:text-xl font-semibold mb-2">Không thể nhắn tin</h2>
+              <h2 className="text-lg md:text-xl font-semibold mb-2">
+                Không thể nhắn tin
+              </h2>
               <p className="text-sm md:text-base text-muted-foreground mb-4">
                 {userProfileData.data.isPrivate
                   ? "Profile này là riêng tư. Bạn cần follow để nhắn tin."
@@ -446,7 +454,9 @@ function MessagesPage() {
                   <Edit className="h-4 w-4 md:h-6 md:w-6 text-primary-foreground" />
                 </div>
               </div>
-              <h2 className="text-lg md:text-xl font-semibold mb-2">Tin nhắn của bạn</h2>
+              <h2 className="text-lg md:text-xl font-semibold mb-2">
+                Tin nhắn của bạn
+              </h2>
               <p className="text-sm md:text-base text-muted-foreground mb-4">
                 Gửi ảnh và tin nhắn riêng tư cho bạn bè hoặc nhóm
               </p>

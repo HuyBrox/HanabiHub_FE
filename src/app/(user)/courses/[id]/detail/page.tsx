@@ -1,10 +1,16 @@
 "use client";
 
+<<<<<<< HEAD
 import { useEffect, useMemo, useState, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { withAuth } from "@/components/auth";
+=======
+import { useState, useMemo, use } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
+>>>>>>> origin/main
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -38,6 +44,7 @@ import {
   useGetCourseByIdQuery,
   useGetUserCourseProgressQuery,
   useResetCourseProgressMutation,
+  useRateCourseMutation,
 } from "@/store/services/courseApi";
 import { LoadingSpinner } from "@/components/loading";
 import { createVnpayPayment } from "@/lib/payment";
@@ -78,6 +85,7 @@ const formatDate = (dateString: string) => {
   });
 };
 
+<<<<<<< HEAD
 // ✅ parse tiền an toàn (tránh "200,000" => NaN)
 const toMoneyNumber = (v: any): number => {
   if (v == null) return 0;
@@ -273,6 +281,23 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [isLiked, setIsLiked] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [buying, setBuying] = useState(false);
+=======
+// Helper function để tính rating trung bình
+const calculateAverageRating = (
+  ratings?: Array<{ user: string | any; rating: number }>
+) => {
+  if (!ratings || ratings.length === 0) return 0;
+  const sum = ratings.reduce((acc, r) => acc + r.rating, 0);
+  return sum / ratings.length;
+};
+
+function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const [isLiked, setIsLiked] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
+  const router = useRouter();
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+>>>>>>> origin/main
 
   // access check
   const [purchasedByEnrollment, setPurchasedByEnrollment] = useState(false);
@@ -316,6 +341,12 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [resetProgress, { isLoading: isResetting }] =
     useResetCourseProgressMutation();
 
+<<<<<<< HEAD
+=======
+  const [rateCourse, { isLoading: isRating }] = useRateCourseMutation();
+
+  // Transform lessons data
+>>>>>>> origin/main
   const lessons = useMemo(() => {
     if (!courseData?.data?.lessons) return [];
     return [...courseData.data.lessons].sort(
@@ -420,12 +451,16 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   }, [lessons, userProgress]);
 
   const handleStartLearning = () => {
+<<<<<<< HEAD
     if (isLocked) return;
     if (nextLesson) {
       router.push(`/courses/${courseId}/learn/${nextLesson._id}`);
     } else if (lessons.length > 0) {
       router.push(`/courses/${courseId}/learn/${lessons[0]._id}`);
     }
+=======
+    router.push(`/courses/${id}`);
+>>>>>>> origin/main
   };
 
   const handleResetProgress = async () => {
@@ -440,6 +475,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     }
   };
 
+<<<<<<< HEAD
   const handleBuyCourse = async () => {
     try {
       setBuying(true);
@@ -469,6 +505,20 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     }
   };
 
+=======
+  const handleRateCourse = async () => {
+    if (!selectedRating) return;
+    try {
+      await rateCourse({ courseId: id, rating: selectedRating }).unwrap();
+      refetch();
+      setSelectedRating(null);
+    } catch (error) {
+      console.error("Failed to rate course:", error);
+    }
+  };
+
+  // Loading state
+>>>>>>> origin/main
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
@@ -491,6 +541,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     );
   }
 
+<<<<<<< HEAD
   // ✅ pending chỉ có ý nghĩa khi: khóa trả phí + chưa mua
   const showPending = isPaidCourse && !purchasedByEnrollment && isPending;
 
@@ -513,6 +564,18 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
     if (isFree || purchasedByEnrollment) return handleStartLearning();
     return handleBuyCourse();
   };
+=======
+  // Tính toán ratings
+  const ratings = course?.ratings || [];
+  const avgRating = calculateAverageRating(ratings);
+  const userRating = currentUser
+    ? ratings.find((r: any) =>
+        typeof r.user === "string"
+          ? r.user === currentUser._id
+          : r.user?._id === currentUser._id
+      )
+    : null;
+>>>>>>> origin/main
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white dark:from-gray-900 dark:to-gray-800">
@@ -617,7 +680,10 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                     {course.level}
                   </Badge>
                 </div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
                 <h2 className="text-lg md:text-xl lg:text-2xl font-bold mb-2 md:mb-3 lg:mb-4">
                   {course.title}
                 </h2>
@@ -655,6 +721,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       <span className="sm:hidden">Reset</span>
                     </Button>
                   )}
+<<<<<<< HEAD
 
                   {hasAccess && (
                     <Button
@@ -667,6 +734,17 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       <span className="sm:hidden">Tải về</span>
                     </Button>
                   )}
+=======
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="text-sm md:text-base h-10 md:h-11"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Tải tài liệu</span>
+                    <span className="sm:hidden">Tải về</span>
+                  </Button>
+>>>>>>> origin/main
                 </div>
               </CardContent>
             </Card>
@@ -769,6 +847,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                         {showPending ? "Đang xác nhận..." : "Mua khóa học"}
                       </Button>
                     </div>
+<<<<<<< HEAD
                   ) : (
                     <div className="space-y-3 md:space-y-4">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 md:mb-4">
@@ -778,6 +857,15 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                         <div className="text-xs md:text-sm text-muted-foreground">
                           {completedLessons}/{lessons.length} bài đã hoàn thành
                         </div>
+=======
+
+                    {lessons.length > 0 && (
+                      <div className="mb-3 md:mb-4">
+                        <Progress
+                          value={progressPercentage}
+                          className="h-1.5 md:h-2"
+                        />
+>>>>>>> origin/main
                       </div>
 
                       {lessons.length > 0 && (
@@ -802,6 +890,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                 "flex items-start gap-2 md:gap-3 p-3 md:p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer",
                                 isCurrent && "border-primary bg-primary/5"
                               )}
+<<<<<<< HEAD
                               onClick={() =>
                                 router.push(
                                   `/courses/${courseId}/learn/${lesson._id}`
@@ -850,6 +939,58 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                           );
                         })}
                       </div>
+=======
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mb-1">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] md:text-xs"
+                                >
+                                  Bài {index + 1}
+                                </Badge>
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] md:text-xs"
+                                >
+                                  {lesson.type === "video"
+                                    ? "Video"
+                                    : "Bài tập"}
+                                </Badge>
+                                {isCurrent && (
+                                  <Badge
+                                    variant="default"
+                                    className="text-[10px] md:text-xs bg-primary"
+                                  >
+                                    Đang học
+                                  </Badge>
+                                )}
+                                {completed && (
+                                  <Badge
+                                    variant="default"
+                                    className="text-[10px] md:text-xs bg-green-600"
+                                  >
+                                    Hoàn thành ✓
+                                  </Badge>
+                                )}
+                              </div>
+                              <h4 className="font-medium text-sm md:text-base mb-1">
+                                {lesson.title}
+                              </h4>
+                              <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
+                                {lesson.content}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-muted-foreground flex-shrink-0">
+                              <Clock className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                              <span>
+                                {formatDuration(lesson.duration || 0)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+>>>>>>> origin/main
                     </div>
                   )}
                 </TabsContent>

@@ -12,7 +12,7 @@ export default function NotificationItem({
 
   const handleRemove = () => {
     setIsExiting(true);
-    setTimeout(() => onRemove(notification.id), 300);
+    setTimeout(() => onRemove(notification.id, notification.notificationId), 300);
   };
 
   const icons: any = {
@@ -62,7 +62,7 @@ export default function NotificationItem({
               {notification.title}
             </div>
           )}
-          <div className="text-sm text-gray-700">{notification.message}</div>
+          <div className="text-sm text-gray-700">{notification.message || notification.content}</div>
         </div>
 
         <button

@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
+  Bell,
   BarChart3,
   Settings,
 } from "lucide-react";
@@ -33,9 +34,9 @@ const mobileMenuItems = [
     icon: BookOpen,
   },
   {
-    title: "Analytics",
-    href: "/admin/analytics",
-    icon: BarChart3,
+    title: "Content",
+    href: "/admin/content",
+    icon: Bell,
   },
   {
     title: "Settings",

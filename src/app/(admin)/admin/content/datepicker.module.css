@@ -1,0 +1,35 @@
+/* 🎨 DatePicker CSS Module - Isolated styles for admin content page */
+/* ✅ Only local classes - Global styles moved to globals.css */
+
+/* ==================== Input Styling ==================== */
+.dateInput,
+.timeInput,
+.datetimeInput {
+  background-color: var(--color-input);
+  color: var(--color-foreground);
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  font-size: 0.875rem;
+  font-weight: 500;
+  -webkit-text-fill-color: var(--color-foreground);
+}
+
+.dateInput:focus,
+.timeInput:focus,
+.datetimeInput:focus {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-color: var(--color-ring);
+  background-color: var(--color-input);
+  color: var(--color-foreground);
+}
+
+.dateInput::placeholder,
+.timeInput::placeholder,
+.datetimeInput::placeholder {
+  color: var(--color-muted-foreground);
+}
+
+

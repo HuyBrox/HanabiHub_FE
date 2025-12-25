@@ -8,12 +8,9 @@ import {
   GraduationCap,
   TrendingUp,
   BarChart3,
-  Sparkles
+  Sparkles,
 } from "lucide-react";
-import {
-  CreateCourseModal,
-  CourseTable,
-} from "@/components/admin/course";
+import { CreateCourseModal, CourseTable } from "@/components/admin/course";
 import {
   useGetCourseStatsQuery,
   useGetCourseGrowthQuery,
@@ -202,8 +199,13 @@ const CourseManagement = () => {
                   <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-1 rounded-full">
                     {(() => {
                       const first = chartData.courses[0]?.value || 0;
-                      const last = chartData.courses[chartData.courses.length - 1]?.value || 0;
-                      const change = first > 0 ? Math.round(((last - first) / first) * 100) : 0;
+                      const last =
+                        chartData.courses[chartData.courses.length - 1]
+                          ?.value || 0;
+                      const change =
+                        first > 0
+                          ? Math.round(((last - first) / first) * 100)
+                          : 0;
                       return change > 0 ? `+${change}%` : `${change}%`;
                     })()}
                   </span>
@@ -230,9 +232,14 @@ const CourseManagement = () => {
                     <>
                       <path
                         d={chartData.courses
-                          .map((item, i) => {
-                            const maxValue = Math.max(...chartData.courses.map((c: any) => c.value), 1);
-                            const x = 60 + (i / (chartData.courses.length - 1 || 1)) * 500;
+                          .map((item: { value: number }, i: number) => {
+                            const maxValue = Math.max(
+                              ...chartData.courses.map((c: any) => c.value),
+                              1
+                            );
+                            const x =
+                              60 +
+                              (i / (chartData.courses.length - 1 || 1)) * 500;
                             const y = 200 - (item.value / maxValue) * 170;
                             return `${i === 0 ? "M" : "L"} ${x} ${y}`;
                           })
@@ -247,25 +254,45 @@ const CourseManagement = () => {
                       {/* Area under curve */}
                       <path
                         d={`${chartData.courses
-                          .map((item, i) => {
-                            const maxValue = Math.max(...chartData.courses.map((c: any) => c.value), 1);
-                            const x = 60 + (i / (chartData.courses.length - 1 || 1)) * 500;
+                          .map((item: { value: number }, i: number) => {
+                            const maxValue = Math.max(
+                              ...chartData.courses.map((c: any) => c.value),
+                              1
+                            );
+                            const x =
+                              60 +
+                              (i / (chartData.courses.length - 1 || 1)) * 500;
                             const y = 200 - (item.value / maxValue) * 170;
                             return `${i === 0 ? "M" : "L"} ${x} ${y}`;
                           })
-                          .join(" ")} L ${60 + ((chartData.courses.length - 1) / (chartData.courses.length - 1 || 1)) * 500} 200 L 60 200 Z`}
+                          .join(" ")} L ${
+                          60 +
+                          ((chartData.courses.length - 1) /
+                            (chartData.courses.length - 1 || 1)) *
+                            500
+                        } 200 L 60 200 Z`}
                         fill="url(#blueAreaGradient)"
                         opacity="0.2"
                       />
 
                       {/* Course points */}
                       {chartData.courses.map((item: any, i: number) => {
-                        const maxValue = Math.max(...chartData.courses.map((c: any) => c.value), 1);
-                        const x = 60 + (i / (chartData.courses.length - 1 || 1)) * 500;
+                        const maxValue = Math.max(
+                          ...chartData.courses.map((c: any) => c.value),
+                          1
+                        );
+                        const x =
+                          60 + (i / (chartData.courses.length - 1 || 1)) * 500;
                         const y = 200 - (item.value / maxValue) * 170;
                         return (
                           <g key={i}>
-                            <circle cx={x} cy={y} r="8" fill="#3b82f6" opacity="0.2" />
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r="8"
+                              fill="#3b82f6"
+                              opacity="0.2"
+                            />
                             <circle cx={x} cy={y} r="5" fill="#3b82f6" />
                             <circle cx={x} cy={y} r="2" fill="white" />
                             <text
@@ -283,7 +310,8 @@ const CourseManagement = () => {
 
                       {/* Month labels */}
                       {chartData.courses.map((item: any, i: number) => {
-                        const x = 60 + (i / (chartData.courses.length - 1 || 1)) * 500;
+                        const x =
+                          60 + (i / (chartData.courses.length - 1 || 1)) * 500;
                         return (
                           <text
                             key={i}
@@ -300,22 +328,46 @@ const CourseManagement = () => {
                     </>
                   )}
                   {growthLoading && (
-                    <text x="300" y="120" textAnchor="middle" className="text-sm" fill="#64748b">
+                    <text
+                      x="300"
+                      y="120"
+                      textAnchor="middle"
+                      className="text-sm"
+                      fill="#64748b"
+                    >
                       Đang tải...
                     </text>
                   )}
                   {!growthLoading && chartData.courses.length === 0 && (
-                    <text x="300" y="120" textAnchor="middle" className="text-sm" fill="#64748b">
+                    <text
+                      x="300"
+                      y="120"
+                      textAnchor="middle"
+                      className="text-sm"
+                      fill="#64748b"
+                    >
                       Chưa có dữ liệu
                     </text>
                   )}
 
                   <defs>
-                    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient
+                      id="blueGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="0%"
+                    >
                       <stop offset="0%" stopColor="#3b82f6" />
                       <stop offset="100%" stopColor="#8b5cf6" />
                     </linearGradient>
-                    <linearGradient id="blueAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <linearGradient
+                      id="blueAreaGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="0%"
+                      y2="100%"
+                    >
                       <stop offset="0%" stopColor="#3b82f6" />
                       <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
                     </linearGradient>
@@ -335,8 +387,13 @@ const CourseManagement = () => {
                   <span className="ml-auto text-xs text-slate-500 bg-white/60 px-2 py-1 rounded-full">
                     {(() => {
                       const first = chartData.lessons[0]?.value || 0;
-                      const last = chartData.lessons[chartData.lessons.length - 1]?.value || 0;
-                      const change = first > 0 ? Math.round(((last - first) / first) * 100) : 0;
+                      const last =
+                        chartData.lessons[chartData.lessons.length - 1]
+                          ?.value || 0;
+                      const change =
+                        first > 0
+                          ? Math.round(((last - first) / first) * 100)
+                          : 0;
                       return change > 0 ? `+${change}%` : `${change}%`;
                     })()}
                   </span>
@@ -363,9 +420,14 @@ const CourseManagement = () => {
                     <>
                       <path
                         d={chartData.lessons
-                          .map((item, i) => {
-                            const maxValue = Math.max(...chartData.lessons.map((l: any) => l.value), 1);
-                            const x = 60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
+                          .map((item: { value: number }, i: number) => {
+                            const maxValue = Math.max(
+                              ...chartData.lessons.map((l: any) => l.value),
+                              1
+                            );
+                            const x =
+                              60 +
+                              (i / (chartData.lessons.length - 1 || 1)) * 500;
                             const y = 200 - (item.value / maxValue) * 170;
                             return `${i === 0 ? "M" : "L"} ${x} ${y}`;
                           })
@@ -380,25 +442,45 @@ const CourseManagement = () => {
                       {/* Area under curve */}
                       <path
                         d={`${chartData.lessons
-                          .map((item, i) => {
-                            const maxValue = Math.max(...chartData.lessons.map((l: any) => l.value), 1);
-                            const x = 60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
+                          .map((item: { value: number }, i: number) => {
+                            const maxValue = Math.max(
+                              ...chartData.lessons.map((l: any) => l.value),
+                              1
+                            );
+                            const x =
+                              60 +
+                              (i / (chartData.lessons.length - 1 || 1)) * 500;
                             const y = 200 - (item.value / maxValue) * 170;
                             return `${i === 0 ? "M" : "L"} ${x} ${y}`;
                           })
-                          .join(" ")} L ${60 + ((chartData.lessons.length - 1) / (chartData.lessons.length - 1 || 1)) * 500} 200 L 60 200 Z`}
+                          .join(" ")} L ${
+                          60 +
+                          ((chartData.lessons.length - 1) /
+                            (chartData.lessons.length - 1 || 1)) *
+                            500
+                        } 200 L 60 200 Z`}
                         fill="url(#purpleAreaGradient)"
                         opacity="0.2"
                       />
 
                       {/* Lesson points */}
                       {chartData.lessons.map((item: any, i: number) => {
-                        const maxValue = Math.max(...chartData.lessons.map((l: any) => l.value), 1);
-                        const x = 60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
+                        const maxValue = Math.max(
+                          ...chartData.lessons.map((l: any) => l.value),
+                          1
+                        );
+                        const x =
+                          60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
                         const y = 200 - (item.value / maxValue) * 170;
                         return (
                           <g key={i}>
-                            <circle cx={x} cy={y} r="8" fill="#a855f7" opacity="0.2" />
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r="8"
+                              fill="#a855f7"
+                              opacity="0.2"
+                            />
                             <circle cx={x} cy={y} r="5" fill="#a855f7" />
                             <circle cx={x} cy={y} r="2" fill="white" />
                             <text
@@ -416,7 +498,8 @@ const CourseManagement = () => {
 
                       {/* Month labels */}
                       {chartData.lessons.map((item: any, i: number) => {
-                        const x = 60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
+                        const x =
+                          60 + (i / (chartData.lessons.length - 1 || 1)) * 500;
                         return (
                           <text
                             key={i}
@@ -433,22 +516,46 @@ const CourseManagement = () => {
                     </>
                   )}
                   {growthLoading && (
-                    <text x="300" y="120" textAnchor="middle" className="text-sm" fill="#64748b">
+                    <text
+                      x="300"
+                      y="120"
+                      textAnchor="middle"
+                      className="text-sm"
+                      fill="#64748b"
+                    >
                       Đang tải...
                     </text>
                   )}
                   {!growthLoading && chartData.lessons.length === 0 && (
-                    <text x="300" y="120" textAnchor="middle" className="text-sm" fill="#64748b">
+                    <text
+                      x="300"
+                      y="120"
+                      textAnchor="middle"
+                      className="text-sm"
+                      fill="#64748b"
+                    >
                       Chưa có dữ liệu
                     </text>
                   )}
 
                   <defs>
-                    <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient
+                      id="purpleGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="0%"
+                    >
                       <stop offset="0%" stopColor="#a855f7" />
                       <stop offset="100%" stopColor="#ec4899" />
                     </linearGradient>
-                    <linearGradient id="purpleAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <linearGradient
+                      id="purpleAreaGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="0%"
+                      y2="100%"
+                    >
                       <stop offset="0%" stopColor="#a855f7" />
                       <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
                     </linearGradient>

@@ -36,15 +36,15 @@ export function CallControls({
   isConnected = false,
 }: CallControlsProps) {
   return (
-    <Card className="p-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
+    <Card className="p-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm pointer-events-auto">
       <div className="flex justify-center items-center gap-3 sm:gap-4">
         {/* Microphone Toggle */}
         <Button
           variant={isMuted ? "destructive" : "secondary"}
           size="lg"
-          className="h-12 w-12 sm:h-14 sm:w-14 rounded-full"
+          className="h-12 w-12 sm:h-14 sm:w-14 rounded-full cursor-pointer hover:scale-110 transition-transform active:scale-95"
           onClick={onToggleMute}
-          disabled={disabled}
+          disabled={disabled || !onToggleMute}
           aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
         >
           {isMuted ? (
@@ -58,9 +58,9 @@ export function CallControls({
         <Button
           variant={isVideoOff ? "destructive" : "secondary"}
           size="lg"
-          className="h-12 w-12 sm:h-14 sm:w-14 rounded-full"
+          className="h-12 w-12 sm:h-14 sm:w-14 rounded-full cursor-pointer hover:scale-110 transition-transform active:scale-95"
           onClick={onToggleVideo}
-          disabled={disabled}
+          disabled={disabled || !onToggleVideo}
           aria-label={isVideoOff ? "Turn on camera" : "Turn off camera"}
         >
           {isVideoOff ? (
@@ -70,26 +70,28 @@ export function CallControls({
           )}
         </Button>
 
-        {/* Next Partner (Mobile) */}
-        <Button
-          variant="secondary"
-          size="lg"
-          className="h-12 w-12 sm:h-14 sm:w-14 rounded-full sm:hidden"
-          onClick={onNextPartner}
-          disabled={disabled || !isConnected}
-          aria-label="Next partner"
-        >
-          <SkipForward className="h-5 w-5" />
-        </Button>
+        {/* Next Partner (Mobile) - Only show if onNextPartner is provided */}
+        {onNextPartner && (
+          <Button
+            variant="secondary"
+            size="lg"
+            className="h-12 w-12 sm:h-14 sm:w-14 rounded-full sm:hidden"
+            onClick={onNextPartner}
+            disabled={disabled || !isConnected}
+            aria-label="Next partner"
+          >
+            <SkipForward className="h-5 w-5" />
+          </Button>
+        )}
 
         {/* End/Start Call */}
         {isConnected ? (
           <Button
             variant="destructive"
             size="lg"
-            className="h-12 w-16 sm:h-14 sm:w-20 rounded-full bg-red-500 hover:bg-red-600"
+            className="h-12 w-16 sm:h-14 sm:w-20 rounded-full bg-red-500 hover:bg-red-600 cursor-pointer hover:scale-110 transition-transform active:scale-95"
             onClick={onEndCall}
-            disabled={disabled}
+            disabled={disabled || !onEndCall}
             aria-label="End call"
           >
             <PhoneOff className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -107,17 +109,19 @@ export function CallControls({
           </Button>
         )}
 
-        {/* Next Partner (Desktop) */}
-        <Button
-          variant="secondary"
-          size="lg"
-          className="h-12 w-12 sm:h-14 sm:w-14 rounded-full hidden sm:flex"
-          onClick={onNextPartner}
-          disabled={disabled || !isConnected}
-          aria-label="Next partner"
-        >
-          <SkipForward className="h-5 w-5 sm:h-6 sm:w-6" />
-        </Button>
+        {/* Next Partner (Desktop) - Only show if onNextPartner is provided */}
+        {onNextPartner && (
+          <Button
+            variant="secondary"
+            size="lg"
+            className="h-12 w-12 sm:h-14 sm:w-14 rounded-full hidden sm:flex"
+            onClick={onNextPartner}
+            disabled={disabled || !isConnected}
+            aria-label="Next partner"
+          >
+            <SkipForward className="h-5 w-5 sm:h-6 sm:w-6" />
+          </Button>
+        )}
       </div>
 
       {/* Control Labels (Desktop) */}
@@ -131,9 +135,11 @@ export function CallControls({
         <span className="text-xs text-gray-600 dark:text-gray-400 w-20 text-center">
           {isConnected ? "End Call" : "Start"}
         </span>
-        <span className="text-xs text-gray-600 dark:text-gray-400 w-14 text-center">
-          Next
-        </span>
+        {onNextPartner && (
+          <span className="text-xs text-gray-600 dark:text-gray-400 w-14 text-center">
+            Next
+          </span>
+        )}
       </div>
     </Card>
   );

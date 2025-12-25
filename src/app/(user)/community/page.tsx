@@ -7,7 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Heart, MessageCircle, Share } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useGetAllPostsQuery, useToggleLikePostMutation, useDeletePostMutation } from "@/store/services/postApi";
+import {
+  useGetAllPostsQuery,
+  useToggleLikePostMutation,
+  useDeletePostMutation,
+} from "@/store/services/postApi";
 import { Post, User } from "@/types/post";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale/vi";
@@ -114,11 +118,14 @@ function CommunityPage() {
         ) : (
           <div className="space-y-6">
             {posts.map((post: Post) => {
-              const author = typeof post.author === "string" ? null : post.author;
+              const author =
+                typeof post.author === "string" ? null : post.author;
               const isLiked = Array.isArray(post.likes)
                 ? post.likes.includes(currentUserId)
                 : false;
-              const likesCount = Array.isArray(post.likes) ? post.likes.length : 0;
+              const likesCount = Array.isArray(post.likes)
+                ? post.likes.length
+                : 0;
               const commentCount = post.commentCount || 0;
 
               return (
@@ -132,7 +139,9 @@ function CommunityPage() {
                       <Avatar>
                         <AvatarImage src={author?.avatar} />
                         <AvatarFallback>
-                          {author?.fullname?.[0] || author?.username?.[0] || "?"}
+                          {author?.fullname?.[0] ||
+                            author?.username?.[0] ||
+                            "?"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
@@ -142,7 +151,9 @@ function CommunityPage() {
                           </span>
                           {post.createdAt && (
                             <>
-                              <span className="text-sm text-muted-foreground">•</span>
+                              <span className="text-sm text-muted-foreground">
+                                •
+                              </span>
                               <span className="text-sm text-muted-foreground">
                                 {formatDistanceToNow(new Date(post.createdAt), {
                                   addSuffix: true,
@@ -153,13 +164,23 @@ function CommunityPage() {
                           )}
                           {author?._id === currentUserId && (
                             <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-auto">
+                              <DropdownMenuTrigger
+                                asChild
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 ml-auto"
+                                >
                                   <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
-                                <DropdownMenuItem onClick={(e) => handleDelete(e, post._id)} className="text-destructive">
+                                <DropdownMenuItem
+                                  onClick={(e) => handleDelete(e, post._id)}
+                                  className="text-destructive"
+                                >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Xóa bài viết
                                 </DropdownMenuItem>
@@ -175,7 +196,10 @@ function CommunityPage() {
                         {post.images && post.images.length > 0 && (
                           <div className="mb-3">
                             {post.images.length === 1 ? (
-                              <div className="relative w-full" style={{ maxHeight: '384px' }}>
+                              <div
+                                className="relative w-full"
+                                style={{ maxHeight: "384px" }}
+                              >
                                 <Image
                                   src={post.images[0]}
                                   alt="Post"
@@ -191,7 +215,10 @@ function CommunityPage() {
                                 <CarouselContent>
                                   {post.images.map((image, index) => (
                                     <CarouselItem key={index}>
-                                      <div className="relative w-full" style={{ maxHeight: '384px' }}>
+                                      <div
+                                        className="relative w-full"
+                                        style={{ maxHeight: "384px" }}
+                                      >
                                         <Image
                                           src={image}
                                           alt={`Post ${index + 1}`}

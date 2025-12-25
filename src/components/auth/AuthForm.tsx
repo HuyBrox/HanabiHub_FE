@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -94,8 +94,12 @@ export function AuthForm({
   }, [mode]);
 
   // Chỉ redirect sau khi login thành công và không phải modal
+  // Sử dụng useRef để track đã hiển thị thông báo chưa, tránh duplicate
+  const hasShownSuccessRef = useRef(false);
+
   useEffect(() => {
-    if (isAuthenticated && !isModal) {
+    if (isAuthenticated && !isModal && !hasShownSuccessRef.current) {
+      hasShownSuccessRef.current = true;
       try {
         success("Đăng nhập thành công", { title: "Thành công" });
       } catch (e) {}
@@ -107,7 +111,12 @@ export function AuthForm({
         } catch (e) {}
       }
     }
-  }, [isAuthenticated, isModal, router]);
+
+    // Reset khi logout hoặc chuyển mode
+    if (!isAuthenticated) {
+      hasShownSuccessRef.current = false;
+    }
+  }, [isAuthenticated, isModal, router, success]);
 
   const handleGoogleSignIn = useCallback(
     async (response: any) => {
@@ -276,13 +285,29 @@ export function AuthForm({
   // Hàm gửi OTP
   const handleSendOtp = useCallback(async () => {
     setLocalError(null);
+    setFieldErrors({});
 
-    // Chỉ validate email khi gửi OTP
-    // Không check email tồn tại - backend sẽ check sau khi verify OTP
-    const emailError = validateEmail(formData.email);
-    if (emailError) {
-      setFieldErrors({ email: emailError });
-      setLocalError(emailError);
+    // Validate toàn bộ form trước khi gửi OTP
+    const errors: typeof fieldErrors = {};
+    errors.email = validateEmail(formData.email);
+    errors.username = validateUsername(formData.username);
+    errors.fullname = validateFullname(formData.fullname);
+    errors.password = validatePassword(formData.password);
+    errors.confirmPassword = validateConfirmPassword(
+      formData.confirmPassword,
+      formData.password
+    );
+
+    // Remove undefined errors
+    Object.keys(errors).forEach((key) => {
+      if (errors[key as keyof typeof errors] === undefined) {
+        delete errors[key as keyof typeof errors];
+      }
+    });
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setLocalError("Vui lòng điền đầy đủ và đúng thông tin");
       return;
     }
 
@@ -290,28 +315,55 @@ export function AuthForm({
       const result = await sendOtpRegister({ email: formData.email }).unwrap();
       success("OTP đã được gửi đến email của bạn", { title: "Thành công" });
       setOtpSent(true);
+      setLocalError(null);
+      setFieldErrors({});
+
+      // Auto-focus vào OTP field sau khi gửi OTP thành công
+      setTimeout(() => {
+        const otpInput = document.querySelector(
+          '[id^="otp-"]'
+        ) as HTMLInputElement;
+        if (otpInput) {
+          otpInput.focus();
+        }
+      }, 100);
     } catch (err: any) {
       const errorMessage =
         err?.data?.message || err?.message || "Không thể gửi OTP";
       setLocalError(errorMessage);
       notifyError(errorMessage, { title: "Lỗi" });
+
+      // Nếu email đã tồn tại, highlight field
+      if (errorMessage.includes("Email này đã được sử dụng")) {
+        setFieldErrors({ email: errorMessage });
+      }
     }
-  }, [formData.email, sendOtpRegister, validateEmail, success, notifyError]);
+  }, [
+    formData,
+    sendOtpRegister,
+    validateEmail,
+    validateUsername,
+    validateFullname,
+    validatePassword,
+    validateConfirmPassword,
+    success,
+    notifyError,
+  ]);
 
   // Hàm xác thực OTP và đăng ký
   const handleVerifyAndRegister = useCallback(async () => {
     setLocalError(null);
+    setFieldErrors({});
 
     // Validate OTP
     if (!formData.otp || formData.otp.length !== 6) {
-      setLocalError("Vui lòng nhập đầy đủ mã OTP");
+      setLocalError("Vui lòng nhập đầy đủ mã OTP (6 số)");
       return;
     }
 
-    // Validate toàn bộ form trước khi đăng ký
-    // Backend sẽ check email/username tồn tại sau khi verify OTP
+    // Validate lại toàn bộ form trước khi đăng ký
     if (!validateForm()) {
-      setLocalError("Vui lòng điền đầy đủ thông tin");
+      setLocalError("Vui lòng kiểm tra lại thông tin");
       return;
     }
 
@@ -329,7 +381,7 @@ export function AuthForm({
         title: "Thành công",
       });
 
-      // Chuyển về màn hình login
+      // Reset form và chuyển về màn hình login
       setOtpSent(false);
       setFormData({
         email: "",
@@ -339,14 +391,40 @@ export function AuthForm({
         confirmPassword: "",
         otp: "",
       });
-      onModeChange("login");
+      setFieldErrors({});
+      setLocalError(null);
+
+      // Delay một chút để user thấy thông báo thành công
+      setTimeout(() => {
+        onModeChange("login");
+      }, 1500);
     } catch (err: any) {
       const errorMessage =
         err?.data?.message || err?.message || "Đăng ký thất bại";
       setLocalError(errorMessage);
       notifyError(errorMessage, { title: "Lỗi" });
+
+      // Highlight field có lỗi
+      if (errorMessage.includes("Email")) {
+        setFieldErrors({ email: errorMessage });
+      } else if (
+        errorMessage.includes("Tên người dùng") ||
+        errorMessage.includes("username")
+      ) {
+        setFieldErrors({ username: errorMessage });
+      } else if (errorMessage.includes("OTP")) {
+        // Clear OTP field nếu OTP sai
+        setFormData((prev) => ({ ...prev, otp: "" }));
+      }
     }
-  }, [formData, registerUser, success, notifyError, onModeChange]);
+  }, [
+    formData,
+    registerUser,
+    validateForm,
+    success,
+    notifyError,
+    onModeChange,
+  ]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -370,22 +448,11 @@ export function AuthForm({
           window.dispatchEvent(new CustomEvent("auth-success"));
         }
       } else if (mode === "register") {
-        // Nếu chưa gửi OTP, chỉ validate email và gửi OTP
+        // Nếu chưa gửi OTP, validate và gửi OTP
         if (!otpSent) {
-          // Chỉ validate email khi gửi OTP
-          const emailError = validateEmail(formData.email);
-          if (emailError) {
-            setFieldErrors({ email: emailError });
-            setLocalError(emailError);
-            return;
-          }
           await handleSendOtp();
         } else {
-          // Nếu đã gửi OTP, validate toàn bộ form và đăng ký
-          if (!validateForm()) {
-            setLocalError("Vui lòng điền đầy đủ thông tin");
-            return;
-          }
+          // Nếu đã gửi OTP, verify và đăng ký
           await handleVerifyAndRegister();
         }
       }
@@ -470,8 +537,42 @@ export function AuthForm({
         <CardDescription>
           {mode === "login"
             ? "Sign in to continue your Japanese learning journey"
+            : otpSent
+            ? "Nhập mã OTP đã được gửi đến email của bạn"
             : "Start your Japanese learning adventure today"}
         </CardDescription>
+
+        {/* Step indicator cho đăng ký */}
+        {mode === "register" && (
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <div
+              className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                !otpSent
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              1
+            </div>
+            <div
+              className={cn(
+                "h-0.5 w-12 transition-colors",
+                otpSent ? "bg-primary" : "bg-muted"
+              )}
+            />
+            <div
+              className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                otpSent
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              2
+            </div>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -485,14 +586,7 @@ export function AuthForm({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username field for register mode */}
-          <div
-            className={cn(
-              "transition-all duration-300 ease-in-out overflow-hidden",
-              mode === "register" && !otpSent
-                ? "max-h-24 opacity-100"
-                : "max-h-0 opacity-0"
-            )}
-          >
+          {mode === "register" && (
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <div className="relative">
@@ -508,7 +602,12 @@ export function AuthForm({
                   )}
                   value={formData.username}
                   onChange={handleUsernameChange}
-                  disabled={isLoading || isSendingOtp || isRegistering}
+                  disabled={
+                    isLoading ||
+                    isSendingOtp ||
+                    isRegistering ||
+                    (mode === "register" && otpSent)
+                  }
                 />
               </div>
               {fieldErrors.username && (
@@ -517,17 +616,10 @@ export function AuthForm({
                 </p>
               )}
             </div>
-          </div>
+          )}
 
           {/* Fullname field for register mode */}
-          <div
-            className={cn(
-              "transition-all duration-300 ease-in-out overflow-hidden",
-              mode === "register" && !otpSent
-                ? "max-h-24 opacity-100"
-                : "max-h-0 opacity-0"
-            )}
-          >
+          {mode === "register" && (
             <div className="space-y-2">
               <Label htmlFor="fullname">Full Name</Label>
               <div className="relative">
@@ -543,7 +635,12 @@ export function AuthForm({
                   )}
                   value={formData.fullname}
                   onChange={handleFullnameChange}
-                  disabled={isLoading || isSendingOtp || isRegistering}
+                  disabled={
+                    isLoading ||
+                    isSendingOtp ||
+                    isRegistering ||
+                    (mode === "register" && otpSent)
+                  }
                 />
               </div>
               {fieldErrors.fullname && (
@@ -552,7 +649,7 @@ export function AuthForm({
                 </p>
               )}
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -626,14 +723,7 @@ export function AuthForm({
           </div>
 
           {/* Confirm Password field for register mode */}
-          <div
-            className={cn(
-              "transition-all duration-300 ease-in-out overflow-hidden",
-              mode === "register" && !otpSent
-                ? "max-h-24 opacity-100"
-                : "max-h-0 opacity-0"
-            )}
-          >
+          {mode === "register" && (
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <div className="relative">
@@ -649,7 +739,12 @@ export function AuthForm({
                   )}
                   value={formData.confirmPassword}
                   onChange={handleConfirmPasswordChange}
-                  disabled={isLoading || isSendingOtp || isRegistering}
+                  disabled={
+                    isLoading ||
+                    isSendingOtp ||
+                    isRegistering ||
+                    (mode === "register" && otpSent)
+                  }
                 />
               </div>
               {fieldErrors.confirmPassword && (
@@ -658,7 +753,7 @@ export function AuthForm({
                 </p>
               )}
             </div>
-          </div>
+          )}
 
           {/* OTP field - hiện sau khi gửi OTP thành công */}
           <div
@@ -691,15 +786,31 @@ export function AuthForm({
                   </InputOTPGroup>
                 </InputOTP>
               </div>
-              <Button
-                type="button"
-                variant="link"
-                className="w-full text-sm"
-                onClick={handleSendOtp}
-                disabled={isSendingOtp}
-              >
-                {isSendingOtp ? "Sending..." : "Resend OTP"}
-              </Button>
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 text-sm"
+                  onClick={() => {
+                    setOtpSent(false);
+                    setFormData((prev) => ({ ...prev, otp: "" }));
+                    setLocalError(null);
+                    setFieldErrors({});
+                  }}
+                  disabled={isSendingOtp || isRegistering}
+                >
+                  Quay lại
+                </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="flex-1 text-sm"
+                  onClick={handleSendOtp}
+                  disabled={isSendingOtp || isRegistering}
+                >
+                  {isSendingOtp ? "Đang gửi..." : "Gửi lại OTP"}
+                </Button>
+              </div>
             </div>
           </div>
 

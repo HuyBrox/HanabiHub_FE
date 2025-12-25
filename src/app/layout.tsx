@@ -1,20 +1,27 @@
 import type React from "react";
 import type { Metadata } from "next";
+import Script from "next/script";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-import { ThemeProvider } from "@/components/common";
+import { ThemeProvider, ExtensionCleanup } from "@/components/common";
 import { LanguageProvider } from "@/lib/language-context";
 import { AuthInitializer } from "@/hooks/useAuthInit"; // để khởi tạo auth khi app load lên, nếu có session hợp lệ thì sẽ tự động login
 import RtkProvider from "./providers";
 import { NotificationProvider } from "@/components/notification";
 import IncomingCallPopup from "@/components/IncomingCallPopup";
+import { InitialPageLoader } from "@/components/loading";
 
 export const metadata: Metadata = {
   title: "HanabiHub - Nền tảng học tiếng Nhật thông minh",
   description:
     "Luyện nói tiếng Nhật cùng AI, theo dõi tiến độ học, và trò chuyện với giáo viên ảo Hanabi.",
   generator: "v0.app",
+  icons: {
+    icon: "/images/logos/logohanabi.png",
+    shortcut: "/images/logos/logohanabi.png",
+    apple: "/images/logos/logohanabi.png",
+  },
   openGraph: {
     title: "HanabiHub - Nền tảng học tiếng Nhật thông minh",
     description:
@@ -53,15 +60,17 @@ export default function RootLayout({
       className={`${GeistSans.variable} ${GeistMono.variable}`}
     >
       <head>
-        <style>{`
-html {
-  font-family: ${GeistSans.style.fontFamily};
-  --font-sans: ${GeistSans.variable};
-  --font-mono: ${GeistMono.variable};
-}
-        `}</style>
-        {/* Script chống flash theme & language */}
-        <script
+        {/* Favicon */}
+        <link rel="icon" href="/images/logos/logohanabi.png" type="image/png" />
+        <link rel="shortcut icon" href="/images/logos/logohanabi.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/images/logos/logohanabi.png" />
+        {/* Theme & Language initialization - using Next.js Script for better hydration handling */}
+      </head>
+      <body suppressHydrationWarning>
+        {/* ✅ Script chạy trước khi React hydrate để chống flash theme/language */}
+        <Script
+          id="theme-language-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
@@ -82,8 +91,8 @@ html {
             `,
           }}
         />
-      </head>
-      <body>
+        <ExtensionCleanup />
+        <InitialPageLoader />
         <RtkProvider>
           <AuthInitializer>
             <ThemeProvider
