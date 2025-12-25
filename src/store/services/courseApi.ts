@@ -324,5 +324,4 @@ export const {
   useUpdateCurrentLessonMutation,
   useMarkLessonCompleteMutation,
   useResetCourseProgressMutation,
-  useRateCourseMutation,
 } = courseApi;
