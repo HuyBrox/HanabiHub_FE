@@ -113,10 +113,8 @@ export interface UserCourseProgress {
 
 const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
-  credentials: "include",
-  prepareHeaders: (headers) => {
-    return headers;
-  },
+  credentials: "include", // ✅ quan trọng để gửi cookie
+  prepareHeaders: (headers) => headers,
 });
 
 export const courseApi = createApi({
@@ -126,7 +124,6 @@ export const courseApi = createApi({
   endpoints: (builder) => ({
     // ============ COURSE ENDPOINTS ============
 
-    // Lấy tất cả courses (dùng chung cho cả admin và user)
     getAllCourses: builder.query<
       ApiResponse<Course[]>,
       { page?: number; limit?: number }
@@ -138,19 +135,13 @@ export const courseApi = createApi({
       }),
       providesTags: ["Course"],
       transformResponse: (response: any) => {
-        // Nếu response có cấu trúc { courses: [], pagination: {} }, lấy courses
         if (response.data && Array.isArray(response.data.courses)) {
-          return {
-            ...response,
-            data: response.data.courses,
-          };
+          return { ...response, data: response.data.courses };
         }
-        // Nếu response.data là array trực tiếp
         return response;
       },
     }),
 
-    // Lấy chi tiết course theo ID
     getCourseById: builder.query<ApiResponse<Course>, string>({
       query: (id) => ({
         url: `/courses/${id}`,
@@ -159,23 +150,21 @@ export const courseApi = createApi({
       providesTags: (_result, _error, id) => [{ type: "Course", id }],
     }),
 
-    // Tạo course mới (Admin)
     createCourse: builder.mutation<ApiResponse<Course>, FormData>({
       query: (formData) => ({
-        url: "/courses/create",
+        url: "/courses/",
         method: "POST",
         body: formData,
       }),
       invalidatesTags: ["Course"],
     }),
 
-    // Cập nhật course (Admin)
     updateCourse: builder.mutation<
       ApiResponse<Course>,
       { id: string; formData: FormData }
     >({
       query: ({ id, formData }) => ({
-        url: `/courses/update/${id}`,
+        url: `/courses/${id}`,
         method: "PUT",
         body: formData,
       }),
@@ -185,7 +174,6 @@ export const courseApi = createApi({
       ],
     }),
 
-    // Xóa course (Admin)
     deleteCourse: builder.mutation<ApiResponse<null>, string>({
       query: (id) => ({
         url: `/courses/delete/${id}`,
@@ -196,7 +184,6 @@ export const courseApi = createApi({
 
     // ============ LESSON ENDPOINTS ============
 
-    // Lấy chi tiết lesson theo ID
     getLessonById: builder.query<ApiResponse<Lesson>, string>({
       query: (id) => ({
         url: `/courses/lesson/${id}`,
@@ -205,7 +192,6 @@ export const courseApi = createApi({
       providesTags: (_result, _error, id) => [{ type: "Lesson", id }],
     }),
 
-    // Tạo lesson mới (Admin)
     createLesson: builder.mutation<ApiResponse<Lesson>, FormData>({
       query: (formData) => ({
         url: "/courses/lesson",
@@ -215,7 +201,6 @@ export const courseApi = createApi({
       invalidatesTags: ["Lesson", "Course"],
     }),
 
-    // Cập nhật lesson (Admin)
     updateLesson: builder.mutation<
       ApiResponse<Lesson>,
       { id: string; formData: FormData }
@@ -232,7 +217,6 @@ export const courseApi = createApi({
       ],
     }),
 
-    // Xóa lesson (Admin)
     deleteLesson: builder.mutation<
       ApiResponse<null>,
       { lessonId: string; courseId: string }
@@ -245,21 +229,16 @@ export const courseApi = createApi({
       invalidatesTags: ["Lesson", "Course"],
     }),
 
-    // Upload audio cho task (Admin)
     uploadAudio: builder.mutation<ApiResponse<string>, FormData>({
       query: (formData) => ({
         url: "/courses/lesson/upload-audio",
         method: "POST",
         body: formData,
-        headers: {
-          // Không set Content-Type, để browser tự set với boundary
-        },
       }),
     }),
 
     // ============ USER COURSE PROGRESS ENDPOINTS ============
 
-    // Lấy tiến độ của user trong 1 khóa học
     getUserCourseProgress: builder.query<
       ApiResponse<UserCourseProgress>,
       string
@@ -273,11 +252,7 @@ export const courseApi = createApi({
       ],
     }),
 
-    // Lấy tất cả tiến độ của user
-    getAllUserProgress: builder.query<
-      ApiResponse<UserCourseProgress[]>,
-      void
-    >({
+    getAllUserProgress: builder.query<ApiResponse<UserCourseProgress[]>, void>({
       query: () => ({
         url: "/courses/my-progress",
         method: "GET",
@@ -285,7 +260,6 @@ export const courseApi = createApi({
       providesTags: ["Course"],
     }),
 
-    // Cập nhật bài học hiện tại (checkpoint)
     updateCurrentLesson: builder.mutation<
       ApiResponse<UserCourseProgress>,
       {
@@ -305,15 +279,9 @@ export const courseApi = createApi({
       ],
     }),
 
-    // Đánh dấu bài học đã hoàn thành
     markLessonComplete: builder.mutation<
       ApiResponse<UserCourseProgress>,
-      {
-        courseId: string;
-        lessonId: string;
-        score?: number;
-        maxScore?: number;
-      }
+      { courseId: string; lessonId: string; score?: number; maxScore?: number }
     >({
       query: ({ courseId, ...body }) => ({
         url: `/courses/progress/${courseId}/complete-lesson`,
@@ -326,7 +294,6 @@ export const courseApi = createApi({
       ],
     }),
 
-    // Reset tiến độ khóa học
     resetCourseProgress: builder.mutation<ApiResponse<null>, string>({
       query: (courseId) => ({
         url: `/courses/progress/${courseId}/reset`,
@@ -337,11 +304,9 @@ export const courseApi = createApi({
         "Course",
       ],
     }),
-
   }),
 });
 
-// Export hooks
 export const {
   useGetAllCoursesQuery,
   useGetCourseByIdQuery,

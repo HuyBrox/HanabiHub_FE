@@ -249,7 +249,10 @@ export function useCall(): UseCallApi {
       };
 
       // Chỉ thêm Google-specific constraints nếu trình duyệt hỗ trợ (Chrome/Edge)
-      if (navigator.userAgent.includes("Chrome") || navigator.userAgent.includes("Edge")) {
+      if (
+        navigator.userAgent.includes("Chrome") ||
+        navigator.userAgent.includes("Edge")
+      ) {
         advancedAudioConstraints.googEchoCancellation = true;
         advancedAudioConstraints.googNoiseSuppression = true;
         advancedAudioConstraints.googAutoGainControl = true;

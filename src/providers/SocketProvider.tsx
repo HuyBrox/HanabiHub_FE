@@ -1,98 +1,108 @@
-// Quản lý kết nối socket theo trạng thái đăng nhập
 "use client";
-import React, { createContext, useContext, useEffect, useRef } from "react";
+
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useSelector } from "react-redux";
-import type { Socket } from "socket.io-client";
-import { RootState } from "@/store";
+import type { RootState } from "@/store";
 import {
   createSocketConnection,
-  getSocket,
   closeSocket,
+  getSocket,
 } from "@/lib/socketClient";
+import type { Socket } from "socket.io-client";
 
-interface SocketContextType {
+type SocketCtx = {
   socket: Socket | null;
   connected: boolean;
-}
+};
 
-const SocketContext = createContext<SocketContextType>({
+const SocketContext = createContext<SocketCtx>({
   socket: null,
   connected: false,
 });
 
-export const useSocketContext = () => {
-  const context = useContext(SocketContext);
-  if (!context) {
-    throw new Error("useSocketContext must be used within a SocketProvider");
-  }
-  return context;
-};
-
-interface SocketProviderProps {
-  children: React.ReactNode;
+// ✅ ĐÚNG TÊN hook theo code của bạn đang dùng
+export function useSocketContext() {
+  return useContext(SocketContext);
 }
 
-export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
-  const { user, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
-  );
-  const [connected, setConnected] = React.useState(false);
-  const socketRef = useRef<Socket | null>(null);
+export default function SocketProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const user = useSelector((s: RootState) => s.auth.user);
+
+  const [connected, setConnected] = useState(false);
+  const [token, setToken] = useState<string>("");
+  const [sock, setSock] = useState<Socket | null>(null);
+
+  // đọc token client-only
+  useEffect(() => {
+    try {
+      const t =
+        typeof window !== "undefined"
+          ? localStorage.getItem("access_token") || ""
+          : "";
+      setToken(t);
+    } catch {
+      setToken("");
+    }
+  }, [user?._id]);
 
   useEffect(() => {
-    if (isAuthenticated && user?._id) {
-      try {
-        const socket = createSocketConnection({
-          userId: user._id,
-          autoConnect: true,
-        });
-
-        socketRef.current = socket;
-
-        const handleConnect = () => {
-          setConnected(true);
-        };
-
-        const handleDisconnect = (reason: string) => {
-          setConnected(false);
-        };
-
-        const handleConnectError = (error: Error) => {
-          setConnected(false);
-        };
-
-        socket.on("connect", handleConnect);
-        socket.on("disconnect", handleDisconnect);
-        socket.on("connect_error", handleConnectError);
-
-        return () => {
-          socket.off("connect", handleConnect);
-          socket.off("disconnect", handleDisconnect);
-          socket.off("connect_error", handleConnectError);
-        };
-      } catch (error) {
-        console.error("Lỗi khởi tạo socket:", error);
-        setConnected(false);
-      }
-    } else {
-      if (socketRef.current) {
-        closeSocket();
-        socketRef.current = null;
-        setConnected(false);
-      }
+    // chưa login => đóng socket
+    if (!user?._id) {
+      closeSocket();
+      setSock(null);
+      setConnected(false);
+      return;
     }
-  }, [isAuthenticated, user?._id]);
 
-  const contextValue: SocketContextType = {
-    socket: socketRef.current || getSocket(),
-    connected,
-  };
+    // tạo (hoặc reuse) socket
+    const s = createSocketConnection({
+      userId: String(user._id),
+      token,
+      autoConnect: true,
+    });
+
+    setSock(s);
+
+    const onConnect = () => setConnected(true);
+    const onDisconnect = () => setConnected(false);
+
+    s.on("connect", onConnect);
+    s.on("disconnect", onDisconnect);
+
+    setConnected(Boolean(s.connected));
+
+    return () => {
+      try {
+        s.off("connect", onConnect);
+        s.off("disconnect", onDisconnect);
+      } catch {}
+
+      // ✅ tránh dính session cũ khi user đổi/logout
+      closeSocket();
+      setSock(null);
+      setConnected(false);
+    };
+  }, [user?._id, token]);
+
+  const value = useMemo<SocketCtx>(
+    () => ({
+      socket: sock ?? getSocket(),
+      connected,
+    }),
+    [sock, connected]
+  );
 
   return (
-    <SocketContext.Provider value={contextValue}>
-      {children}
-    </SocketContext.Provider>
+    <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
   );
-};
-
-export default SocketProvider;
+}

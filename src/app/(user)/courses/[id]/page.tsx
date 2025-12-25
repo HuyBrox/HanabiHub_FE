@@ -109,8 +109,10 @@ const MatchingTaskComponent = ({
   // Prepare left and right items - shuffle every time items change or shuffleKey changes
   // This ensures different order each time user enters the lesson or resets
   const { leftItems, rightItems, correctMatches } = useMemo(() => {
-    const lefts: Array<{ id: string; text: string; originalIndex: number }> = [];
-    const rights: Array<{ id: string; text: string; originalIndex: number }> = [];
+    const lefts: Array<{ id: string; text: string; originalIndex: number }> =
+      [];
+    const rights: Array<{ id: string; text: string; originalIndex: number }> =
+      [];
     const correctMap: { [leftText: string]: string } = {};
 
     items.forEach((item, index) => {
@@ -179,7 +181,9 @@ const MatchingTaskComponent = ({
           const leftItem = leftItems.find((item) => item.id === leftId);
           const rightItem = rightItems.find((item) => item.id === rightId);
           const isCorrect =
-            leftItem && rightItem && correctMatches[leftItem.text] === rightItem.text;
+            leftItem &&
+            rightItem &&
+            correctMatches[leftItem.text] === rightItem.text;
 
           newConnections.push({
             leftId,
@@ -221,7 +225,9 @@ const MatchingTaskComponent = ({
     if (!showResults) return false;
     const leftItem = leftItems.find((item) => item.id === leftId);
     const rightItem = rightItems.find((item) => item.id === rightId);
-    return leftItem && rightItem && correctMatches[leftItem.text] === rightItem.text;
+    return (
+      leftItem && rightItem && correctMatches[leftItem.text] === rightItem.text
+    );
   };
 
   return (
@@ -476,7 +482,12 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   useEffect(() => {
     if (!currentUser?._id || !currentLesson?._id) return;
 
-    console.log("🎬 Entering lesson:", currentLesson.title, "Type:", currentLesson.type);
+    console.log(
+      "🎬 Entering lesson:",
+      currentLesson.title,
+      "Type:",
+      currentLesson.type
+    );
 
     // Reset timers
     setVideoWatchedTime(0);
@@ -521,7 +532,12 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
         taskTimerRef.current = null;
       }
     };
-  }, [currentLessonIndex, currentLesson?._id, currentLesson?.type, currentUser?._id]);
+  }, [
+    currentLessonIndex,
+    currentLesson?._id,
+    currentLesson?.type,
+    currentUser?._id,
+  ]);
 
   // 🎯 SIMPLE: Save video progress when leaving lesson
   useEffect(() => {
@@ -533,7 +549,7 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
       if (lessonAtMount?.type === "video" && watchedSeconds > 0) {
         console.log("🚪 Leaving lesson, sending time:", {
           lesson: lessonAtMount.title,
-          watchedSeconds
+          watchedSeconds,
         });
 
         // 🎯 SIMPLE: Just send watched time, no complex calculations
@@ -558,7 +574,11 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (currentLesson?.type === "video" && videoWatchedTimeRef.current > 0) {
-        console.log("📡 Page unload, sending beacon:", videoWatchedTimeRef.current, "seconds");
+        console.log(
+          "📡 Page unload, sending beacon:",
+          videoWatchedTimeRef.current,
+          "seconds"
+        );
 
         const payload = {
           courseId: id,
@@ -571,14 +591,16 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
         };
 
         const data = JSON.stringify(payload);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/user-activity/track-video`;
+        const blob = new Blob([data], { type: "application/json" });
+        const url = `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
+        }/user-activity/track-video`;
         navigator.sendBeacon(url, blob);
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [currentLesson, id]);
 
   // 🗑️ REMOVED: Page visibility tracking (too complex, not needed)
@@ -760,7 +782,14 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
           courseId: id,
           lessonId: currentLesson._id,
           lessonTitle: currentLesson.title,
-          taskType: (currentLesson.taskType as "multiple_choice" | "fill_blank" | "listening" | "matching" | "speaking" | "reading") || "multiple_choice",
+          taskType:
+            (currentLesson.taskType as
+              | "multiple_choice"
+              | "fill_blank"
+              | "listening"
+              | "matching"
+              | "speaking"
+              | "reading") || "multiple_choice",
           score: calculatedScore,
           maxScore: 100,
           correctAnswers,
@@ -788,13 +817,17 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const saveCurrentVideoProgress = async () => {
     const currentWatchedTime = videoWatchedTimeRef.current;
 
-    if (!currentLesson || currentLesson.type !== "video" || currentWatchedTime === 0) {
+    if (
+      !currentLesson ||
+      currentLesson.type !== "video" ||
+      currentWatchedTime === 0
+    ) {
       return;
     }
 
     console.log("🔄 Switching lesson, saving time:", {
       lesson: currentLesson.title,
-      watchedSeconds: currentWatchedTime
+      watchedSeconds: currentWatchedTime,
     });
 
     const payload = {
@@ -884,7 +917,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 className="gap-1 md:gap-2 hover:bg-primary/10 h-8 md:h-9"
               >
                 <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                <span className="hidden sm:inline text-xs md:text-sm">Quay lại</span>
+                <span className="hidden sm:inline text-xs md:text-sm">
+                  Quay lại
+                </span>
               </Button>
               <div className="h-6 md:h-8 w-px bg-border hidden sm:block" />
               <div className="hidden md:block">
@@ -977,7 +1012,10 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       {Math.round(progressPercentage)}%
                     </span>
                   </div>
-                  <Progress value={progressPercentage} className="h-1.5 md:h-2" />
+                  <Progress
+                    value={progressPercentage}
+                    className="h-1.5 md:h-2"
+                  />
                   <div className="flex items-center justify-between text-[10px] md:text-xs">
                     <span className="text-muted-foreground">
                       {completedLessons} / {lessons.length} bài học
@@ -1152,7 +1190,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                     {currentLesson.videoType === "youtube" ? (
                       <iframe
                         className="w-full h-full"
-                        src={`https://www.youtube.com/embed/${getYouTubeVideoId(currentLesson.videoUrl)}`}
+                        src={`https://www.youtube.com/embed/${getYouTubeVideoId(
+                          currentLesson.videoUrl
+                        )}`}
                         title="YouTube video player"
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -1172,7 +1212,8 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                   {/* Watch time indicator */}
                   {videoWatchedTime > 0 && (
                     <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 bg-black/75 text-white px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-medium backdrop-blur-sm">
-                      ⏱️ Đã xem: {Math.floor(videoWatchedTime / 60)}:{String(videoWatchedTime % 60).padStart(2, '0')}
+                      ⏱️ Đã xem: {Math.floor(videoWatchedTime / 60)}:
+                      {String(videoWatchedTime % 60).padStart(2, "0")}
                     </div>
                   )}
                 </div>
@@ -1183,7 +1224,10 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 <div className="flex items-start justify-between gap-3 md:gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 md:gap-2 mb-2 flex-wrap">
-                      <Badge variant="outline" className="font-medium text-xs md:text-sm">
+                      <Badge
+                        variant="outline"
+                        className="font-medium text-xs md:text-sm"
+                      >
                         Bài {currentLessonIndex + 1}/{lessons.length}
                       </Badge>
                       {currentLesson?.type === "video" ? (
@@ -1198,18 +1242,30 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                         </Badge>
                       )}
                       {/* Task Timer */}
-                      {currentLesson?.type === "task" && !showResults && taskElapsedTime > 0 && (
-                        <Badge variant="secondary" className="gap-1 text-xs md:text-sm">
-                          <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                          {Math.floor(taskElapsedTime / 60)}:{String(taskElapsedTime % 60).padStart(2, '0')}
-                        </Badge>
-                      )}
+                      {currentLesson?.type === "task" &&
+                        !showResults &&
+                        taskElapsedTime > 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="gap-1 text-xs md:text-sm"
+                          >
+                            <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                            {Math.floor(taskElapsedTime / 60)}:
+                            {String(taskElapsedTime % 60).padStart(2, "0")}
+                          </Badge>
+                        )}
                       {/* Show final time after submit */}
                       {currentLesson?.type === "task" && showResults && (
-                        <Badge variant="secondary" className="gap-1 text-xs md:text-sm">
+                        <Badge
+                          variant="secondary"
+                          className="gap-1 text-xs md:text-sm"
+                        >
                           <Clock className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                          <span className="hidden sm:inline">Hoàn thành trong </span>
-                          {Math.floor(taskElapsedTime / 60)}:{String(taskElapsedTime % 60).padStart(2, '0')}
+                          <span className="hidden sm:inline">
+                            Hoàn thành trong{" "}
+                          </span>
+                          {Math.floor(taskElapsedTime / 60)}:
+                          {String(taskElapsedTime % 60).padStart(2, "0")}
                         </Badge>
                       )}
                     </div>
@@ -1217,11 +1273,12 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                       {currentLesson?.title}
                     </CardTitle>
                     {/* Only show content preview for task lessons, not video (video will show full description below) */}
-                    {currentLesson?.type === "task" && currentLesson?.content && (
-                      <p className="mt-1.5 md:mt-2 text-xs md:text-sm text-muted-foreground line-clamp-2">
-                        {currentLesson.content}
-                      </p>
-                    )}
+                    {currentLesson?.type === "task" &&
+                      currentLesson?.content && (
+                        <p className="mt-1.5 md:mt-2 text-xs md:text-sm text-muted-foreground line-clamp-2">
+                          {currentLesson.content}
+                        </p>
+                      )}
                   </div>
                 </div>
               </CardHeader>
@@ -1244,21 +1301,22 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 {currentLesson?.type === "task" && currentLesson.jsonTask && (
                   <div className="space-y-4 md:space-y-5 lg:space-y-6">
                     {/* Task Instructions - Only show for non-matching tasks (matching has its own instructions) */}
-                    {currentLesson.taskType !== "matching" && currentLesson.jsonTask.instructions && (
-                      <div className="p-3 md:p-4 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-lg">
-                        <div className="flex items-start gap-2 md:gap-3">
-                          <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm md:text-base">
-                              Hướng dẫn
-                            </h4>
-                            <p className="text-xs md:text-sm text-blue-800 dark:text-blue-200">
-                              {currentLesson.jsonTask.instructions}
-                            </p>
+                    {currentLesson.taskType !== "matching" &&
+                      currentLesson.jsonTask.instructions && (
+                        <div className="p-3 md:p-4 bg-blue-50 dark:bg-blue-950/30 border-l-4 border-blue-500 rounded-r-lg">
+                          <div className="flex items-start gap-2 md:gap-3">
+                            <AlertCircle className="h-4 w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1 text-sm md:text-base">
+                                Hướng dẫn
+                              </h4>
+                              <p className="text-xs md:text-sm text-blue-800 dark:text-blue-200">
+                                {currentLesson.jsonTask.instructions}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
                     {/* Multiple Choice Task */}
                     {currentLesson.taskType === "multiple_choice" &&
@@ -1273,7 +1331,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                               <span className="flex-shrink-0 w-6 h-6 md:w-7 md:h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs md:text-sm font-bold">
                                 {index + 1}
                               </span>
-                              <span className="flex-1 leading-snug">{item.question}</span>
+                              <span className="flex-1 leading-snug">
+                                {item.question}
+                              </span>
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
                               {item.options?.map((option: any) => {
@@ -1368,7 +1428,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                 <span className="flex-shrink-0 w-6 h-6 md:w-7 md:h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs md:text-sm font-bold">
                                   {index + 1}
                                 </span>
-                                <span className="flex-1 leading-snug">{item.sentence}</span>
+                                <span className="flex-1 leading-snug">
+                                  {item.sentence}
+                                </span>
                               </h3>
                               <div className="relative">
                                 <Input
@@ -1477,7 +1539,9 @@ function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
                                 <span className="flex-shrink-0 w-6 h-6 md:w-7 md:h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs md:text-sm font-bold">
                                   {index + 1}
                                 </span>
-                                <span className="flex-1 leading-snug">{item.question}</span>
+                                <span className="flex-1 leading-snug">
+                                  {item.question}
+                                </span>
                               </h3>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
                                 {item.options?.map((option: any) => {

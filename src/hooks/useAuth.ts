@@ -36,6 +36,13 @@ export const useAuth = () => {
         const result = await loginMutation(credentials).unwrap();
 
         if (result.success && result.data) {
+          // Save access token for subsequent API calls that expect Authorization header
+          try {
+            if (typeof window !== "undefined" && result.data.accessToken) {
+              localStorage.setItem("access_token", result.data.accessToken);
+            }
+          } catch (e) {}
+
           dispatch(loginSuccess(result.data.user));
           return { success: true, user: result.data.user };
         } else {

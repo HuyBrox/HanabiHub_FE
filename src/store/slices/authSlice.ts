@@ -150,6 +150,9 @@ const authSlice = createSlice({
         // Xóa khỏi localStorage
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth_state");
+          try {
+            localStorage.removeItem("access_token");
+          } catch (e) {}
         }
 
         console.log("✅ Logout successful - cookies cleared on backend");
@@ -164,6 +167,9 @@ const authSlice = createSlice({
 
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth_state");
+          try {
+            localStorage.removeItem("access_token");
+          } catch (e) {}
         }
 
         console.log("⚠️ Logout API failed but local state cleared");
