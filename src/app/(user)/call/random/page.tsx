@@ -111,19 +111,22 @@ function RandomCallPage() {
         console.warn("[RandomCall] Failed to fetch TURN credentials, using STUN only:", error);
       }
 
+      // Build peer config - don't hardcode port for production behind reverse proxy
       const peerConfig: any = {
         host: url.hostname,
         secure: url.protocol === "https:",
-        port: url.port
-          ? Number(url.port)
-          : url.protocol === "https:"
-          ? 443
-          : 80,
         path: "/peerjs",
         config: {
           iceServers,
         },
       };
+
+      // Only set port if explicitly specified in URL
+      // This is important for production behind reverse proxy (Render, Heroku, etc.)
+      // where the proxy handles port routing
+      if (url.port) {
+        peerConfig.port = Number(url.port);
+      }
 
       console.log("[RandomCall] Creating new peer with config:", {
         peerId,
@@ -597,8 +600,31 @@ function RandomCallPage() {
     });
 
     // Errors
-    socket.on("randomCallError", (error: any) => {
+    socket.on("randomCallError", async (error: any) => {
       console.error("[RandomCall] Error:", error);
+
+      // Handle NOT_IN_QUEUE error - auto rejoin
+      if (error.code === "NOT_IN_QUEUE" && isCallModeOn && user?._id) {
+        console.log("[RandomCall] Not in queue, attempting to rejoin...");
+        try {
+          socket.emit("joinRandomQueue", {
+            filters: {
+              level: selectedLevel,
+              lang: "ja",
+            },
+          });
+          // Wait a bit then retry
+          setTimeout(() => {
+            if (isSearching) {
+              socket.emit("startRandomSearch", {});
+            }
+          }, 500);
+          return; // Don't show error toast for auto-rejoin
+        } catch (rejoinError) {
+          console.error("[RandomCall] Failed to rejoin queue:", rejoinError);
+        }
+      }
+
       toast.error(error.message || "Random call error");
       setIsSearching(false);
       setIsMatched(false);
@@ -607,6 +633,9 @@ function RandomCallPage() {
     // Socket disconnect handling
     socket.on("disconnect", (reason: string) => {
       console.warn("[RandomCall] Socket disconnected:", reason);
+      // Mark as not in queue since socket changed
+      joinedQueueRef.current = false;
+
       if (isInCall) {
         toast.error("Connection lost");
         handleCallEnd();
@@ -617,10 +646,35 @@ function RandomCallPage() {
     });
 
     // Socket reconnect handling
-    socket.on("connect", () => {
+    socket.on("connect", async () => {
       console.log("[RandomCall] Socket reconnected");
-      if (isSearching) {
-        toast.info("Reconnected. Resuming search...");
+
+      // Rejoin queue if user was in call mode or searching
+      if (isCallModeOn && !joinedQueueRef.current && user?._id) {
+        console.log("[RandomCall] Rejoining queue after reconnect...");
+        try {
+          socket.emit("joinRandomQueue", {
+            filters: {
+              level: selectedLevel,
+              lang: "ja",
+            },
+          });
+          // Wait a bit for queue join to complete
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // Resume search if was searching
+          if (isSearching) {
+            toast.info("Reconnected. Resuming search...");
+            socket.emit("startRandomSearch", {});
+          } else {
+            toast.success("Reconnected successfully");
+          }
+        } catch (error) {
+          console.error("[RandomCall] Failed to rejoin queue:", error);
+          toast.error("Failed to reconnect. Please refresh the page.");
+        }
+      } else if (isSearching) {
+        toast.info("Reconnected. Please start search again.");
       }
     });
 
@@ -645,6 +699,8 @@ function RandomCallPage() {
     isInCall,
     isSearching,
     isCallModeOn,
+    selectedLevel,
+    user?._id,
   ]);
 
   // Attach streams to video elements
@@ -848,61 +904,98 @@ function RandomCallPage() {
     }
 
     isEndingCallRef.current = true;
-    console.log("[RandomCall] 🔴 handleCallEnd called - Stack trace:");
-    console.trace(); // ✅ Show where this function was called from
+    console.log("[RandomCall] 🔴 handleCallEnd called");
 
-    // Notify server
-    if (socket && partnerInfo) {
-      socket.emit("endRandomCall", {
-        partnerId: partnerInfo.partnerId,
-      });
+    // Use try-finally to ensure guard is reset even if errors occur
+    try {
+      // Notify server (only if we have socket and partner info)
+      if (socket && partnerInfo) {
+        try {
+          socket.emit("endRandomCall", {
+            partnerId: partnerInfo.partnerId,
+          });
+        } catch (emitError) {
+          console.warn("[RandomCall] Failed to emit endRandomCall:", emitError);
+        }
+      }
+
+      // Cleanup media connections
+      if (mediaConnRef.current) {
+        try {
+          mediaConnRef.current.close();
+        } catch (closeError) {
+          console.warn("[RandomCall] Error closing media connection:", closeError);
+        }
+        mediaConnRef.current = null;
+      }
+
+      // Clear peer connection
+      setPeerConnection(null);
+
+      // Stop local stream tracks
+      if (localStream) {
+        try {
+          localStream.getTracks().forEach((track) => {
+            try {
+              track.stop();
+            } catch (stopError) {
+              console.warn("[RandomCall] Error stopping track:", stopError);
+            }
+          });
+        } catch (streamError) {
+          console.warn("[RandomCall] Error stopping local stream:", streamError);
+        }
+        setLocalStream(null);
+      }
+
+      // Stop remote stream tracks
+      if (remoteStream) {
+        try {
+          remoteStream.getTracks().forEach((track) => {
+            try {
+              track.stop();
+            } catch (stopError) {
+              console.warn("[RandomCall] Error stopping remote track:", stopError);
+            }
+          });
+        } catch (streamError) {
+          console.warn("[RandomCall] Error stopping remote stream:", streamError);
+        }
+        setRemoteStream(null);
+      }
+
+      // Destroy peer
+      if (peerRef.current) {
+        try {
+          peerRef.current.destroy();
+        } catch (destroyError) {
+          console.warn("[RandomCall] Error destroying peer:", destroyError);
+        }
+        peerRef.current = null;
+      }
+
+      // Clear refs
+      localStreamRef.current = null;
+
+      // Reset states
+      setIsInCall(false);
+      setIsMatched(false);
+      setIsSearching(false);
+      setPartnerInfo(null);
+      setCallDuration(0);
+      callStartTimeRef.current = null;
+
+      // Reset rating UI
+      setHoveredRating(0);
+      setHasRated(false);
+      setIsMuted(false);
+      setIsVideoOff(false);
+    } finally {
+      // ✅ Reset guard after cleanup (always, even on error)
+      setTimeout(() => {
+        isEndingCallRef.current = false;
+      }, 1000); // Increased timeout to prevent rapid re-calls
     }
-
-    // Cleanup media connections
-    if (mediaConnRef.current) {
-      mediaConnRef.current.close();
-      mediaConnRef.current = null;
-    }
-
-    // Clear peer connection
-    setPeerConnection(null);
-
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
-      setLocalStream(null);
-    }
-
-    if (remoteStream) {
-      remoteStream.getTracks().forEach((track) => track.stop());
-      setRemoteStream(null);
-    }
-
-    if (peerRef.current) {
-      peerRef.current.destroy();
-      peerRef.current = null;
-    }
-
-    // Clear refs
-    localStreamRef.current = null;
-
-    // Reset states
-    setIsInCall(false);
-    setIsMatched(false);
-    setIsSearching(false);
-    setPartnerInfo(null);
-    setCallDuration(0);
-    callStartTimeRef.current = null;
-
-    // Reset rating UI
-    setHoveredRating(0);
-    setHasRated(false);
-    setIsMuted(false);
-    setIsVideoOff(false);
-
-    // ✅ Reset guard after cleanup
-    setTimeout(() => {
-      isEndingCallRef.current = false;
-    }, 500);
   };
 
   return (

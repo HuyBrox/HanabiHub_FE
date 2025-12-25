@@ -356,19 +356,24 @@ export function useCall(): UseCallApi {
           console.warn("[initPeer] Failed to fetch TURN credentials, using STUN only:", error);
         }
 
-        const peer = new Peer(peerId, {
+        // Build peer config - don't hardcode port for production behind reverse proxy
+        const peerConfig: any = {
           host: url.hostname,
           secure: url.protocol === "https:",
-          port: url.port
-            ? Number(url.port)
-            : url.protocol === "https:"
-            ? 443
-            : 80,
           path: "/peerjs",
           config: {
             iceServers,
           },
-        });
+        };
+
+        // Only set port if explicitly specified in URL
+        // This is important for production behind reverse proxy (Render, Heroku, etc.)
+        // where the proxy handles port routing
+        if (url.port) {
+          peerConfig.port = Number(url.port);
+        }
+
+        const peer = new Peer(peerId, peerConfig);
 
         console.log("[initPeer] Initializing with ID:", peerId);
 
