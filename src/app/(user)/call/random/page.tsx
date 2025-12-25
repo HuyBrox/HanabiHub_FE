@@ -111,22 +111,20 @@ function RandomCallPage() {
         console.warn("[RandomCall] Failed to fetch TURN credentials, using STUN only:", error);
       }
 
-      // Build peer config - don't hardcode port for production behind reverse proxy
+      // PeerJS config - use port from URL if available, otherwise use default based on protocol
       const peerConfig: any = {
         host: url.hostname,
         secure: url.protocol === "https:",
+        port: url.port
+          ? Number(url.port)
+          : url.protocol === "https:"
+          ? 443
+          : 80,
         path: "/peerjs",
         config: {
           iceServers,
         },
       };
-
-      // Only set port if explicitly specified in URL
-      // This is important for production behind reverse proxy (Render, Heroku, etc.)
-      // where the proxy handles port routing
-      if (url.port) {
-        peerConfig.port = Number(url.port);
-      }
 
       console.log("[RandomCall] Creating new peer with config:", {
         peerId,
@@ -177,6 +175,14 @@ function RandomCallPage() {
       // Handle incoming call
       peer.on("call", (conn) => {
         console.log("[RandomCall] 📞 Incoming call from:", conn.peer);
+
+        // ✅ GUARD: If already have a connection, reject new one
+        if (mediaConnRef.current) {
+          console.warn("[RandomCall] Already have connection, rejecting new call");
+          conn.close();
+          return;
+        }
+
         mediaConnRef.current = conn;
 
         if (localStreamRef.current) {
@@ -184,6 +190,8 @@ function RandomCallPage() {
           conn.answer(localStreamRef.current);
         } else {
           console.error("[RandomCall] No local stream to answer with");
+          conn.close();
+          return;
         }
 
         conn.on("stream", (remoteStream) => {
@@ -446,6 +454,12 @@ function RandomCallPage() {
     socket.on("receiveRandomCallPeerId", async (data: any) => {
       console.log("[RandomCall] Received partner peer ID:", data.peerId);
 
+      // ✅ GUARD: Prevent duplicate calls - if already in call or already calling, ignore
+      if (isInCall || mediaConnRef.current) {
+        console.warn("[RandomCall] Already in call or calling, ignoring peer ID");
+        return;
+      }
+
       try {
         if (!data.peerId) {
           console.error("[RandomCall] Invalid peer ID received");
@@ -454,9 +468,9 @@ function RandomCallPage() {
           return;
         }
 
-        // Wait for peer and stream to be ready (with timeout)
+        // Wait for peer and stream to be ready (with shorter timeout)
         const waitForReady = async (
-          maxWait: number = 10000
+          maxWait: number = 5000 // Reduced from 10s to 5s
         ): Promise<boolean> => {
           const startTime = Date.now();
           while (Date.now() - startTime < maxWait) {
@@ -464,13 +478,8 @@ function RandomCallPage() {
               console.log("[RandomCall] Peer and stream ready");
               return true;
             }
-            console.log(
-              "[RandomCall] Waiting for ready... Peer:",
-              !!peerRef.current,
-              "Stream:",
-              !!localStreamRef.current
-            );
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            // Check every 100ms instead of 200ms for faster response
+            await new Promise((resolve) => setTimeout(resolve, 100));
           }
           console.error(
             "[RandomCall] Timeout - Peer ready:",
@@ -495,8 +504,9 @@ function RandomCallPage() {
           throw new Error("Peer or stream became null after ready check");
         }
 
-        // Additional delay for stability
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // ✅ Reduced delay - only wait 200ms instead of 500ms for faster connection
+        // This gives peer server time to register the peer ID
+        await new Promise((resolve) => setTimeout(resolve, 200));
 
         console.log("[RandomCall] Calling partner with peer:", data.peerId);
         console.log("[RandomCall] peerRef.current:", peerRef.current);
@@ -504,6 +514,12 @@ function RandomCallPage() {
           "[RandomCall] localStreamRef.current:",
           localStreamRef.current
         );
+
+        // ✅ GUARD: Double check not already calling/in call
+        if (mediaConnRef.current || isInCall) {
+          console.warn("[RandomCall] Already calling/in call, aborting");
+          return;
+        }
 
         const conn = peerRef.current.call(data.peerId, localStreamRef.current);
 
@@ -706,16 +722,44 @@ function RandomCallPage() {
   // Attach streams to video elements
   useEffect(() => {
     if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-      localVideoRef.current.muted = true;
-      localVideoRef.current.play().catch(() => {});
+      const video = localVideoRef.current;
+      // ✅ Only set srcObject if it's different to avoid interruption
+      if (video.srcObject !== localStream) {
+        video.srcObject = localStream;
+      }
+      video.muted = true;
+
+      // ✅ Safe play with proper error handling
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // Ignore AbortError (interrupted by new load)
+          if (err.name !== "AbortError") {
+            console.warn("[RandomCall] Local video play error:", err);
+          }
+        });
+      }
     }
   }, [localStream, isVideoOff]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch(() => {});
+      const video = remoteVideoRef.current;
+      // ✅ Only set srcObject if it's different to avoid interruption
+      if (video.srcObject !== remoteStream) {
+        video.srcObject = remoteStream;
+      }
+
+      // ✅ Safe play with proper error handling
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          // Ignore AbortError (interrupted by new load)
+          if (err.name !== "AbortError") {
+            console.warn("[RandomCall] Remote video play error:", err);
+          }
+        });
+      }
     }
   }, [remoteStream]);
 

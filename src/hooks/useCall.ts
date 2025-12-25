@@ -19,6 +19,8 @@ export interface CallState {
   callerId: string | null;
   receiverId: string | null;
   otherPeerId?: string | null;
+  partnerMuted?: boolean;
+  partnerVideoOff?: boolean;
 }
 
 export interface IncomingCallData {
@@ -76,6 +78,8 @@ export function useCall(): UseCallApi {
     callerId: null,
     receiverId: null,
     otherPeerId: null,
+    partnerMuted: false,
+    partnerVideoOff: false,
   });
 
   // ============ MAIN WINDOW FUNCTIONS ============
@@ -291,8 +295,9 @@ export function useCall(): UseCallApi {
               }
             );
 
-            // Dừng tracks từ stream cũ
-            stream.getAudioTracks().forEach((track) => track.stop());
+            // ✅ KHÔNG dừng tracks từ stream gốc vì source node trong AudioContext
+            // cần chúng để lấy input. Chỉ dừng khi cleanup (end call).
+            // stream.getAudioTracks().forEach((track) => track.stop());
 
             localStreamRef.current = processedStream;
             setState((s) => ({ ...s, localStream: processedStream }));
@@ -338,9 +343,22 @@ export function useCall(): UseCallApi {
   const initPeer = useCallback(
     (customId?: string): Promise<string> => {
       return new Promise(async (resolve, reject) => {
-        if (peerRef.current) {
+        // ✅ Guard: If peer already exists and is open, reuse it
+        if (peerRef.current && peerRef.current.open) {
+          console.log("[initPeer] Reusing existing peer:", peerRef.current.id);
           resolve(peerRef.current.id!);
           return;
+        }
+
+        // ✅ If peer exists but not open, destroy it first
+        if (peerRef.current) {
+          console.log("[initPeer] Destroying existing peer before creating new one");
+          try {
+            peerRef.current.destroy();
+          } catch (err) {
+            console.warn("[initPeer] Error destroying peer:", err);
+          }
+          peerRef.current = null;
         }
 
         const url = new URL(SERVER_URL);
@@ -356,24 +374,20 @@ export function useCall(): UseCallApi {
           console.warn("[initPeer] Failed to fetch TURN credentials, using STUN only:", error);
         }
 
-        // Build peer config - don't hardcode port for production behind reverse proxy
-        const peerConfig: any = {
+        // PeerJS config - use port from URL if available, otherwise use default based on protocol
+        const peer = new Peer(peerId, {
           host: url.hostname,
           secure: url.protocol === "https:",
+          port: url.port
+            ? Number(url.port)
+            : url.protocol === "https:"
+            ? 443
+            : 80,
           path: "/peerjs",
           config: {
             iceServers,
           },
-        };
-
-        // Only set port if explicitly specified in URL
-        // This is important for production behind reverse proxy (Render, Heroku, etc.)
-        // where the proxy handles port routing
-        if (url.port) {
-          peerConfig.port = Number(url.port);
-        }
-
-        const peer = new Peer(peerId, peerConfig);
+        });
 
         console.log("[initPeer] Initializing with ID:", peerId);
 
@@ -434,6 +448,12 @@ export function useCall(): UseCallApi {
       role: "caller" | "receiver",
       otherPeerId?: string
     ) => {
+      // ✅ Guard: Prevent duplicate calls
+      if (state.inCall || mediaConnRef.current) {
+        console.warn("[startCallInPopup] Already in call, ignoring duplicate request");
+        return;
+      }
+
       try {
         console.log("[startCallInPopup] Starting...", {
           receiverId,
@@ -442,7 +462,15 @@ export function useCall(): UseCallApi {
           otherPeerId,
         });
 
-        // 1. Get media first
+        // 1. Get media first - ALWAYS get fresh media in popup window
+        // This ensures popup has its own media stream, not shared with main window
+        // Stop any existing tracks first to avoid conflicts
+        if (localStreamRef.current) {
+          console.log("[startCallInPopup] Stopping existing local stream tracks");
+          localStreamRef.current.getTracks().forEach((track) => track.stop());
+          localStreamRef.current = null;
+        }
+
         const stream = await getUserMedia(callType);
 
         // 2. Initialize peer
@@ -484,6 +512,15 @@ export function useCall(): UseCallApi {
 
           conn.on("stream", (remoteStream) => {
             console.log("[startCallInPopup] Receiver got remote stream");
+
+            // ✅ Debug: Log audio tracks in remote stream
+            const audioTracks = remoteStream.getAudioTracks();
+            console.log("[startCallInPopup] Remote stream audio tracks:", audioTracks.length);
+            if (audioTracks.length > 0) {
+              console.log("[startCallInPopup] Audio track enabled:", audioTracks[0].enabled);
+              console.log("[startCallInPopup] Audio track muted:", audioTracks[0].muted);
+            }
+
             remoteStreamRef.current = remoteStream;
             setState((s) => ({
               ...s,
@@ -549,29 +586,78 @@ export function useCall(): UseCallApi {
       otherPeerId: null,
     });
 
-    // Close popup window
+    // ✅ SAFE: Only close if this is a popup window (opened by window.open)
+    // Check if window was opened by script (popup) vs main window
     try {
-      window.close();
-    } catch {}
+      // Popup windows have window.opener set and are not the main window
+      if (window.opener && window.opener !== window) {
+        // This is a popup window, safe to close
+        window.close();
+      } else {
+        // This is main window, don't close it!
+        console.log("[endCall] Main window detected, not closing");
+      }
+    } catch (error) {
+      // Some browsers block window.close(), ignore error
+      console.warn("[endCall] Could not close window:", error);
+    }
   }, [state.peerId]);
 
   const toggleMic = useCallback((on?: boolean) => {
     const tracks = localStreamRef.current?.getAudioTracks();
-    if (!tracks || tracks.length === 0) return;
+    if (!tracks || tracks.length === 0) {
+      console.warn("[toggleMic] No audio tracks found in local stream");
+      return;
+    }
 
     const enabled = on ?? !tracks[0].enabled;
-    tracks.forEach((track) => (track.enabled = enabled));
+    tracks.forEach((track) => {
+      track.enabled = enabled;
+      console.log(`[toggleMic] Audio track ${track.id} set to:`, enabled);
+    });
     console.log("[toggleMic] Microphone:", enabled ? "ON" : "OFF");
-  }, []);
+
+    // ✅ Sync mic state với partner qua socket (dùng ref để tránh re-render)
+    if (socket && connected && state.inCall) {
+      const targetId = state.receiverId || state.callerId;
+      const localStream = localStreamRef.current; // Dùng ref thay vì state
+      if (targetId && localStream) {
+        socket.emit("callMediaState", {
+          receiverId: targetId,
+          isMuted: !enabled,
+          isVideoOff: localStream.getVideoTracks()[0]?.enabled === false,
+        });
+      }
+    }
+  }, [socket, connected, state.inCall, state.receiverId, state.callerId]);
 
   const toggleCamera = useCallback((on?: boolean) => {
     const tracks = localStreamRef.current?.getVideoTracks();
-    if (!tracks || tracks.length === 0) return;
+    if (!tracks || tracks.length === 0) {
+      console.warn("[toggleCamera] No video tracks found in local stream");
+      return;
+    }
 
     const enabled = on ?? !tracks[0].enabled;
-    tracks.forEach((track) => (track.enabled = enabled));
+    tracks.forEach((track) => {
+      track.enabled = enabled;
+      console.log(`[toggleCamera] Video track ${track.id} set to:`, enabled);
+    });
     console.log("[toggleCamera] Camera:", enabled ? "ON" : "OFF");
-  }, []);
+
+    // ✅ Sync video state với partner qua socket (dùng ref để tránh re-render)
+    if (socket && connected && state.inCall) {
+      const targetId = state.receiverId || state.callerId;
+      const localStream = localStreamRef.current; // Dùng ref thay vì state
+      if (targetId && localStream) {
+        socket.emit("callMediaState", {
+          receiverId: targetId,
+          isMuted: localStream.getAudioTracks()[0]?.enabled === false,
+          isVideoOff: !enabled,
+        });
+      }
+    }
+  }, [socket, connected, state.inCall, state.receiverId, state.callerId]);
 
   // ============ SOCKET EVENT LISTENERS ============
   // Chỉ lắng nghe để update UI state trong main window
@@ -614,17 +700,32 @@ export function useCall(): UseCallApi {
       endCall();
     };
 
+    const onPartnerMediaState = (data: {
+      callerId: string;
+      isMuted: boolean;
+      isVideoOff: boolean;
+    }) => {
+      console.log("[Socket] partnerMediaState:", data);
+      setState((s) => ({
+        ...s,
+        partnerMuted: data.isMuted,
+        partnerVideoOff: data.isVideoOff,
+      }));
+    };
+
     // Register listeners
     socket.on("receivePeerId", onReceivePeerId);
     socket.on("incomingCall", onIncomingCall);
     socket.on("callAnswered", onCallAnswered);
     socket.on("callEnded", onCallEnded);
+    socket.on("partnerMediaState", onPartnerMediaState);
 
     return () => {
       socket.off("receivePeerId", onReceivePeerId);
       socket.off("incomingCall", onIncomingCall);
       socket.off("callAnswered", onCallAnswered);
       socket.off("callEnded", onCallEnded);
+      socket.off("partnerMediaState", onPartnerMediaState);
     };
   }, [socket, connected, endCall]);
 
