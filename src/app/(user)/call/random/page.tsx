@@ -59,6 +59,7 @@ function RandomCallPage() {
   const isEndingCallRef = useRef(false); // ✅ Prevent circular handleCallEnd calls
   const socketRef = useRef(socket); // Track socket for cleanup
   const partnerInfoRef = useRef(partnerInfo); // Track partner for cleanup
+  const isInCallRef = useRef(false); // Track isInCall state for event handlers
 
   // Sync refs with state for cleanup
   useEffect(() => {
@@ -68,6 +69,10 @@ function RandomCallPage() {
   useEffect(() => {
     partnerInfoRef.current = partnerInfo;
   }, [partnerInfo]);
+
+  useEffect(() => {
+    isInCallRef.current = isInCall;
+  }, [isInCall]);
 
   // Call duration timer
   useEffect(() => {
@@ -176,13 +181,30 @@ function RandomCallPage() {
       peer.on("call", (conn) => {
         console.log("[RandomCall] 📞 Incoming call from:", conn.peer);
 
-        // ✅ GUARD: If already have a connection, reject new one
-        if (mediaConnRef.current) {
-          console.warn("[RandomCall] Already have connection, rejecting new call");
+        // ✅ GUARD: Check if already have an active connection
+        const existingConn = mediaConnRef.current;
+        const currentlyInCall = isInCallRef.current;
+
+        if (existingConn && currentlyInCall) {
+          // We're already in an active call, reject the new one
+          console.warn("[RandomCall] Already in active call, rejecting new call");
           conn.close();
           return;
         }
 
+        // If we have a connection reference but we're not in call, it's likely stale
+        // Clean it up before accepting the new call
+        if (existingConn && !currentlyInCall) {
+          console.warn("[RandomCall] Found stale connection, cleaning up before accepting new call");
+          try {
+            existingConn.close();
+          } catch (err) {
+            console.warn("[RandomCall] Error closing stale connection:", err);
+          }
+          mediaConnRef.current = null;
+        }
+
+        // Accept the new call
         mediaConnRef.current = conn;
 
         if (localStreamRef.current) {
@@ -191,6 +213,7 @@ function RandomCallPage() {
         } else {
           console.error("[RandomCall] No local stream to answer with");
           conn.close();
+          mediaConnRef.current = null;
           return;
         }
 
@@ -455,7 +478,7 @@ function RandomCallPage() {
       console.log("[RandomCall] Received partner peer ID:", data.peerId);
 
       // ✅ GUARD: Prevent duplicate calls - if already in call or already calling, ignore
-      if (isInCall || mediaConnRef.current) {
+      if (isInCallRef.current || mediaConnRef.current) {
         console.warn("[RandomCall] Already in call or calling, ignoring peer ID");
         return;
       }
@@ -516,7 +539,7 @@ function RandomCallPage() {
         );
 
         // ✅ GUARD: Double check not already calling/in call
-        if (mediaConnRef.current || isInCall) {
+        if (mediaConnRef.current || isInCallRef.current) {
           console.warn("[RandomCall] Already calling/in call, aborting");
           return;
         }
@@ -652,7 +675,7 @@ function RandomCallPage() {
       // Mark as not in queue since socket changed
       joinedQueueRef.current = false;
 
-      if (isInCall) {
+      if (isInCallRef.current) {
         toast.error("Connection lost");
         handleCallEnd();
       } else if (isSearching) {
